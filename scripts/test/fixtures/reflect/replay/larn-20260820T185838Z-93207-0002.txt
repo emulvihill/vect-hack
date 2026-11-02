@@ -1,0 +1,15 @@
+[
+  {
+    "op": "assert",
+    "claim": { "kind": "avoid-terrain", "category": "stairs", "ch": "V" },
+    "text": "A V exit drops the hero far past the depth its experience level can survive.",
+    "evidence": [{ "trajectory": "larn-20260820T185838Z-93207-0002", "from": 20, "to": 100 }]
+  },
+  {
+    "op": "assert",
+    "claim": { "kind": "threat", "ch": "H", "color": 1, "depth": 1 },
+    "value": 0.4,
+    "text": "An H in colour 1 stood beside the hero over two command boundaries and traded hits without ending the run.",
+    "evidence": [{ "trajectory": "larn-20260820T185838Z-93207-0002", "from": 60, "to": 110 }]
+  }
+]

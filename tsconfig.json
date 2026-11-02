@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "WebWorker"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    // A local nothing reads is usually a symptom, not dirt: a fixture built
+    // and then never asserted on is a test that does not test what its name
+    // says (vect-hack-8r0). Both flags were clean on the tree the moment they
+    // went in, so neither is carrying a suppression list — and
+    // noUnusedParameters still exempts a leading underscore, which is the
+    // escape hatch for a signature that has to keep a parameter it ignores.
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noEmit": true,
+    // scripts/test/*.mjs run src/modules/nethack straight from source, and
+    // node's ESM resolver needs the real filename.
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    // scripts/ is real node code (test drivers, vitest fixtures), not the
+    // browser bundle. The real gain of including it is that its .ts vitest
+    // fixtures now get fully checked — e.g. persist.test.ts's
+    // `class FakeFS implements PersistFS` is verified against the real
+    // interface. allowJs only lets tsc parse the .mjs drivers themselves
+    // (catches a syntax error there; without it they aren't part of the
+    // program at all) — checkJs is off, so it does not check their
+    // semantics, and a bad import against the shared helpers below reports
+    // nothing here. "node" covers the process/Buffer/node: imports the
+    // drivers and their vitest fixtures use.
+    "allowJs": true,
+    "types": ["vite/client", "node"]
+  },
+  "include": ["src", "scripts"]
+}

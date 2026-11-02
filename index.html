@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- Without this a phone lays the page out at ~980px and scales it down, so
+       the canvas and the HUD strips render tiny. It does not make the game
+       playable on touch — there is no on-screen key input (vect-hack-d72) —
+       but the page should still declare its own viewport rather than be
+       guessed at. user-scalable is left alone: pinch-zoom is an accessibility
+       affordance, and nothing here depends on the visual viewport. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VectHack</title>
+  <!-- Identity for the tab, the home screen and a shared link (vect-hack-j725).
+       The icon is the hero glyph drawn the way the game draws letters; the
+       PNGs are rendered from it by scripts/build/render-icons.mjs and
+       committed, so the build never needs a rasteriser. Relative hrefs, so
+       they resolve under any deploy base — except og:image, which the
+       Open Graph spec requires absolute, so it names the production deploy.
+       One set of tags for all four games: this file is static and ?game= is
+       a query string. -->
+  <meta name="description" content="The official NetHack 5.0, Angband 4.2, Larn 12.0, and Umoria 5.7 cores compiled to WebAssembly, rendered as glowing arcade vector graphics. Free to play in your browser.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="VectHack">
+  <meta property="og:description" content="NetHack, Angband, Larn, and Moria as glowing arcade vector graphics. Free to play in your browser.">
+  <meta property="og:image" content="https://vecthack.com/play/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0; background: var(--vh-bg); color: var(--vh-fg);
+      font: 14px/1.25 "DejaVu Sans Mono", "Cascadia Mono", monospace;
+      display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+    }
+    #messages { height: 5.5em; overflow-y: auto; padding: 4px 8px; border-bottom: 1px solid var(--vh-rule); }
+    /* min-height reserves the line even when the strip is blank. Angband's
+       view mirrors the term's top row here and keeps it shown, so without it
+       the strip collapses whenever that row empties, the stage grows by a
+       line, and the canvas resizes on nearly every turn — each resize
+       rebuilding the trail targets and the viewport texture the line
+       materials copy through (WebGL logs a deleted-texture bind for it). */
+    #prompt { padding: 2px 8px; color: var(--vh-accent); min-height: 1.25em; }
+    #prompt input { background: var(--vh-input-bg); color: var(--vh-bright); border: 1px solid var(--vh-input-border); font: inherit; }
+    /* Clickable yn_function answers (vect-hack-be3.7): the pointer's way to
+       say yes, so a menu-driven command never dead-ends on a typed letter. */
+    .ynchip {
+      display: inline-block; margin-left: 6px; padding: 0 7px; cursor: pointer;
+      background: var(--vh-input-bg); color: var(--vh-accent); border: 1px solid var(--vh-input-border);
+    }
+    .ynchip:hover { color: var(--vh-bright); border-color: var(--vh-accent); }
+    #stage { flex: 1; position: relative; min-height: 0; }
+    #view {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      display: block; touch-action: none; cursor: grab;
+    }
+    #view:active { cursor: grabbing; }
+    #angband-sidebar, #larn-sidebar, #moria-sidebar {
+      position: absolute; left: 8px; top: 8px; z-index: 1; margin: 0;
+      padding: 6px; color: var(--vh-status); background: var(--vh-panel-bg);
+      border: 1px solid var(--vh-panel-border); pointer-events: none;
+      white-space: pre;
+    }
+    #map { position: absolute; inset: 0; margin: 0; padding: 4px 8px; white-space: pre; overflow: auto; }
+    /* Monster radar: anchored to a corner and scaled off the short viewport
+       edge, so it never creeps into the middle of the play area. It must not
+       eat the drag that rotates the camera. */
+    #radar {
+      position: absolute; right: 14px; top: 14px;
+      width: min(240px, 34vmin); aspect-ratio: 1; pointer-events: none;
+    }
+    /* Look label (spec 2026-08-18): the engine's own name for whatever the
+       pointer is over. position: fixed so it needs no arithmetic against the
+       stage's box and is never clipped by it; pointer-events: none so it can
+       never eat the camera drag or a click verb. Colours come from the skin's
+       CSS custom properties, like every other piece of chrome. */
+    #looklabel {
+      position: fixed; z-index: 2; pointer-events: none;
+      background: var(--vh-panel-bg); color: var(--vh-bright);
+      border: 1px solid var(--vh-panel-border); box-shadow: 0 0 16px var(--vh-glow);
+      padding: 2px 8px; white-space: nowrap; font: inherit;
+    }
+    /* Command menu button (vect-hack-be3.7): the one always-visible thing
+       that makes the game playable without knowing a command letter. Sits
+       opposite the radar, and outside #view so it never eats the drag that
+       rotates the camera. tabindex -1 keeps it out of the tab order; TextHud
+       blurs it after a click so a later Space or Enter goes to the game
+       rather than reopening the menu. */
+    #cmdbtn {
+      position: absolute; left: 14px; top: 14px; z-index: 1;
+      background: var(--vh-panel-bg); color: var(--vh-dim-accent); border: 1px solid var(--vh-panel-border);
+      font: inherit; font-size: 18px; line-height: 1; padding: 3px 9px; cursor: pointer;
+    }
+    #cmdbtn:hover { color: var(--vh-hi-accent); border-color: var(--vh-hi-accent); box-shadow: 0 0 10px var(--vh-glow); }
+    /* Save affordance (vect-hack-9h1): the same button in every Module, and
+       the only visible route to a save file in either direction. Bottom-left
+       of the stage — the radar owns the top-right and the command menu the
+       top-left — and outside #view so it never eats the camera drag. */
+    #savebtn {
+      position: absolute; left: 14px; bottom: 14px; z-index: 1;
+      background: var(--vh-panel-bg); color: var(--vh-dim-accent); border: 1px solid var(--vh-panel-border);
+      font: inherit; line-height: 1; padding: 4px 9px; cursor: pointer;
+    }
+    #savebtn:hover { color: var(--vh-hi-accent); border-color: var(--vh-hi-accent); box-shadow: 0 0 10px var(--vh-glow); }
+    #savepanel {
+      position: absolute; left: 14px; bottom: 3.2em; z-index: 1;
+      background: var(--vh-panel-bg); border: 1px solid var(--vh-panel-border);
+      box-shadow: 0 0 24px var(--vh-glow); padding: 4px 0;
+    }
+    #savepanel button, #savepanel a {
+      display: block; width: 100%; text-align: left; white-space: pre;
+      background: none; color: var(--vh-accent); border: 0;
+      font: inherit; padding: 3px 12px; cursor: pointer;
+    }
+    #savepanel a { box-sizing: border-box; text-decoration: none; }
+    #savepanel button:hover, #savepanel a:hover { background: var(--vh-hover-bg); color: var(--vh-bright); }
+    /* The at-risk mark on the Saves button (vect-hack-h4q): worn for as long
+       as this browser has not promised to keep the origin's storage, so the
+       reminder outlives the one-time notice being dismissed. */
+    #savebtn.atrisk { color: var(--vh-accent); border-color: var(--vh-accent); }
+    #savebtn.atrisk::after { content: " \25CF"; }
+    /* And the no-save mark (vect-hack-dem): this tab's volume never mounted,
+       so the button behind it refuses both keys. A separate class rather than
+       a stronger atrisk — the two states mean different things and one of them
+       replaces the other — and a visibly different mark: an open dashed edge
+       and a cross where at-risk is solid with a dot. Skin tokens only, like
+       every other rule in this file. */
+    #savebtn.nosave {
+      color: var(--vh-bright); border-color: var(--vh-bright); border-style: dashed;
+    }
+    #savebtn.nosave::after { content: " \2715"; }
+    /* And the notice itself: one sentence, shown once. Inside #stage and
+       absolutely positioned, so neither showing nor dismissing it resizes the
+       canvas — see the #prompt note above for what a resize costs here. */
+    #storagenotice {
+      position: absolute; left: 50%; top: 14px; z-index: 2;
+      transform: translateX(-50%); max-width: min(44em, calc(100% - 28px));
+      background: var(--vh-panel-bg); color: var(--vh-fg);
+      border: 1px solid var(--vh-panel-border); box-shadow: 0 0 24px var(--vh-glow);
+      padding: 6px 10px;
+    }
+    #storagenotice button {
+      margin-left: 10px; background: none; color: var(--vh-accent);
+      border: 1px solid var(--vh-input-border); font: inherit;
+      padding: 2px 8px; cursor: pointer;
+    }
+    #storagenotice button:hover { color: var(--vh-bright); border-color: var(--vh-accent); }
+    /* No-keyboard notice (vect-hack-d72): the whole answer for a touch-only
+       visitor, not chrome over a game they can play — so it is fixed, opaque
+       and full-page rather than a strip. Desktop never matches the query that
+       unhides it. */
+    #nokeyboard {
+      position: fixed; inset: 0; z-index: 4;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 1.25em; padding: 2em 1.5em; text-align: center;
+      background: var(--vh-bg); color: var(--vh-fg); font-size: 16px; line-height: 1.5;
+    }
+    #nokeyboard p { margin: 0; max-width: 26em; }
+    #nokeyboard #nokeyboardoffer { color: var(--vh-hint); }
+    #nokeyboardwatch {
+      background: var(--vh-panel-bg); color: var(--vh-hi-accent);
+      border: 1px solid var(--vh-hi-accent); box-shadow: 0 0 16px var(--vh-glow);
+      font: inherit; padding: 0.7em 1.2em; cursor: pointer;
+    }
+    #nokeyboarddismiss {
+      background: none; color: var(--vh-hint); border: 0; font: inherit;
+      text-decoration: underline; cursor: pointer;
+    }
+    #status { padding: 4px 8px; border-top: 1px solid var(--vh-rule); color: var(--vh-status); white-space: pre-wrap; }
+    #overlay {
+      /* Center the panel itself, not a fixed top edge: Angband's 24-row
+         store screen otherwise covers the prompt strip above the stage. */
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      max-height: 70vh; background: var(--vh-panel-bg); border: 1px solid var(--vh-panel-border);
+      padding: 8px 16px; box-shadow: 0 0 24px var(--vh-glow);
+      /* Menus and text windows arrive space-padded into columns from NetHack;
+         without this the browser collapses the runs and the columns break. */
+      white-space: pre;
+      /* And because they do, the box is as wide as the widest line: 80 columns
+         of monospace is 708px, which at 390px is 318px of overflow to the
+         right of the viewport (vect-hack-0a4). That is not merely ugly. This
+         element's containing block is the initial one, so a phone's LAYOUT
+         VIEWPORT grows to cover it — measured 549px at 390x844 — and every
+         position:fixed thing on the page is then centred against 549 inside a
+         390 window. The no-keyboard notice (vect-hack-d72) is the visible
+         casualty: its button and its dismiss link both land past 390 and a
+         phone visitor is offered a demo they cannot press.
+         So the overlay scrolls inside its own box instead of widening the
+         document. overflow-y alone is not enough — it is the WIDTH that
+         escapes — and a max-height with no max-width was only ever half a
+         constraint. Desktop is untouched: at any viewport wider than about
+         732px the cap is looser than the content and nothing moves.
+         box-sizing is part of the fix, not tidying: this box carries 16px of
+         padding and a 1px border a side, so a content-box max-width of
+         100vw-24px is a 400px element on a 390px phone. Measured — the first
+         cut of this fix left 5px hanging off each edge and the layout
+         viewport still grew, to 395. */
+      box-sizing: border-box; max-width: calc(100vw - 24px); overflow: auto;
+    }
+    .mhead { color: var(--vh-bright); font-weight: bold; margin-top: 4px; }
+    .macc { color: var(--vh-accent); }
+    .mhint { color: var(--vh-hint); margin-top: 6px; }
+    /* Per-row stack quantity (vect-hack-be3.4): same look as the getlin
+       input, just narrow enough to sit inline with a menu row. */
+    .mqty { background: var(--vh-input-bg); color: var(--vh-bright); border: 1px solid var(--vh-input-border); font: inherit; width: 3.5em; margin-left: 6px; }
+    /* Pointer action menu (vect-hack-be3.3): the only overlay rows a mouse
+       picks rather than a key, so they get a hover affordance the others don't. */
+    .pmrow { cursor: pointer; padding: 1px 2px; }
+    .pmrow:hover { background: var(--vh-hover-bg); color: var(--vh-bright); }
+    /* ---- Touch scheme (vect-hack-21k), behind ?touch --------------------
+       Every rule below is scoped to body.vh-touch, which only
+       src/ui/touch/TouchControls.ts ever sets. A page without the flag sees
+       none of it and carries none of the elements: the layer builds its own
+       DOM, so there is no markup here to leave lying around either.
+       The pad and the bar live inside #stage and are absolutely positioned,
+       so showing them never resizes the canvas (see the #prompt note above
+       for what a resize costs a WebGPU frame). */
+    #touchbar {
+      position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+      display: flex; gap: 2px; padding: 3px;
+      background: var(--vh-panel-bg); border-top: 1px solid var(--vh-panel-border);
+    }
+    #touchbar button {
+      flex: 1 1 0; min-width: 0; min-height: 44px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 2px; background: none; color: var(--vh-dim-accent);
+      border: 1px solid var(--vh-panel-border); font: inherit; cursor: pointer;
+      touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+    }
+    #touchbar button:active { color: var(--vh-hi-accent); border-color: var(--vh-hi-accent); box-shadow: 0 0 10px var(--vh-glow); }
+    #touchbar .tbglyph { color: var(--vh-accent); font-size: 17px; line-height: 1; }
+    /* nowrap: at 390px a slot is 55px and "Pick up" wraps to two lines that
+       overflow the button. The glyph is the target; the label is the hint. */
+    #touchbar .tblabel {
+      font-size: 10px; line-height: 1; color: var(--vh-hint);
+      white-space: nowrap; overflow: hidden; max-width: 100%;
+    }
+    /* Locked, not hidden: the bar is the player's map of what the game can
+       do, and one that disappeared every time the game asked a question would
+       read as the UI breaking. The pad stays lit — a direction prompt is
+       exactly what it is for. */
+    #touchbar.locked { opacity: 0.35; }
+    #touchpad {
+      position: absolute; right: 8px; bottom: 58px; z-index: 2;
+      display: grid; grid-template-columns: repeat(3, 52px); grid-auto-rows: 52px;
+      gap: 3px; touch-action: none;
+    }
+    #touchpad button {
+      background: var(--vh-panel-bg); color: var(--vh-accent);
+      border: 1px solid var(--vh-panel-border); font: inherit; font-size: 20px;
+      line-height: 1; cursor: pointer; touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #touchpad button:active { color: var(--vh-bright); border-color: var(--vh-hi-accent); box-shadow: 0 0 12px var(--vh-glow); }
+    /* The pad centre faces the camera north — view chrome, and marked as
+       chrome: it is the one key on the pad that feeds the engine nothing. */
+    #touchpad button:nth-child(5) { color: var(--vh-hint); font-size: 14px; }
+    /* The F2 equivalent. Also chrome, so it sits with the pad rather than on
+       the bar, where everything reaches the engine. */
+    #touchcam {
+      position: absolute; left: 8px; bottom: 58px; z-index: 2;
+      background: var(--vh-panel-bg); color: var(--vh-hint);
+      border: 1px solid var(--vh-panel-border); font: inherit; font-size: 13px;
+      padding: 8px 10px; min-height: 44px; cursor: pointer;
+      touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+    }
+    /* Chrome that would sit under the bar moves up out of it, and the two
+       corners the pad now owns give theirs up. Nothing is resized. */
+    body.vh-touch #savebtn { bottom: 112px; }
+    body.vh-touch #savepanel { bottom: 158px; }
+    body.vh-touch #radar { width: 26vmin; right: 8px; top: 8px; }
+    /* Touch targets: a menu row and a yn chip were both sized for a mouse. */
+    body.vh-touch .pmrow { padding: 9px 4px; }
+    body.vh-touch .ynchip { padding: 7px 14px; margin: 3px 4px 0 0; }
+    /* z-index: the storage notice (vect-hack-h4q) is a z-index:2 child of
+       #stage and #overlay is not positioned above it, so at 390px — where the
+       notice is four lines tall and the overlay starts near the top — an
+       undismissed notice sits on top of a menu and eats every tap on it. On a
+       desktop the two never overlap, which is why this only shows up here. */
+    /* max-width used to live here too. It is in the base rule now, because a
+       page without ?touch is on the same phone and has the same 390px
+       (vect-hack-0a4) — leaving a copy behind would be two sources for one
+       number. */
+    body.vh-touch #overlay {
+      max-height: 52vh; top: 3em; transform: translateX(-50%); z-index: 3;
+    }
+    body.vh-touch #messages { height: 4em; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <div id="messages"></div>
+  <div id="prompt" hidden></div>
+  <div id="stage">
+    <canvas id="view"></canvas>
+    <button id="cmdbtn" tabindex="-1" title="Commands — every action, no keys needed">&#9776;</button>
+    <button id="savebtn" tabindex="-1" title="Save files — keep a copy, or load one back">&#9636; Saves</button>
+    <div id="savepanel" hidden>
+      <button id="savefile" tabindex="-1">Save to file    F3</button>
+      <button id="loadfile" tabindex="-1">Load from file… F4</button>
+      <!-- No key of its own (src/ui/saveMenu.ts): the way out of a save the
+           engine cannot boot should take a deliberate click. -->
+      <button id="resetsave" tabindex="-1">Delete this save…</button>
+      <!-- The license notices and source offer every Module's wasm needs
+           (vect-hack-a4c). Relative, so it resolves under any deploy base;
+           the file is staged by scripts/build/stage-licenses.mjs. -->
+      <a id="licenseslink" href="licenses/index.html" target="_blank" rel="noopener" tabindex="-1">Licenses &amp; source</a>
+    </div>
+    <!-- Both notices carry no copy of their own: every string is set from
+         src/ui/ so the wording is pinned by a unit test rather than by a
+         reader of this file. -->
+    <div id="storagenotice" hidden>
+      <span id="storagenoticetext"></span>
+      <button id="storagenoticedismiss" tabindex="-1"></button>
+    </div>
+  </div>
+  <div id="status"></div>
+  <div id="overlay" hidden></div>
+  <div id="nokeyboard" hidden>
+    <p id="nokeyboardtext"></p>
+    <p id="nokeyboardoffer"></p>
+    <button id="nokeyboardwatch"></button>
+    <button id="nokeyboarddismiss"></button>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

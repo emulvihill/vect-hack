@@ -1,0 +1,13 @@
+[
+  {
+    "op": "confirm",
+    "claim": { "kind": "avoid-terrain", "category": "stairs", "ch": "V" },
+    "evidence": [{ "trajectory": "larn-20260820T185838Z-93207-0003", "from": 60, "to": 188 }]
+  },
+  {
+    "op": "assert",
+    "claim": { "kind": "avoid-terrain", "category": "stairs", "ch": "E" },
+    "text": "The dungeon entrance is another way down and it is no safer.",
+    "evidence": [{ "trajectory": "larn-20260820T185838Z-93207-0003", "from": 60, "to": 188 }]
+  }
+]

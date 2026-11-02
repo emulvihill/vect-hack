@@ -1,0 +1,24 @@
+{
+  "name": "high-contrast",
+  "label": "High contrast",
+  "clr": {
+    "BLACK": "#a0b0d0", "BLUE": "#6090ff", "GRAY": "#d8dee8", "NO_COLOR": "#d8dee8",
+    "BROWN": "#ffb040", "MAGENTA": "#ff70d0"
+  },
+  "ink": {
+    "wall": ["#3050ff", 2.4], "wallTop": "#7fa0ff",
+    "floor": "#3a66a8", "corridor": "#417a9a"
+  },
+  "walls": { "opacity": 1 },
+  "strokes": { "terrainWidth": 3.25, "entityWidth": 4 },
+  "gains": { "floorInterior": 0.55 },
+  "hudClr": [
+    "#9aa", "#f66", "#6e6", "#d95", "#88f", "#e8e", "#7cc", "#ddd",
+    "#aaa", "#fa0", "#8f8", "#ff8", "#99f", "#f9f", "#9ff", "#fff"
+  ],
+  "css": {
+    "--vh-fg": "#ddd", "--vh-hint": "#9ab", "--vh-status": "#cef",
+    "--vh-dim-accent": "#7dd", "--vh-rule": "#356", "--vh-hover-bg": "#245"
+  },
+  "tokens": { "glow": { "beam_layers": 2 } }
+}

@@ -1,0 +1,34 @@
+{
+  "name": "quadrascan",
+  "label": "Quadrascan",
+  "background": "#000000",
+  "clr": {
+    "BLACK": "#2c3c78", "RED": "#ff2233", "GREEN": "#00ddaa", "BROWN": "#ff9000",
+    "BLUE": "#3060ff", "MAGENTA": "#ff40c0", "CYAN": "#20d0ff", "GRAY": "#9fb4cf",
+    "NO_COLOR": "#9fb4cf", "ORANGE": "#ff6000", "BRIGHT_GREEN": "#aaff00",
+    "YELLOW": "#ffd000", "BRIGHT_BLUE": "#60e0ff", "BRIGHT_MAGENTA": "#ff80e0",
+    "BRIGHT_CYAN": "#80d0ff", "WHITE": "#ffffff"
+  },
+  "ink": {
+    "wall": ["#1030ff", 2.2], "wallTop": "#4f7bff", "floor": "#123a6e",
+    "corridor": "#1d4a70", "door": "#ffd000", "stairs": "#80d0ff",
+    "hero": "#ffffff", "heroRing": "#a0e0ff", "pet": "#aaff00",
+    "water": "#20d0ff", "lava": "#ff2233", "trap": "#ff2233", "cursor": "#30ff50"
+  },
+  "walls": { "opacity": 1 },
+  "strokes": { "terrainWidth": 1.6, "entityWidth": 2.2 },
+  "gains": {},
+  "hudClr": [
+    "#555", "#c33", "#2b2", "#a52", "#33c", "#c3c", "#3aa", "#bbb",
+    "#888", "#f80", "#5f5", "#ff5", "#66f", "#f6f", "#6ff", "#fff"
+  ],
+  "radar": { "backdrop": "#02040c1a" },
+  "css": {
+    "--vh-fg": "#bbb", "--vh-bright": "#fff", "--vh-rule": "#123",
+    "--vh-accent": "#ff5", "--vh-hint": "#567", "--vh-status": "#9cf",
+    "--vh-input-bg": "#111", "--vh-input-border": "#444",
+    "--vh-panel-bg": "#05060cee", "--vh-panel-border": "#345",
+    "--vh-dim-accent": "#3aa", "--vh-hi-accent": "#6ff",
+    "--vh-glow": "#024", "--vh-hover-bg": "#123"
+  }
+}

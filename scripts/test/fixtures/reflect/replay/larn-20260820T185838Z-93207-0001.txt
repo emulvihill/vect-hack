@@ -1,0 +1,4 @@
+Looking at this run, the hero went down the dungeon entrance at command 9 and
+was still on depth 1 when the command cap ended the game. Nothing killed it and
+nothing about the entrance is shown to have cost it anything, so there is no
+fact here I can state without inventing the part that matters.

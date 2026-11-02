@@ -1,0 +1,119 @@
+# What a green check here means — and, more to the point, what it does not.
+#
+# This workflow runs the part of the suite that needs no build:
+#
+#   * `npm run lint`          — ESLint over the ~70 hand-written JavaScript
+#                               files under `scripts/`. Nothing else: ESLint
+#                               cannot parse this repo's TypeScript, because
+#                               typescript-eslint does not support TS 7 — see
+#                               the header of `eslint.config.mjs`.
+#   * `npm run typecheck`     — tsc over the whole tree
+#   * `npm run test:render`   — vitest: the shared render/backplane layer and
+#                               every Module's unit tests (140 files)
+#   * `npm run check:payload` — the per-game payload acceptance test
+#                               (vect-hack-l11), in its own job
+#
+# It deliberately does NOT run `npm test`. `npm test` also runs the four engine
+# groups — `test:nethack`, `test:angband`, `test:larn`, `test:moria` — and each
+# of those boots a compiled WASM artifact under `public/modules/` or
+# `external/NetHack/targets/wasm/`. Those paths are gitignored build outputs: a
+# checkout does not have them, and producing them needs the pinned Emscripten
+# SDK (`scripts/build/setup-toolchain.sh`, ~1.7 GB installed) plus four builds.
+# So nothing in this workflow is evidence about any engine core, about the
+# native shims, or about save/restore. Measured on the dev machine, the whole of
+# `npm test` fits inside a 30-minute timeout; adding a build-and-engine-test job
+# would cost roughly that per push, which is why it is not here yet rather than
+# because it was forgotten.
+#
+# It also cannot run the four render gates — `check:browser`, `check:controls`,
+# `check:touch`, `check:angband-borg`. Those need a GPU and a readable DRM
+# render node; a GitHub-hosted runner has neither, which is exactly the
+# "could not run" (exit 3) verdict `docs/GATES.md` describes. `check:payload` is
+# the one gate that needs neither a GPU nor a dev server, so it is the one that
+# is here.
+name: checks (no engine build, no GPU)
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: lint + typecheck + vitest
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # Action versions verified against the upstream release lists on
+      # 2026-08-30: actions/checkout v7.0.1 (2026-07-20) and
+      # actions/setup-node v7.0.0 (2026-07-14) are the current releases.
+      - uses: actions/checkout@v7.0.1
+        with:
+          # Two vitest files read engine SOURCE — not artifacts — straight out
+          # of the submodules: `scripts/test/recover-save.test.ts` parses
+          # `external/NetHack/include/global.h`, and
+          # `scripts/test/moria-checkpoint-strategy.test.ts` reads
+          # `external/umoria/src/game_save.cpp`. Without this the suite fails
+          # with two ENOENTs. Non-recursive on purpose: nothing vitest loads
+          # touches NetHack's own nested submodules (lua, pdcurses,
+          # pdcursesmod). A WASM build job would need `recursive`.
+          #
+          # The default fetch-depth of 1 makes this a shallow submodule fetch of
+          # an exact pinned SHA; all three pins were confirmed fetchable that way
+          # from github.com (`git fetch --depth=1 <url> <sha>`, exit 0).
+          submodules: true
+      - uses: actions/setup-node@v7.0.0
+        with:
+          # One pin, in `.nvmrc` (vect-hack-5a9), read here and by `nvm use` on
+          # a dev machine; package.json `engines` states the same floor for
+          # anyone who installs without either. Node 24 is the current LTS line
+          # (Krypton; v24.20.0 on 2026-08-26, re-verified against
+          # https://nodejs.org/dist/index.json). It is load-bearing, not
+          # incidental: `test:larn-killer` passes `--experimental-strip-types`
+          # and `scripts/test/bot-node-import.test.ts` loads `.ts` from source.
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # First because it is the cheapest thing here that can be wrong: ~1.4s
+      # against ~20s of tsc and vitest.
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:render
+
+  payload:
+    # Separate job, not a fourth step, so that a payload regression and a unit
+    # failure are two different red checks rather than one.
+    name: per-game payload
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # No submodules here: `check:payload` runs a real `vite build` of `src/`,
+      # and `src/` mentions `external/` only in comments.
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # `npm ci` does not fetch browsers — playwright 1.62.0 ships no install
+      # lifecycle script — so the gate's own `chromium.launch()` needs this.
+      - run: npx playwright install --with-deps chromium
+      # Needs no GPU, no dev server and no WASM artifact: it asserts which JS
+      # chunks each `?game=<M>` fetches on a cold cache, which is a property of
+      # the bundle. ~25s on the dev machine.
+      #
+      # It does need headless Chromium to supply SOME 3D, because its no-GPU
+      # arm is a comparison: if the ordinary arm also falls back to the tty
+      # view, both arms measure the same page and "a browser with no GPU
+      # fetched no renderer" is true by construction. The gate refuses to
+      # report green in that case, so a runner with no software GL turns this
+      # job red on purpose rather than passing vacuously. SwiftShader normally
+      # supplies it — which is why the browser gate's nogpu arm has to pass
+      # --disable-3d-apis to take it away.
+      - run: npm run check:payload

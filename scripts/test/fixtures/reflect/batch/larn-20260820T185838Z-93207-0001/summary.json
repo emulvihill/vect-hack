@@ -1,0 +1,45 @@
+{
+  "game": "larn",
+  "id": "larn-20260820T185838Z-93207-0001",
+  "startedAt": "2026-08-20T18:58:38.397Z",
+  "endedAt": "2026-08-20T18:58:38.537Z",
+  "outcome": "capped",
+  "seed": 1817006980,
+  "kb": "",
+  "depth": 1,
+  "xlevel": 1,
+  "hp": 10,
+  "hpmax": 10,
+  "commands": 60,
+  "score": 0,
+  "events": 447,
+  "cause": "",
+  "lastMessages": [
+    "You have found some gold!",
+    "It is worth 44!",
+    "You hit the hobgoblin",
+    "You hit the hobgoblin"
+  ],
+  "details": {
+    "larn": {
+      "gold": 44,
+      "mobulsElapsed": 2,
+      "mobulsLeft": 299,
+      "conditions": [],
+      "inventory": [
+        {
+          "letter": "a",
+          "itemClass": 4,
+          "name": "leather armor (being worn)"
+        },
+        {
+          "letter": "b",
+          "itemClass": 4,
+          "name": "a dagger (weapon in hand)"
+        }
+      ]
+    }
+  },
+  "stderr": [],
+  "error": ""
+}

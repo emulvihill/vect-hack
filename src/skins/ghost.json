@@ -1,0 +1,5 @@
+{
+  "name": "ghost",
+  "label": "Ghost",
+  "walls": { "opacity": 0.8 }
+}

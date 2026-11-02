@@ -1,0 +1,46 @@
+# Offline renderer previews (scripts/dev/scene-preview.test.ts)
+.preview/
+
+# Headless bot gym output (scripts/dev/bot-gym.mjs): trajectories are large
+.gym/
+
+# Node / web build
+node_modules/
+dist/
+.vite/
+
+# Emscripten / WASM build outputs
+# Root-anchored: a bare `build/` also matches scripts/build/.
+/build/
+*.wasm
+*.wasm.map
+external/emsdk
+external/emsdk/
+
+# Vendored NetHack build artifacts (source is a submodule/vendor dir; builds are not)
+external/NetHack/lib/
+external/NetHack/src/*.o
+
+# Git worktrees for isolated workspaces
+.worktrees/
+.claude/worktrees/
+
+# Claude Code scheduled-task runtime lock
+.claude/scheduled_tasks.lock
+
+public/modules/
+.superpowers/
+
+# VS Code multi-root workspace (local editor config; drum-synth precedent)
+vect-hack.code-workspace
+
+# Maintainer-local tooling: tracker, agent hooks and local agent notes, never committed
+.beads/
+.beads-credential-key
+.dolt/
+*.db
+.agents/skills/beads/
+.claude/settings.json
+.codex/
+AGENTS.local.md
+CLAUDE.local.md

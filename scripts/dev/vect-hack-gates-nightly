@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Nightly browser-gate run. Invoked by vect-hack-gates.service; the same shape
+# as task-llama's security-sweep-weekly, which is the precedent for a repo
+# script behind a user timer.
+#
+# It runs from the PRIMARY checkout on purpose. Worktrees are throwaway, and a
+# unit symlinked into one stops working the moment that worktree is removed.
+#
+# --stamp is deliberately absent: it would rewrite a tracked line in
+# docs/RELEASE-CHECKLIST.md and leave a dirty tree every morning, which the
+# deploy preflight refuses. The nightly freshness signal is the artifact under
+# ~/.local/state/vect-hack/gates/ plus the failure notification, not a file in
+# git. A human passes --stamp by hand before a release.
+set -uo pipefail
+
+repo="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
+
+# systemd's user environment is not a login shell, so nvm's node is not on PATH
+# unless we put it there. Sourcing nvm.sh resolves whichever version the
+# `default` alias points at, so a node upgrade does not silently break the timer.
+export PATH="$HOME/.local/bin:$PATH"
+# shellcheck disable=SC1091
+[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" >/dev/null 2>&1
+
+if ! command -v node >/dev/null 2>&1; then
+  # No node is a "could not run", not a red gate — same rule the runner itself
+  # follows, so the exit code has to agree with it (3).
+  notify-send -a vect-hack -u normal "VectHack gates: could not run" \
+    "no node on PATH for the nightly timer" >/dev/null 2>&1
+  echo "could not run: no node on PATH"
+  exit 3
+fi
+
+cd "$repo" || exit 3
+# Not redirected to a file on purpose. systemd captures stdout and stderr into
+# the journal, which rotates; a per-day log under ~/.local/state would sit in
+# the directory gate-run.mjs prunes, and that prune only sweeps run DIRECTORIES,
+# so those files would grow for ever. The run's own artifact is the durable
+# record, and `journalctl --user -u vect-hack-gates.service` is the transcript.
+exec node scripts/dev/gate-run.mjs
