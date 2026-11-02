@@ -312,6 +312,9 @@ on the worker's timeline, so the worker chunk and the engine glue go uncounted.
 The `gzip` and `brotli` columns beside it compress the built file behind every
 recorded request, page and worker alike, because CloudFront serves brotli
 (vect-hack-8gd7.1; `docs/reports/2026-11-02-three-webgpu-attribution-correction.md`).
+A request with no built file behind it — the engine glue wherever the engines
+were never built, CI included — adds nothing to either column and is listed as
+`not-built` instead.
 
 It has a second arm per Module: the same page in a Chromium launched with
 `--disable-3d-apis`, which is what a browser with no GPU sees. It **fails if

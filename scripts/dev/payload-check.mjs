@@ -125,16 +125,25 @@ async function load(browser, url, viewGlobal) {
 // vecthack.com's CloudFront serves brotli where the browser accepts it. So
 // beside it, every request the load recorded, page and worker alike, is
 // compressed from the built file it maps to: what a visitor pays, both ways.
+// A request with no built file behind it — the engine glue on a machine that
+// never built the engines, CI included — adds nothing and is listed instead.
 const compressedSizes = new Map();
 async function compressed(requests, distDir, base) {
-  const sum = { gzip: 0, brotli: 0 };
+  const sum = { gzip: 0, brotli: 0, notBuilt: [] };
   for (const p of requests) {
     if (!compressedSizes.has(p)) {
-      const body = await readFile(resolve(distDir, p.startsWith(base) ? p.slice(base.length) : p));
-      compressedSizes.set(p, { gzip: gzipSync(body).length, brotli: brotliCompressSync(body).length });
+      let body = null;
+      try {
+        body = await readFile(resolve(distDir, p.startsWith(base) ? p.slice(base.length) : p));
+      } catch (e) {
+        if (e.code !== "ENOENT") throw e;
+      }
+      compressedSizes.set(p, body && { gzip: gzipSync(body).length, brotli: brotliCompressSync(body).length });
     }
-    sum.gzip += compressedSizes.get(p).gzip;
-    sum.brotli += compressedSizes.get(p).brotli;
+    const size = compressedSizes.get(p);
+    if (!size) { sum.notBuilt.push(p); continue; }
+    sum.gzip += size.gzip;
+    sum.brotli += size.brotli;
   }
   return sum;
 }
@@ -186,6 +195,7 @@ for (const m of MODULES) {
     transferred: first.transferred,
     gzip: packed.gzip,
     brotli: packed.brotli,
+    notBuilt: packed.notBuilt,
     vector: first.canvas,
     ttiMedian: Math.round(median(ttis)),
     ttis: ttis.map(Math.round),
@@ -196,6 +206,7 @@ for (const m of MODULES) {
       transferred: blind.transferred,
       gzip: blindPacked.gzip,
       brotli: blindPacked.brotli,
+      notBuilt: blindPacked.notBuilt,
       vector: blind.canvas,
       three: blindThree,
     },
@@ -208,11 +219,13 @@ for (const m of MODULES) {
   console.log(`${m.padEnd(8)} js=${String(first.requests.length).padStart(2)} `
     + `transferred=${(first.transferred / 1024).toFixed(1)}kB `
     + `gzip=${(packed.gzip / 1024).toFixed(1)}kB brotli=${(packed.brotli / 1024).toFixed(1)}kB `
-    + `tti=${Math.round(median(ttis))}ms leaks=${leaks.length} vector=${first.canvas}`);
+    + `tti=${Math.round(median(ttis))}ms leaks=${leaks.length} vector=${first.canvas}`
+    + (packed.notBuilt.length ? ` not-built=${packed.notBuilt.join(",")}` : ""));
   console.log(`${"".padEnd(8)} no-GPU: js=${String(blind.requests.length).padStart(2)} `
     + `transferred=${(blind.transferred / 1024).toFixed(1)}kB `
     + `gzip=${(blindPacked.gzip / 1024).toFixed(1)}kB brotli=${(blindPacked.brotli / 1024).toFixed(1)}kB `
-    + `three=${blindThree.length} vector=${blind.canvas}`);
+    + `three=${blindThree.length} vector=${blind.canvas}`
+    + (blindPacked.notBuilt.length ? ` not-built=${blindPacked.notBuilt.join(",")}` : ""));
 }
 
 // If the GPU arm never got a canvas on ANY Module, this machine has no 3D at
