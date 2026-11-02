@@ -51,9 +51,10 @@ jobs:
     timeout-minutes: 15
     steps:
       # Action versions verified against the upstream release lists on
-      # 2026-08-30: actions/checkout v7.0.1 (2026-07-20) and
-      # actions/setup-node v7.0.0 (2026-07-14) are the current releases.
-      - uses: actions/checkout@v7.0.1
+      # 2026-11-02: actions/checkout v7.0.1 (2026-07-20) and
+      # actions/setup-node v7.1.0 (2026-10-08) are the current releases.
+      # Pinned by commit SHA (vect-hack-vlhl): the repository requires it.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Two vitest files read engine SOURCE — not artifacts — straight out
           # of the submodules: `scripts/test/recover-save.test.ts` parses
@@ -68,7 +69,7 @@ jobs:
           # an exact pinned SHA; all three pins were confirmed fetchable that way
           # from github.com (`git fetch --depth=1 <url> <sha>`, exit 0).
           submodules: true
-      - uses: actions/setup-node@v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           # One pin, in `.nvmrc` (vect-hack-5a9), read here and by `nvm use` on
           # a dev machine; package.json `engines` states the same floor for
@@ -95,8 +96,8 @@ jobs:
     steps:
       # No submodules here: `check:payload` runs a real `vite build` of `src/`,
       # and `src/` mentions `external/` only in comments.
-      - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-node@v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
