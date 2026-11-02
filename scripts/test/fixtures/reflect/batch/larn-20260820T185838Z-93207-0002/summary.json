@@ -1,0 +1,43 @@
+{
+  "game": "larn",
+  "id": "larn-20260820T185838Z-93207-0002",
+  "startedAt": "2026-08-20T18:58:38.737Z",
+  "endedAt": "2026-08-20T18:58:38.787Z",
+  "outcome": "died",
+  "seed": 159821391,
+  "kb": "",
+  "depth": 11,
+  "xlevel": 1,
+  "hp": -16,
+  "hpmax": 10,
+  "commands": 4,
+  "score": 0,
+  "events": 116,
+  "cause": "killed by a xvart",
+  "lastMessages": [
+    "You have found a volcanic shaft leaning downward",
+    "The xvart hit you"
+  ],
+  "details": {
+    "larn": {
+      "gold": 0,
+      "mobulsElapsed": 2,
+      "mobulsLeft": 299,
+      "conditions": [],
+      "inventory": [
+        {
+          "letter": "a",
+          "itemClass": 4,
+          "name": "leather armor (being worn)"
+        },
+        {
+          "letter": "b",
+          "itemClass": 4,
+          "name": "a dagger (weapon in hand)"
+        }
+      ]
+    }
+  },
+  "stderr": [],
+  "error": ""
+}

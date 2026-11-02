@@ -1,0 +1,122 @@
+# Larn Module license
+
+Covers `external/larn/`, `src/modules/larn/native/`, and the built
+`public/modules/larn/*`.
+
+## 1. Governing license — Noah Morgan's grant (1986)
+
+Larn shipped with no license file. Morgan stated his terms in a Usenet
+post a month before the release of Larn 12.0, "larn and coming attractions"
+(`net.sources.games`, 10 July 1986):
+
+> Larn was distributed to the net for the enjoyment of all. One of my goals
+> is to have larn available to whom ever wants to play it. I therefore give
+> permission to use the sources, to modify the sources, or to port the
+> sources to another machine, provided that a profit is not made from larn
+> or its sources, or the aforementioned activities. Should a profit be made
+> without permissions, I will exercise my copyright. Other than this case,
+> enjoy it!
+
+**Provenance.** The post is archived at
+<https://groups.google.com/g/net.sources.games/c/G7Dr8fodSYk/m/-lzwfiEmrMEJ>;
+the grant follows "I'd also like to clarify my position on the source code to
+larn:" and is quoted above word for word (checked against the archive
+2026-11-02). A copy of the whole post is kept in
+`docs/licensing/1986-07-10-morgan-larn-and-coming-attractions.txt`. Secondary sources that date it August 1986 are thinking of the
+`larn 12.0` source posting (8 August 1986,
+<https://groups.google.com/g/net.sources.games/c/NFjRJz2NcFU>), which carries
+only the per-file "Larn is copyrighted 1986 by Noah Morgan" headers and no
+grant.
+
+`external/larn/COPYRIGHT` records Morgan's copyright over the vendored tree
+("This entire subtree is copyright by Noah Morgan"); it does not itself
+contain the grant. "Profit" is undefined in the grant, and the wording
+predates browser delivery — see LICENSING.md for the project's reliance
+position.
+
+## 2. Notices carried within — BSD-licensed files
+
+Six NetBSD-era files in `external/larn/` carry their own permissive notices.
+Clause 2 of each requires the notice to accompany binary distributions, and
+`larn.wasm` compiles these files, so both notices are reproduced below.
+
+These files remain under their own BSD grants — Morgan's permission is not
+copyleft and does not re-license them. Their conditions (attribution, notice
+reproduction, and the UCB non-endorsement clause) apply **in addition to**
+Morgan's no-profit condition, which is what binds redistribution of the
+Module as a whole. `src/modules/larn/native/`, being VectHack's own work,
+stays MIT.
+
+### University of California, 3-clause
+
+Applies to five files, whose Regents copyright lines differ by year:
+
+- `data.c`, `store.c` — Copyright (c) 1988 The Regents of the University of
+  California. All rights reserved.
+- `pathnames.h` — Copyright (c) 1990 The Regents of the University of
+  California. All rights reserved.
+- `bill.c`, `fortune.c` — Copyright (c) 1991 The Regents of the University of
+  California. All rights reserved.
+
+The conditions and disclaimer are identical in all five; reproduced here from
+`bill.c`, whose 1991 line stands for the notice body:
+
+```
+ * Copyright (c) 1991 The Regents of the University of California.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the University nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+```
+
+### Christos Zoulas, 2-clause
+
+Applies to `extern.h`, which is included by the compiled sources:
+
+```
+ * Copyright (c) 1997 Christos Zoulas.  All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+
+The NetBSD modernization of this tree (BSD Larn 12.0) is by David Holland
+and others; per-file `__RCSID` banners record the revision history.

@@ -1,0 +1,63 @@
+# external/larn — vendored NetBSD snapshot for the vect-hack Larn Module
+
+This directory holds the NetBSD-maintained `games/larn` source, vendored
+(not a submodule) for the vect-hack Larn Module. The NetBSD src tree is too
+heavy to submodule wholesale, so only `games/larn/` (the engine proper) is
+dropped here, pristine.
+
+## Source
+
+- Origin: NetBSD source tree, `src/games/larn/`.
+- Fetched: 2026-08-06 from
+  `https://cdn.netbsd.org/pub/NetBSD/NetBSD-current/src/games/larn/`
+  (directory last-modified 30-Jun-2026 03:01 UTC on that mirror). The
+  read-only data files (`datfiles/larn.help`, `datfiles/larnmaze`) were
+  fetched the same day from the mirror's `datfiles/` subdirectory and are
+  staged into `/lib` by `scripts/build/build-larn-wasm.sh`.
+- Version: BSD Larn 12.0 (`-DVER=12 -DSUBVER=0`, per the NetBSD Makefile) —
+  David Holland's 2008 modernization of the classic BSD Larn, kept compiling
+  under modern toolchains as part of the NetBSD src tree. Per-file RCS tags
+  are intact in each file's `__RCSID("$NetBSD: <file>,v <rev> ...$")` banner;
+  the engine-wide version is what the Makefile pins via VER/SUBVER.
+- License: Noah Morgan's original non-commercial grant permits use,
+  modification, and ports of the source, provided that a profit is not made
+  from Larn, its sources, or those activities. See `../../LICENSING.md`;
+  `COPYRIGHT` in this directory records Morgan's copyright. The NetBSD
+  modernization is by David Holland et al.
+
+## Why this and not HunterZ/larn
+
+The design spec (`docs/specs/2026-08-06-larn-module-design.md`
+§ Source pinning) listed three candidates. The spike (Task 1) evaluated all
+three on two axes — *compiles under Emscripten with cflags-only (no source
+patches)* and *cleanest terminal interception surface*:
+
+- HunterZ/larn 12.3 (`00d60428284f`) — K&R-era C with ~30 `static declaration
+  follows non-static` conflicts (forward decls missing `static`) and bare
+  `exit()` calls. The static/extern conflict is a hard error in clang C with
+  no `-W` downgrade (only `-fpermissive` in C++ relaxes it), so it requires
+  source patches — fails the cflags-only axis.
+- HunterZ/larn 12.4-alpha2 (`e61f3fbfc31b`) — modernized headers, but
+  `movem.c:218` has the same `static`/`extern` `screen` conflict, plus
+  unconditional `#include <conio.h>` (MSDOS) and an unconditional curses
+  back-end in `ansiterm.c`. Also needs source patches.
+- This NetBSD snapshot — compiles cflags-only (22/22 .o, 0 errors, 0
+  warnings) with the terminfo (termcap-successor) terminal surface, whose
+  semantic-byte `lpbuf` protocol (ST_START / CL_LINE / CLEAR / CL_DOWN /
+  CURSOR / BOLD / END_BOLD) is the same semantic-grid surface the design
+  preferred from 12.3 — no JS ANSI parser needed.
+
+Per the design's pick rule ("If every candidate needs source patches, vendor
+the NetBSD-modernized snapshot"), this is the chosen source. See
+`docs/specs/larn-spike.md` for the full surface contract and
+`docs/DECISIONS.md` (2026-08-06) for the decision record.
+
+## Pristine-source invariant
+
+This tree is **never patched** — same rule as `external/NetHack` and
+`external/angband`. All C compatibility lives in our tree
+(`src/modules/larn/native/compat/`, reached via `-I` and `-include` in
+`scripts/build/larn-wasm.mk`) and in `src/modules/larn/native/main-wasm.c`
+(Task 6), both of which are ours. Do not edit files in this directory; if a
+new NetBSD revision is vendored, re-fetch the whole directory from the
+mirror.

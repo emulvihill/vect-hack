@@ -1,0 +1,53 @@
+{
+  "game": "larn",
+  "id": "larn-20260820T185838Z-93207-0003",
+  "startedAt": "2026-08-20T18:58:38.888Z",
+  "endedAt": "2026-08-20T18:58:39.015Z",
+  "outcome": "died",
+  "seed": 362616153,
+  "kb": "",
+  "depth": 11,
+  "xlevel": 1,
+  "hp": -26,
+  "hpmax": 10,
+  "commands": 43,
+  "score": 230,
+  "events": 394,
+  "cause": "killed by a platinum dragon",
+  "lastMessages": [
+    "You have found a book.",
+    "The platinum dragon flattens you with his psionics!"
+  ],
+  "details": {
+    "larn": {
+      "gold": 230,
+      "mobulsElapsed": 2,
+      "mobulsLeft": 299,
+      "conditions": [],
+      "inventory": [
+        {
+          "letter": "a",
+          "itemClass": 4,
+          "name": "leather armor (being worn)"
+        },
+        {
+          "letter": "b",
+          "itemClass": 4,
+          "name": "a dagger (weapon in hand)"
+        },
+        {
+          "letter": "c",
+          "itemClass": 3,
+          "name": "a fortune cookie"
+        },
+        {
+          "letter": "d",
+          "itemClass": 3,
+          "name": "a book"
+        }
+      ]
+    }
+  },
+  "stderr": [],
+  "error": ""
+}

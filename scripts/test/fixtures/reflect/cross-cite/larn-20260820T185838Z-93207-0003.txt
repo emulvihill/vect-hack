@@ -1,0 +1,7 @@
+[
+  {
+    "op": "confirm",
+    "claim": { "kind": "avoid-terrain", "category": "stairs", "ch": "V" },
+    "evidence": [{ "trajectory": "larn-20260820T185838Z-93207-0002", "from": 20, "to": 100 }]
+  }
+]

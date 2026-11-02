@@ -1,0 +1,27 @@
+# Nightly run of the five gates that are not in `npm test`: four GPU gates and
+# check:payload, which needs neither a GPU nor a server and runs first
+# (vect-hack-qv1).
+#
+# What this needs from the session, because four of the gates need a real GPU:
+#   - a render node this user may open (/dev/dri/renderD*). logind grants that
+#     as a seat ACL to the active session, so a fully logged-out machine cannot
+#     run those four. The runner detects it and exits 3 ("could not run")
+#     rather than reporting a red gate — a nightly false alarm is how a real
+#     one gets ignored. check:payload still runs on such a machine, and a
+#     failure IT found is reported as red: a gate that ran outranks a gate that
+#     could not.
+#   - a session bus, for the notify-send that carries a red run to a human.
+#     Its absence is logged and does not change the run's verdict.
+#   - no display server. Every gate launches headless Chromium, so neither
+#     DISPLAY nor WAYLAND_DISPLAY is required, and none is set here. The touch
+#     gate is no exception: a 390x844 viewport in an emulated touch context is
+#     still headless Chromium (vect-hack-hnw).
+#
+# Install: scripts/dev/install-gate-timer.sh, from the primary checkout; it
+# renders @REPO@ as that checkout's absolute path.
+[Unit]
+Description=Nightly vect-hack browser gates (GPU)
+
+[Service]
+Type=oneshot
+ExecStart=@REPO@/scripts/dev/vect-hack-gates-nightly

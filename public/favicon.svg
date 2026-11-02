@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- The hero glyph from src/render/vectorFont.ts ("@": a 0-loop with a
+       diamond) drawn as the game draws letters — a front face, a back face
+       offset in parallel (no perspective), and struts at a few endpoints.
+       Front is the skin's gold, back and struts its wall blue
+       (src/skins/tokens/quadrascan.json). -->
+  <rect width="128" height="128" fill="#000000"/>
+  <g fill="none" stroke-linejoin="round" stroke-linecap="round" stroke-width="10"
+     transform="translate(64 64) scale(1.2) translate(-58 -32)">
+    <g stroke="#1030ff" transform="translate(16 -16)">
+      <path d="M36 74 L20 62 L20 18 L36 6 L64 6 L80 18 L80 62 L64 74 Z"/>
+      <path d="M34 40 L50 28 L66 40 L50 52 Z"/>
+    </g>
+    <path stroke="#1030ff" stroke-width="7" d="M20 62 L36 46 M80 18 L96 2 M66 40 L82 24"/>
+    <g stroke="#ffd000">
+      <path d="M36 74 L20 62 L20 18 L36 6 L64 6 L80 18 L80 62 L64 74 Z"/>
+      <path d="M34 40 L50 28 L66 40 L50 52 Z"/>
+    </g>
+  </g>
+</svg>

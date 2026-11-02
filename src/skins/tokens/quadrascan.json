@@ -1,0 +1,26 @@
+{
+  "background": "#000000",
+  "semantic": {
+    "primary": "#1030ff", "alert": "#ff2233", "accent": "#80d0ff",
+    "pointer": "#a0e0ff", "white": "#ffffff"
+  },
+  "track_palette": [
+    "#1030ff", "#ff2233", "#20d0ff", "#60e0ff", "#ff9000", "#ff6000", "#ffd000",
+    "#ff40c0", "#30ff50", "#aaff00", "#00ddaa", "#9060ff", "#ffffff"
+  ],
+  "glow": {
+    "beam_layers": 3,
+    "flare_budget": 48,
+    "flare_spikes": 4,
+    "flare_min_energy": 0.15,
+    "persistence_half_life_s": 0.30,
+    "energy_release_s": 0.80
+  },
+  "arc": {
+    "seg_len_px": 40.0, "seg_var": 0.30,
+    "base_amp_px": 0.75, "energy_amp_px": 2.80,
+    "shift_period_s": 0.05,
+    "trail_half_life_s": 0.05,
+    "tint_chance": 0.40, "hue_spread_deg": 30.0
+  }
+}

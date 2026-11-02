@@ -1,0 +1,9 @@
+[submodule "external/NetHack"]
+	path = external/NetHack
+	url = https://github.com/NetHack/NetHack
+[submodule "external/angband"]
+	path = external/angband
+	url = https://github.com/angband/angband
+[submodule "external/umoria"]
+	path = external/umoria
+	url = https://github.com/dungeons-of-moria/umoria

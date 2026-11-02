@@ -1,0 +1,16 @@
+Third-party / shared-origin code notices
+
+NetHack (external/NetHack, and the wasm build under public/modules/nethack/)
+is the official NetHack source, used under the NetHack General Public
+License (NGPL). See external/NetHack/dat/license. This repository's bridge
+and renderer talk to it through the windowport interface. The NetHack engine
+and the NetHack-derived components -- the wasm/JS artifacts and the worker
+bundle carrying src/modules/nethack/recoverSave.ts -- are NGPL-covered; the
+shared renderer and the other Modules are not. See LICENSING.md.
+
+The Angband front end src/modules/angband/native/main-wasm.c is adapted from
+Shelob's main-emscripten.c (ridiculousfish/shelob, branch v3.4.1-emscripten),
+which is dual-licensed GPLv2 or the Angband licence; VectHack elects GPLv2.
+The adapted ASYNCIFY_REMOVE list in scripts/build/angband-wasm.mk follows
+Shelob's recipe.
+
