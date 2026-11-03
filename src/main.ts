@@ -252,13 +252,9 @@ async function bootLarn(params: URLSearchParams): Promise<void> {
   // ?bot: the self-playing decorator answers every key, paced like the
   // NetHack bot.
   const bot = params.get("bot");
-  // Built only for the bot: loadKb validates, and a human game must not
-  // be gated on the state of the bot's knowledge base. Its facts are fetched
-  // with it — the KB's files are read by the host, and in a browser the host
-  // is this import (src/bot/kb.ts never touches a filesystem).
+  // Fetched only for the bot: a human game loads none of its code.
   const player = bot !== null
-    ? new (await import("./modules/larn/bot/LarnBotPlayer")).LarnBotPlayer(
-      view, await loadLarnKb(), botDelayMs(bot))
+    ? new (await import("./modules/larn/bot/LarnBotPlayer")).LarnBotPlayer(view, botDelayMs(bot))
     : view;
   const session = new LarnSession(player);
   window.__larnSession = session;
@@ -273,20 +269,6 @@ async function bootLarn(params: URLSearchParams): Promise<void> {
     request: () => session.exportSave(),
     notify: (text) => view.onNotice(text),
   });
-}
-
-/** The KB's files, read by the host: kb.ts never touches a filesystem, so the
- *  browser hands it these imports and the node gym hands it readFileSync
- *  content (scripts/dev/bot-kb.mjs). Fetched with the bot rather than with the
- *  page, because only the bot ever reads them. */
-async function loadLarnKb() {
-  const [{ loadKb }, facts, policy, meta] = await Promise.all([
-    import("./bot/kb"),
-    import("../data/kb/larn/facts.json"),
-    import("../data/kb/larn/policy.json"),
-    import("../data/kb/meta/facts.json"),
-  ]);
-  return loadKb({ meta: meta.default, engine: facts.default, policy: policy.default });
 }
 
 async function bootMoria(_params: URLSearchParams): Promise<void> {

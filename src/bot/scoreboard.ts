@@ -40,11 +40,11 @@ export interface RunMeta {
   /** The engine seed this game was played on; 0 means "seeded from the clock".
    *  Run metadata, not game state — a game does not observe its own seed. */
   seed: number;
-  /** The knowledge state this game was played under: the `Kb.hash` of the
-   *  compiled tables, or "" for the untaught seed bot. Run metadata like the
-   *  seed — a run cannot be assigned to an A/B arm afterwards unless it says
-   *  so itself. Optional here, always present on the summary. */
-  kb?: string;
+  /** The tuning override this game was played under (the gym's --tuning), or
+   *  {} for the bot's shipped knobs. Run metadata like the seed — a run cannot
+   *  be assigned to a sweep arm afterwards unless it says so itself. Optional
+   *  here, always present on the summary. */
+  tuning?: Record<string, unknown>;
   /** The engine's last stderr lines. */
   stderr?: string[];
   /** For fatal: the error text. */
@@ -58,10 +58,10 @@ export interface RunSummary extends RunSnapshot {
   endedAt: string;
   outcome: Outcome;
   seed: number;
-  /** The `Kb.hash` this game played under; "" for the untaught seed bot.
+  /** The tuning override this game played under; {} for the shipped knobs.
    *  summary.json only — it is deliberately not a scoreboard column, because
    *  the CSV is shared across every engine's rows. */
-  kb: string;
+  tuning: Record<string, unknown>;
   /** Trajectory lines recorded. */
   events: number;
   stderr: string[];
@@ -71,7 +71,7 @@ export interface RunSummary extends RunSnapshot {
 export function emptySummary(meta: RunMeta): RunSummary {
   return {
     game: meta.game, id: meta.id, startedAt: meta.startedAt, endedAt: meta.endedAt,
-    outcome: meta.outcome, seed: meta.seed, kb: meta.kb ?? "",
+    outcome: meta.outcome, seed: meta.seed, tuning: meta.tuning ?? {},
     depth: 0, xlevel: 0, hp: 0, hpmax: 0, commands: 0, score: 0, events: 0, cause: "",
     lastMessages: [], details: {}, stderr: meta.stderr ?? [], error: meta.error ?? "",
   };

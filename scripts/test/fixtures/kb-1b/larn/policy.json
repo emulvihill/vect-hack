@@ -1,9 +1,0 @@
-{
-  "restLimit": 150,
-  "stuckLimit": 3,
-  "restBelowHpFraction": 0.5,
-  "factFloor": 0.6,
-  "engageLevelCap": 10,
-  "engageLevelWeight": 0.5,
-  "disengageLimit": 4
-}

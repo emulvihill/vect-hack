@@ -22,6 +22,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { benchMetrics, formatBench } from "../../src/modules/larn/bot/bench.ts";
+import { resolveTuning } from "../../src/modules/larn/bot/policy.ts";
 
 /** Frozen. See the header — changing either is a spec amendment. */
 const SETS = {
@@ -41,7 +42,9 @@ const { values: opts } = parseArgs({
   options: {
     set: { type: "string", default: "bench" },
     parallel: { type: "string", default: "16" },
-    kb: { type: "string", default: "none" },
+    // A partial tuning override for the gym's --tuning (policy-sweep.mjs's
+    // arms). "{}" is the bot as shipped.
+    tuning: { type: "string", default: "{}" },
     out: { type: "string" },
     // Play into an existing batch directory instead of running the gym. For
     // re-reading a batch the metrics changed under, and for the tests.
@@ -53,9 +56,14 @@ const die = (msg) => { console.error(msg); process.exit(2); };
 const set = SETS[opts.set];
 if (!set) die(`--set must be one of ${Object.keys(SETS).join(", ")}, got ${opts.set}`);
 const out = opts.out ?? join(repo, ".gym", `bench-${opts.set}`);
+let tuning;
+try {
+  tuning = JSON.parse(opts.tuning);
+  resolveTuning(tuning);
+} catch (e) { die(`--tuning: ${e.message}`); }
 
 if (!opts["read-only"]) {
-  console.log(`bench:larn — set ${opts.set}, master ${set.master}, ${set.games} games, kb ${opts.kb}`);
+  console.log(`bench:larn — set ${opts.set}, master ${set.master}, ${set.games} games, tuning ${JSON.stringify(tuning)}`);
   const started = Date.now();
   const r = spawnSync(process.execPath, [
     join(here, "bot-gym.mjs"),
@@ -64,7 +72,7 @@ if (!opts["read-only"]) {
     "--seed", String(set.master),
     "--max-commands", String(MAX_COMMANDS),
     "--parallel", opts.parallel,
-    "--kb", opts.kb,
+    "--tuning", JSON.stringify(tuning),
     "--out", out,
   ], { stdio: ["ignore", "ignore", "inherit"], cwd: repo });
   if (r.status !== 0) die(`gym exited ${r.status}`);
@@ -96,7 +104,7 @@ console.log(formatBench(metrics));
 const artifact = join(out, "bench.json");
 writeFileSync(artifact, JSON.stringify({
   set: opts.set, master: set.master, games: set.games, maxCommands: MAX_COMMANDS,
-  kb: opts.kb, at: new Date().toISOString(), metrics,
+  tuning, at: new Date().toISOString(), metrics,
 }, null, 2) + "\n");
 console.log(`artifact: ${artifact}`);
 

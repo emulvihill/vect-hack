@@ -5,14 +5,7 @@ import type { LarnEvent } from "../../src/modules/larn/protocol";
 import type { LarnHandler } from "../../src/modules/larn/session";
 import { GRID, GRID_STRIDE, TERRAIN, TOP } from "../../src/modules/larn/mapRecords";
 import { LARN_COLS, LARN_ROWS } from "../../src/modules/larn/classifier";
-import { loadKb } from "../../src/bot/kb";
 import { SLOT_STRIDE, STATUS, STATUS_HEADER } from "../../src/modules/larn/statusRecords";
-import metaFacts from "../../data/kb/meta/facts.json";
-import larnFacts from "../../data/kb/larn/facts.json";
-import larnPolicy from "../../data/kb/larn/policy.json";
-
-/** The shipped seed KB, as the hosts hand it to the bot. */
-const kb = () => loadKb({ meta: metaFacts, engine: larnFacts, policy: larnPolicy });
 
 function stubView() {
   const seen: LarnEvent[] = [];
@@ -43,7 +36,7 @@ function roomWithHero(x: number, y: number) {
 describe("LarnBotPlayer", () => {
   it("forwards display events, ready and notices to the view and feeds its model", () => {
     const { view, seen, notices, readyCount } = stubView();
-    const bot = new LarnBotPlayer(view, kb(), 0);
+    const bot = new LarnBotPlayer(view, 0);
     bot.onReady();
     bot.onNotice("Saving is off");
     bot.handle({ name: "text", x: 0, y: 19, rgb: 0, text: "hello" });
@@ -55,7 +48,7 @@ describe("LarnBotPlayer", () => {
 
   it("answers a poll with no key, a prompt from the prompt table, and a command from the brain", async () => {
     const { view } = stubView();
-    const bot = new LarnBotPlayer(view, kb(), 0);
+    const bot = new LarnBotPlayer(view, 0);
     expect(await bot.nextKey(false, false)).toBeNull();
     bot.handle({ name: "text", x: 0, y: 20, rgb: 0, text: "Do you (o) try to open it, or (i) ignore it? " });
     expect(await bot.nextKey(true, false)).toEqual({ code: "o".charCodeAt(0), mods: 0 });
@@ -73,7 +66,7 @@ describe("LarnBotPlayer", () => {
     // passes a constant between them. A hero at experience level 1 is far
     // below the bar of 8, so "(c) climb down" must come back as the ignore.
     const { view } = stubView();
-    const bot = new LarnBotPlayer(view, kb(), 0);
+    const bot = new LarnBotPlayer(view, 0);
     bot.handle({ name: "map", records: roomWithHero(5, 5) });
     bot.handle({ name: "text", x: 0, y: 20, rgb: 0, text: "Do you (c) climb down, or (i) ignore it? " });
     expect(await bot.nextKey(true, false)).toEqual({ code: "i".charCodeAt(0), mods: 0 });
@@ -85,7 +78,7 @@ describe("LarnBotPlayer", () => {
     // halves can each be right while the player still hands the table a
     // default (vect-hack-b5f.10).
     const { view } = stubView();
-    const bot = new LarnBotPlayer(view, kb(), 0);
+    const bot = new LarnBotPlayer(view, 0);
     const scroll = "You have found a magic scrollDo you (r) read it, (t) take it, or (i) ignore it? ";
     const record = new Int32Array(STATUS_HEADER + 26 * SLOT_STRIDE);
     record[STATUS.SLOTS] = 26;
@@ -99,7 +92,7 @@ describe("LarnBotPlayer", () => {
 
   it("marks the model game over on quit", () => {
     const { view } = stubView();
-    const bot = new LarnBotPlayer(view, kb(), 0);
+    const bot = new LarnBotPlayer(view, 0);
     bot.onQuit();
     expect(bot.model.gameOver).toBe(true);
   });

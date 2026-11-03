@@ -8,9 +8,8 @@
 // ".ts" import extensions: the headless gym loads this straight from source.
 import type { LarnEvent, LarnKey } from "../protocol.ts";
 import type { LarnHandler } from "../session.ts";
-import type { Kb } from "../../../bot/kb.ts";
 import { LarnBotModel } from "./model.ts";
-import { LarnBrain } from "./policy.ts";
+import { LarnBrain, type PolicyTuning } from "./policy.ts";
 import { answerPrompt } from "./prompts.ts";
 
 export class LarnBotPlayer implements LarnHandler {
@@ -20,11 +19,11 @@ export class LarnBotPlayer implements LarnHandler {
   private view: LarnHandler;
   private delayMs: number;
 
-  /** The KB comes from the host, already parsed: kb.ts never touches a
-   *  filesystem, because this class runs in the browser too. */
-  constructor(view: LarnHandler, kb: Kb, delayMs = 150) {
+  /** `tuning` overrides the ladder's knobs (policy.ts DEFAULT_TUNING); only
+   *  the gym's --tuning passes one. */
+  constructor(view: LarnHandler, delayMs = 150, tuning: Partial<PolicyTuning> = {}) {
     this.view = view;
-    this.brain = new LarnBrain(kb);
+    this.brain = new LarnBrain(tuning);
     this.delayMs = delayMs;
   }
 

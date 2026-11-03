@@ -47,8 +47,7 @@ it, `package.json` is right and this file is stale.
 | `test:larn-map-contract` | the source-pinned map tap: blindness publishes no newly live state; visible trap subtypes share records and Look labels, hidden traps match floor, and pits stay distinct |
 | `test:larn-status` | the status tap vs the engine's own screen: scalars, clock, items, no leaked ids |
 | `test:larn-savefile` | a `savefile:` line in `.larnopts` cannot move the explicit save off the volume, is refused out loud, and the save it did not redirect really restores |
-| `test:larn-gym` | one real game through the headless bot gym: bot, prompts, artifacts |
-| `test:larn-reflect` | the reflect loop on a replay Brain: transcripts, a second pass that changes no byte, the leak gate, resume, the socket retry |
+| `test:larn-gym` | one real game through the headless bot gym: bot, prompts, artifacts; an unknown `--tuning` knob is refused before the game |
 | `test:larn-killer` | three frozen seeds: the killer glyph vs Larn's own tables, a trap death and an unseen killer |
 
 ## Moria — `npm run test:moria`

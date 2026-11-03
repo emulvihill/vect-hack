@@ -17,6 +17,7 @@ const seam = vi.hoisted(() => ({
   installMenu: vi.fn(),
   describe: vi.fn(async () => "a floor"),
   botWrapped: null as object | null,
+  botDelay: null as number | null,
   /** One counter per foreign Module, bumped by that Module's mock factory. */
   foreign: { nethack: vi.fn(), angband: vi.fn(), moria: vi.fn() },
 }));
@@ -34,7 +35,9 @@ vi.mock("../../src/modules/larn/ui/VectorView", () => ({
   VectorView: class { constructor(...args: unknown[]) { seam.vectorArgs = args; return seam.vector; } },
 }));
 vi.mock("../../src/modules/larn/bot/LarnBotPlayer", () => ({
-  LarnBotPlayer: class { constructor(view: object) { seam.botWrapped = view; } },
+  LarnBotPlayer: class {
+    constructor(view: object, delayMs: number) { seam.botWrapped = view; seam.botDelay = delayMs; }
+  },
 }));
 vi.mock("../../src/modules/larn/session", () => ({
   LarnSession: class {
@@ -82,6 +85,7 @@ async function boot(search: string) {
   seam.handler = null;
   seam.vectorArgs = [];
   seam.botWrapped = null;
+  seam.botDelay = null;
   seam.installMenu.mockClear();
   seam.exportSave.mockClear();
   seam.describe.mockClear();
@@ -142,9 +146,10 @@ it("keeps the canvas and builds the vector view when a GPU is available", async 
 it("hands ?bot the view it just built, and a human game no bot at all", async () => {
   seam.gpu = true;
   await boot("?game=larn&view=debug&bot=fast");
-  // The decorator and the knowledge base it reads are fetched only for the
-  // bot: a human game must not be gated on the state of data/kb.
+  // The decorator is fetched only for the bot, and it gets the pacing
+  // ?bot asked for: fast is unthrottled.
   expect(seam.botWrapped).toBe(seam.tty);
+  expect(seam.botDelay).toBe(0);
   // The session sees the decorator, and the decorator sees the view — the
   // order that lets the bot answer every key the engine asks for.
   expect(seam.handler).not.toBe(seam.tty);

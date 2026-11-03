@@ -1,6 +1,6 @@
-// The Larn run digest: the small public projection of one finished game that
-// reflection is allowed to see (spec: 2026-08-19-bot-phase1b-larn-reflect-
-// design.md, "The digest").
+// The Larn run digest: the small public projection of one finished game
+// (src/bot/digest.ts; spec: 2026-08-19-bot-phase1b-larn-reflect-design.md,
+// "The digest").
 //
 // The fixtures here are deliberately built the way the gym's trajectory file
 // holds them, not the way the worker posts them: TrajectoryLog's `plainArrays`
@@ -10,11 +10,11 @@
 //
 // The synthetic cases below are not enough on their own, and were not: they
 // passed while two real defects stood (vect-hack-b5f.2.2). The recorded runs
-// under fixtures/reflect/batch/ are the backstop — see the second describe.
+// under fixtures/larn-digest/batch/ are the backstop — see the second describe.
 import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
-import { DIGEST_LIMITS, runGrounds } from "../../src/bot/digest";
+import { DIGEST_LIMITS } from "../../src/bot/digest";
 import { buildLarnDigest } from "../../src/modules/larn/bot/digest";
 import { GRID, GRID_STRIDE, KIND_NAMES, TERRAIN, TOP } from "../../src/modules/larn/mapRecords";
 import { STATUS, STATUS_HEADER } from "../../src/modules/larn/statusRecords";
@@ -96,9 +96,8 @@ describe("buildLarnDigest", () => {
 
     const d = buildLarnDigest(lines, summaryOf({ depth: 11 }));
 
-    // The category comes with the character: "stairs:V" is the key the avoid
-    // table is read by, and a descent that named only the glyph left the
-    // reflect prompt unable to offer the claim at all (vect-hack-b5f.6).
+    // The category comes with the character: a descent that named only the
+    // glyph could not say what kind of exit it was (vect-hack-b5f.6).
     expect(d.descents).toEqual([
       { category: "stairs", ch: "V", kind: "down", fromDepth: 0, toDepth: 11, xlevel: 1, hp: 9, hpmax: 12, atCommand: 1 },
     ]);
@@ -107,8 +106,7 @@ describe("buildLarnDigest", () => {
   it("reports what the screen drew under a fall the hero did not choose", () => {
     // A trap door the hero never discovered draws floor and drops them. The
     // category has to be that floor, not the trap underneath: it is what the
-    // player saw, and it is what keeps an unchosen fall out of the claim keys
-    // the reflect prompt offers (src/bot/digest.ts, AVOIDABLE_CATEGORIES).
+    // player saw.
     const lines: Line[] = [
       statusLine({ DEPTH: 1, XLEVEL: 1, HP: 12, HPMAX: 12 }),
       mapLine([{ x: 5, y: 5, cat: TERRAIN.FLOOR, ch: ".", top: TOP.HERO }]),
@@ -322,7 +320,6 @@ describe("buildLarnDigest", () => {
       // The last living reading is still reported — it says how the run ended
       // — but it is not what the killer is measured against.
       expect(d.hpBeforeDeath).toBe(3);
-      expect(runGrounds(d).killedAtCapacity).toBe(1);
     });
 
     it("measures the final engagement, not an earlier meeting with the same glyph", () => {
@@ -427,7 +424,6 @@ describe("buildLarnDigest", () => {
 
       expect(d.killer).not.toBeNull();
       expect(d.killer?.capacity).toBeNull();
-      expect(runGrounds(d).killedAtCapacity).toBeNull();
     });
   });
 
@@ -449,7 +445,7 @@ describe("buildLarnDigest", () => {
 // believes the engine does; these encode what it did. Both defects in
 // vect-hack-b5f.2.2 were invisible to the synthetic cases above and obvious
 // here, so this block is the one that must not be deleted for being slow.
-const BATCH = new URL("./fixtures/reflect/batch/", import.meta.url);
+const BATCH = new URL("./fixtures/larn-digest/batch/", import.meta.url);
 
 function recordedRun(id: string): { lines: Line[]; summary: RunSummary } {
   const dir = new URL(`${id}/`, BATCH);
@@ -474,7 +470,7 @@ describe("buildLarnDigest over recorded Larn runs", () => {
   // takes the town's volcanic shaft and is dead at depth 11 four commands in.
   // The game never asks for another command, so a boundary-triggered detector
   // records nothing at all — and this is precisely the run that demonstrates
-  // the fact the reflect loop exists to learn.
+  // the death the shaft bar (vect-hack-h9x.5) exists to prevent.
   it("records a descent that is the last thing a run ever did", () => {
     const { lines, summary } = recordedRun("larn-20260820T185838Z-93207-0002");
     const d = buildLarnDigest(lines, summary);

@@ -64,8 +64,7 @@ fi
 #
 # This guard exists because its absence cost something real on 2026-08-29: a
 # teardown took the worktree's `.gym/` with it, and with it 150 reflection
-# transcripts — model outputs, not regenerable, named by two open beads as the
-# corpus for scripts/dev/reflect-prompt-probe.mjs. Every gym batch in there was
+# transcripts — model outputs, not regenerable. Every gym batch in there was
 # reproducible from a frozen seed master, which is exactly why nobody thought
 # about the one thing that was not.
 #

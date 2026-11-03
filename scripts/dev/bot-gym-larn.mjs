@@ -16,13 +16,13 @@ import { fileURLToPath } from "node:url";
 import createLarnModule from "../../public/modules/larn/larn.js";
 import { mountLarnStorage } from "../../src/modules/larn/persist.ts";
 import { LarnBotPlayer } from "../../src/modules/larn/bot/LarnBotPlayer.ts";
+import { resolveTuning } from "../../src/modules/larn/bot/policy.ts";
 import { LarnRecorder } from "../../src/modules/larn/bot/recorder.ts";
 import { installLarnShim } from "../../src/modules/larn/shimBridge.ts";
 import { buildRunSummary } from "../../src/bot/scoreboard.ts";
 import { childArgs, openRunWriter } from "./bot-gym-utils.mjs";
-import { larnKb } from "./bot-kb.mjs";
 
-const { outDir, id, maxCommands, seed, kbDir } = childArgs("bot-gym-larn.mjs");
+const { outDir, id, maxCommands, seed, tuning } = childArgs("bot-gym-larn.mjs");
 const CORE = (name) => fileURLToPath(new URL(`../../public/modules/larn/${name}`, import.meta.url));
 if (!existsSync(CORE("larn.data"))) {
   console.error("public/modules/larn/larn.{js,wasm,data} missing — run npm run build:larn");
@@ -33,9 +33,16 @@ const PROGRESS_EVERY = 200;
 /** No view: the bot answers every key; display events need no reply. */
 const nullView = () => ({ onNotice: () => {}, handle: () => {}, nextKey: () => null });
 
+// Before the first game: a knob that does not exist must not play the
+// defaults under the name of the arm that asked for it.
+let knobs;
+try { knobs = resolveTuning(tuning); } catch (e) {
+  console.error(`bot-gym-larn.mjs: ${e.message}`);
+  process.exit(2);
+}
+
 const writer = openRunWriter(outDir);
-const kb = larnKb(kbDir);
-const bot = new LarnBotPlayer(nullView(), kb, 0); // no pacing: full speed
+const bot = new LarnBotPlayer(nullView(), 0, knobs); // no pacing: full speed
 const rec = new LarnRecorder(bot, (line) => writer.line(line));
 const startedAt = new Date().toISOString();
 const stderr = [];
@@ -45,11 +52,9 @@ let finished = false;
 const endOutcome = () => (bot.model.won() ? "won" : bot.model.snapshot().cause ? "died" : "fatal");
 function summary(outcome, error = "") {
   return buildRunSummary(
-    // The control arm names no knowledge state: an empty KB's hash is a real
-    // hash of empty tables, and writing it here would let a control run be
-    // mistaken for a treatment run whose facts all happened to be filtered out.
+    // The override as named, not the merged knobs: {} is the bot as shipped.
     { game: "larn", id, startedAt, endedAt: new Date().toISOString(), outcome, seed,
-      kb: kbDir ? kb.hash : "", stderr: stderr.slice(-20), error },
+      tuning, stderr: stderr.slice(-20), error },
     bot.model.snapshot(),
     rec.log,
   );

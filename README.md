@@ -104,13 +104,11 @@ and what it deliberately does not.
 
 ```bash
 npm run bot:headless -- --game larn --games 20   # N games in child processes -> .gym/
-npm run bot:reflect -- --batch .gym/<dir>        # one model reflection per game
 npm run bench:larn                               # the frozen 500-seed bench
 ```
 
-`data/kb` ships empty by decision, not by omission: every knowledge base the
-loop has earned so far lost depth on held-out seeds. `docs/BOT.md` has the
-whole story.
+The bot is deterministic and learns nothing: its knobs are hand-tuned
+constants. `docs/BOT.md` has the whole story.
 
 ## Working on the repo
 
