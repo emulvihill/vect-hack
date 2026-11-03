@@ -204,5 +204,6 @@ squash-merge, tag the merge commit and publish its section:
 
 `npm --prefix ../vect-hack-www/infra run deploy` (`scripts/deploy.sh`) —
 preflight requires both trees clean and at `origin/main`, and the game's HEAD
-to be the tag of its own version. It logs to `docs/DEPLOYS.md`; commit that
-log after each deploy.
+to be the tag of its own version. Each deploy is recorded as a GitHub
+Deployment of that tag (environment `vecthack.com`), so it leaves nothing to
+commit.
