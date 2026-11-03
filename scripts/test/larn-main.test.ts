@@ -73,7 +73,10 @@ vi.mock("../../src/skins", () => ({ applySkinCss() {} }));
 
 class El {
   removed = false;
+  /** The Saves panel's licenses link starts at index.html's static href. */
+  href = "licenses/index.html";
   remove() { this.removed = true; }
+  setAttribute(name: string, value: string) { if (name === "href") this.href = value; }
 }
 
 /** One page load. Boot is not synchronous any more (vect-hack-l11): the arm
@@ -91,7 +94,7 @@ async function boot(search: string) {
   seam.describe.mockClear();
   seam.vector.look = {};
   seam.tty.onNotice.mockClear();
-  const els = new Map([["view", new El()], ["cmdbtn", new El()]]);
+  const els = new Map([["view", new El()], ["cmdbtn", new El()], ["licenseslink", new El()]]);
   (globalThis as any).window = {};
   (globalThis as any).location = { search };
   (globalThis as any).document = { getElementById: (id: string) => els.get(id) ?? null };
@@ -158,6 +161,14 @@ it("hands ?bot the view it just built, and a human game no bot at all", async ()
   await boot("?game=larn&view=debug");
   expect(seam.botWrapped).toBeNull();
   expect(seam.handler).toBe(seam.tty);
+});
+
+// licenses-page.test.ts pins licensesHref() and the staged pages; this pins
+// that main.ts actually calls it, so the link a Larn player clicks opens
+// Larn's page and not the VectHack-only one.
+it("points the licenses link at Larn's own page", async () => {
+  const { els } = await boot("?game=larn");
+  expect(els.get("licenseslink")!.href).toBe("licenses/larn.html");
 });
 
 it("loads no other Module's code (vect-hack-l11)", async () => {
