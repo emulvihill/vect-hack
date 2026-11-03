@@ -1,7 +1,5 @@
 # vect-hack agent instructions
 
-A project by Eric Mulvihill.
-
 ## Project
 
 3D web client for official NetHack 5.0, Angband 4.2.6, BSD Larn 12.0, and
