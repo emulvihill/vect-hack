@@ -2,10 +2,6 @@
 
 A project by Eric Mulvihill.
 
-Structure precedent: the sibling projects `drum-synth` and `granular-synth`.
-Contributions arrive as GitHub pull requests. An untracked `AGENTS.local.md`,
-where present, holds the maintainer's local workflow: read it too.
-
 ## Project
 
 3D web client for official NetHack 5.0, Angband 4.2.6, BSD Larn 12.0, and
@@ -103,7 +99,7 @@ npm run bench:larn                  # the Phase 2 bench: a frozen seed set -> th
 node scripts/dev/policy-sweep.mjs   # a knob over the bench, one arm per value: --knob N --values a,b,c | --grid JSON (refuses --set held-out)
 node scripts/dev/kb-ab-report.mjs   # the paired held-out A/B: --control DIR --treatment DIR [--out PREFIX --seed-master N --cohort N]
 node scripts/dev/kb-split.mjs       # one KB per claim kind, for attribution arms: --facts F --kinds threat,note --out DIR
-scripts/dev/worktree-setup.sh       # a fresh worktree has no build state; run this first (see below)
+scripts/dev/worktree-setup.sh       # a fresh worktree has no build state; run this first
 scripts/dev/worktree-teardown.sh    # remove a finished worktree without breaking the primary's submodules (--list, --discard)
 node scripts/dev/larn-engagement-report.mjs --batch DIR   # what a batch did when a monster reached it: melee, never-swung, blows, capped
 node scripts/dev/reflect-prompt-probe.mjs --transcripts DIR --out F.jsonl  # re-ask archived reflections under the current prompt: which kinds it routes a lesson to
@@ -121,70 +117,7 @@ Dev URL flags, in full in `docs/UI.md`: `?game=<module>` (`nethack` | `angband`
 (Angband only), `?touch` (NetHack only). In-game: **F2** first person, the
 **Saves** button with **F3** export / **F4** import, keypad 5 to face north.
 
-## Working in a worktree
-
-A fix starts on its own branch in its own worktree. A fresh worktree checks out
-the tracked files and nothing else, and almost everything `npm test` needs here
-is untracked — so run `scripts/dev/worktree-setup.sh` first. It pulls the three
-engine submodules (empty in a new worktree), installs node_modules, links
-`external/emsdk` back to the primary checkout, and copies the four Modules'
-`public/modules/` artifacts, the `build/` object trees Moria's tests read, and
-NetHack's `external/NetHack/targets/wasm/` — which is a build output living
-inside a submodule, so nothing else brings it. Then rebuild the Module you are
-changing; the script cannot know which that is, and copied artifacts are as
-stale as the primary checkout's.
-
-Three things that cost time when skipped:
-
-- **Vite's watcher never fires in a worktree, so `npm run dev` serves stale
-  source.** The worktree lives under `.claude/worktrees/`, and an edited
-  `src/` file is served from the transform Vite already had — the browser
-  gates then run against the code you did not change. This is silent and it
-  is worst exactly where it matters: every sabotage looks like it passed.
-  Restart the dev server after each `src/` edit, kill it **by port** (`npm run
-  dev` is a wrapper whose grandchild listens, so the recorded PID is not the
-  server), and verify the change in what the server actually serves —
-  `curl -s localhost:5199/src/<path>.ts`. Verify against CODE, never a comment
-  marker: esbuild strips comments, and vite pretty-prints, so compare with the
-  whitespace removed.
-- **A bare `cd` to the repo root lands in the PRIMARY checkout, not your
-  worktree.** It happened twice on 2026-08-29, to two different agents, in both
-  directions: a `sed -i` wrote to the primary's `src/`, and a run of read-only
-  commands silently READ the primary while the author believed they were reading
-  their own edits — which is the worse half, because it had them disbelieving a
-  change that had applied perfectly. Both were caught and reverted, but nothing
-  warns you. Use paths relative to your worktree, or `cd` to it by its full
-  path; and if you must check, `git rev-parse --show-toplevel` is the answer,
-  not the directory you meant to be in. The same blind spot appears from the
-  other side in tooling: a config verified inside a worktree cannot see the
-  worktrees the primary keeps under `.claude/` (vect-hack-5a9).
-- **`npm test` stops at the first failing group and its exit code is what
-  matters.** Piping it (`npm test | tail`) reports the pipe's status, not the
-  suite's, and a suite that died in `test:render` reads as a pass. Capture the
-  code.
-- **A test that pins a CHOICE must be shown failing on the wrong choice.** The
-  first `test-larn-killer.mjs` picked a seed whose killer was also the last
-  being seen, so "name the killer" and "name the nearest glyph" agreed and a
-  deliberately broken join kept the test green. Break the thing under test and
-  watch it fail before believing it — and **when the sabotage does not fail,
-  the test is the finding**, not the sabotage: it is passing for some other
-  reason. `runGrounds` reading `descents` and not `finalTerrain` was pinned by
-  a fixture whose only terrain was `floor`, which the category allowlist
-  rejects anyway, so the assertion never touched the rule it named
-  (vect-hack-b5f.6).
-
-**Tear one down with `scripts/dev/worktree-teardown.sh <path>`**, never by hand.
-It refuses on uncommitted changes and on commits not on `main`, deletes the
-branch only if it merges cleanly, and then CHECKS the primary's submodule
-registration. **Never `git submodule deinit`** — `.git/config` is SHARED by every
-worktree, so a deinit inside one leaves the PRIMARY with unregistered
-submodules, silently. `docs/PROJECT-MAP.md` has why, and what was verified.
-
 ## Playtesting in the browser
-
-Playing the real game is the highest-yield way to find bugs here — every fix in
-`docs/DECISIONS.md` from 2026-07-27 came out of one tutorial run. Read this
-before driving Chrome.
 
 **The one rule: never edit `src/` while a game is live.** Vite HMR full-reloads
 the page, the engine reboots, and the run is gone — NetHack deletes the save on
