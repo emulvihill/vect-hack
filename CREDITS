@@ -1,0 +1,33 @@
+VectHack — Credits
+==================
+
+DEDICATION
+
+This effort is dedicated to my friend, Ethan Sicotte. He taught me about
+the value of persistence and practice; his delves were legendary and I am
+sure he must have defeated Morgoth in the end. We all miss ya.
+
+
+NetHack 5.0
+  The NetHack DevTeam. Built on Hack by Jay Fenlason, with Kenny Woodland,
+  Mike Thome and Jon Payne, and Andries Brouwer's rewrite.
+  Full history: external/NetHack/dat/history
+
+Angband 4.2.6
+  Nick McConnell and the Angband contributors. Earlier maintainers Anna
+  Sidwell, Robert Ruehlmann and Ben Harrison; created by Alex Cutler and
+  Andy Astrand with Sean Marsh, Geoff Hill, Charles Teague and Charles
+  Swiger. Web front end adapted from Shelob by ridiculousfish.
+  Full list: external/angband/docs/thanks.rst
+
+Umoria 5.7.15
+  Robert Alan Koeneke (Moria), James E. Wilson (Umoria), David J. Grabiner,
+  and Michael R. Cook (the 5.7 restoration).
+  Full list: external/umoria/AUTHORS
+
+Larn 12.0
+  Noah Morgan. NetBSD modernization by David Holland and the NetBSD
+  developers.
+
+VectHack
+  Eric Mulvihill.
