@@ -6,8 +6,10 @@
 // information (NGPL ¶3, GPLv2 §3, GPLv3 §6). A bare link to a moving `main`
 // does not identify what was built, so SOURCE.txt records the exact commit.
 //
-// index.html is the page the game's Saves menu links to (vect-hack-a4c). It
-// carries every text inline, escaped, in a <pre>: a visitor reads the terms
+// Each game's Saves menu links its own page, <game>.html (vect-hack-a4c): VectHack's
+// terms and that game's, never another game's. index.html, for a URL with no
+// game, carries VectHack's alone. Every page carries its texts inline, escaped,
+// in a <pre>: a visitor reads the terms
 // in the browser whatever MIME type the host guesses for a `.md` file, and a
 // host that only rewrites `/`-suffixed URLs still serves it, because the menu
 // links the file by name.
@@ -19,9 +21,24 @@ import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+/** VectHack's own terms: the MIT host and the runtime every engine is
+ *  compiled with. Every page carries these. */
+export const VECTHACK_FILES = ['LICENSE', 'THIRD_PARTY_NOTICES.md'];
+
+/** Each game's own terms, keyed by its ?game id (src/backplane/volumes.ts).
+ *  A game's page shows these and VECTHACK_FILES and nothing of another game:
+ *  each game is licensed on its own, independent of VectHack's MIT license. */
+export const MODULES = {
+  nethack: { name: 'NetHack', license: 'the NetHack General Public License', files: ['LICENSE.NETHACK', 'NOTICE.NETHACK'] },
+  angband: { name: 'Angband', license: 'GPL-2.0-only', files: ['LICENSE.GPL2', 'NOTICE.ANGBAND'] },
+  moria: { name: 'Umoria', license: 'GPL-3.0-or-later', files: ['LICENSE.GPL3'] },
+  larn: { name: 'Larn', license: "Noah Morgan's no-profit grant", files: ['LICENSE.LARN'] },
+};
+
+/** Every text, copied raw into dist/licenses/. One deploy serves all four
+ *  games, so all of them ship whatever a single page shows. */
 export const LICENSE_FILES = [
-  'LICENSING.md', 'LICENSE', 'LICENSE.NETHACK', 'LICENSE.GPL2',
-  'LICENSE.GPL3', 'LICENSE.LARN', 'THIRD_PARTY_NOTICES.md', 'NOTICE',
+  'LICENSING.md', ...VECTHACK_FILES, ...Object.values(MODULES).flatMap((m) => m.files),
 ];
 
 export const SOURCE_URL = 'https://github.com/emulvihill/vect-hack';
@@ -65,22 +82,18 @@ To obtain the exact source for this build:
   cd vect-hack && git checkout ${commit}
   git submodule update --init --recursive
 
-The engine cores are unmodified upstream sources tracked as submodules under
-external/ (Larn is a vendored NetBSD snapshot). Lua 5.4.8 is not stored in the
-repository: scripts/build/build-nethack-wasm.sh downloads it sha256-verified
-from https://www.lua.org/ at build time. The Emscripten SDK is likewise
-fetched by scripts/build/setup-toolchain.sh.
+The engine cores are unmodified upstream sources under external/, tracked as
+submodules or vendored snapshots. A library an engine's build script fetches
+at build time, rather than storing in the repository, is named in that game's
+notices; the Emscripten SDK is fetched by scripts/build/setup-toolchain.sh.
 
-Per-component licensing is mapped in LICENSING.md in this directory. Note that
-offering source by repository reference is the NGPL ¶3(b) archive-information
-route, which that licence makes available for noncommercial distribution only;
-commercial distribution requires accompanying the object code with source
-under ¶3(a).
+Per-component licensing is mapped in LICENSING.md in this directory. Each
+game is covered by its own license, independent of VectHack's MIT license.
 `;
 }
 
-/** The licenses page: SOURCE.txt first, then every text in LICENSE_FILES. */
-export function indexHtml(texts) {
+/** One licenses page: the intro, then each text inline under its own heading. */
+function page(title, intro, texts) {
   const sections = texts.map(({ name, body }) =>
     `<h2 id="${escapeHtml(name)}"><a href="${escapeHtml(name)}">${escapeHtml(name)}</a></h2>\n` +
     `<pre>${escapeHtml(body)}</pre>`);
@@ -91,12 +104,11 @@ export function indexHtml(texts) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VectHack — licenses and source</title>
+<title>${escapeHtml(title)}</title>
 </head>
 <body>
-<h1>VectHack — licenses and source</h1>
-<p>VectHack's own code is MIT. Each game engine keeps its own license;
-LICENSING.md below is the map. The source for this build is at
+<h1>${escapeHtml(title)}</h1>
+<p>${intro} The source for this build is at
 <a href="${SOURCE_URL}">${SOURCE_URL}</a>, at the commit named in SOURCE.txt.</p>
 <ul>
 ${toc.join('\n')}
@@ -107,22 +119,40 @@ ${sections.join('\n')}
 `;
 }
 
-/** Stage every text, SOURCE.txt and index.html from `root` into `out`. */
+/** The page with no game: VectHack's own terms only. */
+export function indexHtml(texts) {
+  return page('VectHack — license and source',
+    "VectHack's own code is MIT. Each game is covered by its own license, " +
+    'independent of this one, shown on the licenses page linked from that game.',
+    texts);
+}
+
+/** A game's page: VectHack's terms and that game's, nothing of another game. */
+export function moduleHtml(module, texts) {
+  return page(`VectHack and ${module.name} — licenses and source`,
+    `VectHack's own code is MIT. ${escapeHtml(module.name)} is covered by its own ` +
+    `license, ${escapeHtml(module.license)}, independent of VectHack's.`,
+    texts);
+}
+
+/** Stage every text, SOURCE.txt, index.html and one <game>.html per entry in
+ *  MODULES from `root` into `out`. */
 export function stageLicenses(root, out) {
   mkdirSync(out, { recursive: true });
   for (const f of LICENSE_FILES) copyFileSync(join(root, f), join(out, f));
   const { commit, dirty } = builtCommit(root);
   const source = sourceText(commit, dirty);
   writeFileSync(join(out, 'SOURCE.txt'), source);
-  const texts = [
-    { name: 'SOURCE.txt', body: source },
-    ...LICENSE_FILES.map((name) => ({ name, body: readFileSync(join(root, name), 'utf8') })),
-  ];
-  writeFileSync(join(out, 'index.html'), indexHtml(texts));
+  const text = (name) => ({ name, body: readFileSync(join(root, name), 'utf8') });
+  const vecthack = [{ name: 'SOURCE.txt', body: source }, ...VECTHACK_FILES.map(text)];
+  writeFileSync(join(out, 'index.html'), indexHtml(vecthack));
+  for (const [id, module] of Object.entries(MODULES)) {
+    writeFileSync(join(out, `${id}.html`), moduleHtml(module, [...vecthack, ...module.files.map(text)]));
+  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
   stageLicenses(root, join(root, 'dist', 'licenses'));
-  console.log(`stage-licenses: ${LICENSE_FILES.length} files + SOURCE.txt + index.html -> dist/licenses/`);
+  console.log(`stage-licenses: ${LICENSE_FILES.length} files + SOURCE.txt + index.html + ${Object.keys(MODULES).length} game pages -> dist/licenses/`);
 }
