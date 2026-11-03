@@ -8,11 +8,11 @@ keeping its own license. VectHack's own code is MIT.
 | What | License |
 |------|---------|
 | **VectHack's own code** — renderer, HUD, backplane, skins, UI, bots, build scripts, and every file not listed below | MIT ([LICENSE](LICENSE)) |
-| **The NetHack Module** — `external/NetHack`, `src/modules/nethack/recoverSave.ts` (a port of NetHack's `util/recover.c`), and the built `public/modules/nethack/*` plus the NetHack worker bundle they compile into | NGPL ([LICENSE.NETHACK](LICENSE.NETHACK)) |
-| **The Angband Module** — `external/angband`, `src/modules/angband/native/`, and the built `public/modules/angband/*` | GPL-2.0-only ([LICENSE.GPL2](LICENSE.GPL2)) |
+| **The NetHack Module** — `external/NetHack`, `src/modules/nethack/recoverSave.ts` (a port of NetHack's `util/recover.c`), and the built `public/modules/nethack/*` plus the NetHack worker bundle they compile into | NGPL ([LICENSE.NETHACK](LICENSE.NETHACK); notices in [NOTICE.NETHACK](NOTICE.NETHACK)) |
+| **The Angband Module** — `external/angband`, `src/modules/angband/native/`, and the built `public/modules/angband/*` | GPL-2.0-only ([LICENSE.GPL2](LICENSE.GPL2); notices in [NOTICE.ANGBAND](NOTICE.ANGBAND)) |
 | **The Umoria Module** — `external/umoria`, `src/modules/moria/native/`, and the built `public/modules/moria/*` and `public/modules/moria-versions/*` | GPL-3.0-or-later ([LICENSE.GPL3](LICENSE.GPL3)) |
 | **The Larn Module** — `external/larn`, `src/modules/larn/native/`, and the built `public/modules/larn/*` | Noah Morgan's no-profit grant ([LICENSE.LARN](LICENSE.LARN)) |
-| **Bundled runtime components** — three.js, the Emscripten runtime, musl libc, Lua | MIT / NCSA ([THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)) |
+| **Bundled runtime components** — three.js, the Emscripten runtime, musl libc | MIT / NCSA ([THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)) |
 
 A Module means everything that engine needs: the upstream source, the
 VectHack adaptation named in the row, and the compiled `.wasm`/`.js`/`.data`
@@ -22,7 +22,9 @@ that Module is **distributed as a whole**. Two things it does not mean:
 - **It is not the only license inside.** Each upstream tree also contains
   separately licensed files — Larn's NetBSD BSD files, Angband's BSD-licensed
   sources, NetHack's public-domain `isaac64.c`. Those keep their own grants
-  and conditions, which apply cumulatively. See the next section.
+  and conditions, which apply cumulatively; their notices are in
+  [NOTICE.NETHACK](NOTICE.NETHACK), [NOTICE.ANGBAND](NOTICE.ANGBAND) and
+  [LICENSE.LARN](LICENSE.LARN).
 - **It does not reach the rest of the Module.** Each Module's classifier,
   views, key tables, HUD and bot are original VectHack code under MIT, so the
   renderer and per-game views stay reusable on their own.
@@ -47,10 +49,13 @@ message protocol. Keeping the Modules separable is a design constraint, not just
 ## Corresponding source
 
 `npm run build` stages every license and notice text into `dist/licenses/`,
-so a copied `dist/` carries its own terms. It also writes
-`dist/licenses/index.html`, which carries every text inline together with
-`SOURCE.txt`; the game's Saves panel links it as "Licenses & source", so the
-notices and the source offer are one click from every Module.
+so a copied `dist/` carries its own terms. It also writes one page per game,
+`dist/licenses/<game>.html`, carrying VectHack's terms and that game's inline
+together with `SOURCE.txt` and nothing of another game; the game's Saves panel
+links its own page as "Licenses & source", so its notices and the source offer
+are one click away. `dist/licenses/index.html`, for a URL with no game, carries
+VectHack's terms alone. The game list lives in
+`scripts/build/stage-licenses.mjs`.
 
 The source for each Module is this repository — the pinned upstream tree plus
 VectHack's native adaptation and build script — with one exception worth
@@ -69,8 +74,8 @@ NetHack's own source files carry prominent copyright and license notices —
 every file in `src/` except the public-domain `isaac64.c`. Those notices
 travel with the source; when redistributing the wasm in object-code form,
 what must accompany it is `LICENSE.NETHACK` (verbatim from
-`external/NetHack/dat/license`) together with the source or the ¶3b
-information above.
+`external/NetHack/dat/license`) together with the source or the ¶3(b)
+information in [NOTICE.NETHACK](NOTICE.NETHACK).
 
 Umoria is GPL-3.0-or-later per upstream's official representation (its
 LICENSE, per-file SPDX tags, and the 2008 relicensing recorded in AUTHORS).
