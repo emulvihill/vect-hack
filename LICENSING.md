@@ -38,59 +38,11 @@ conditions apply at once; none displaces another.
 No single standard SPDX expression is used for the repository as a whole, so
 `package.json` says `SEE LICENSE IN LICENSING.md` and this file is the map.
 
-## Additional component licenses and required notices
-
-Every Module contains permissively licensed components. They remain under
-their own grants, and their conditions — attribution, notice reproduction,
-and for BSD-3 a non-endorsement term — apply on top of the row above. None of
-them changes the term on which the Module is distributed as a whole, because
-each is more permissive than the row's license; that is why they live here
-rather than in the map.
-
-- **Larn** — six NetBSD-era files: five University of California 3-clause
-  (`bill.c`, `data.c`, `fortune.c`, `store.c`, `pathnames.h`; 1988, 1990 and
-  1991 Regents copyrights) and one Christos Zoulas 2-clause (`extern.h`).
-  Reproduced in [LICENSE.LARN](LICENSE.LARN).
-- **Angband** — `message.c/.h`, `wiz-stats.c`, `z-textblock.c/.h` and
-  `sound.h` are BSD-2-clause and compile into `angband.wasm`.
-- **NetHack** — Lua 5.4.8 (MIT) is compiled into `nethack.wasm`, and
-  `src/isaac64.c` is CC0 / public domain rather than NGPL.
-- **All four** — the Emscripten runtime (MIT/NCSA) and parts of musl libc
-  (MIT, with its own separately licensed portions).
-
-Everything except the Larn set is reproduced in
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
 ## The combined distribution
 
 The built application is an **aggregation of separable works** — a shared MIT
 host plus four self-contained Modules, each in its own Web Worker behind a
-message protocol. This is the project's documented position, not a settled
-legal conclusion; whether a larger combination would be judged one derivative
-work is fact-dependent. It matters because the licenses cannot be reconciled
-into one: GPL-2.0-only and GPL-3.0-or-later alone cannot both govern a single
-combined derivative work under the present grants, and the NGPL and Morgan's
-grant add further terms of their own. Keeping the Modules separable is
-therefore a design constraint, not just a tidy structure.
-
-Hosting the app is distribution — the browser downloads the wasm binaries and
-bundles. Three consequences:
-
-- **NGPL:** a work containing NetHack must be licensed at no charge (¶2b).
-  ¶2c still permits a fee for the physical act of transferring a copy.
-- **Source offer:** a link to this repository is the *archive-information*
-  route of ¶3b, which is available only for noncommercial distribution — not
-  ¶3a, which is accompany-with-source.
-- **Larn:** the project relies on free, ad-free hosting satisfying Morgan's
-  no-profit condition. "Profit" is undefined in the 1986 grant and browser
-  delivery postdates it, so any revenue-linked distribution of the Larn
-  Module needs separate review.
-
-The GPL Modules expressly permit commercial distribution, and the NGPL permits
-a transfer fee; the constraints above are conditions, not a ban. As project
-policy, VectHack still routes any commercial redistribution past counsel
-first — chiefly because of Morgan's undefined "profit" and the ¶3b
-noncommercial limit, which are the two genuinely unsettled points.
+message protocol. Keeping the Modules separable is a design constraint, not just a tidy structure.
 
 ## Corresponding source
 
