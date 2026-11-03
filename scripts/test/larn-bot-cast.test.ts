@@ -17,21 +17,14 @@
 //      unanswerable direction hangs the engine, not the bot.
 import { describe, expect, it } from "vitest";
 import { LarnBotModel } from "../../src/modules/larn/bot/model";
-import { LarnBrain, rayTarget } from "../../src/modules/larn/bot/policy";
+import { DEFAULT_TUNING, LarnBrain, rayTarget } from "../../src/modules/larn/bot/policy";
 import { LarnBotPlayer } from "../../src/modules/larn/bot/LarnBotPlayer";
 import { GRID, GRID_STRIDE, TERRAIN, TOP } from "../../src/modules/larn/mapRecords";
 import { LARN_COLS, LARN_ROWS } from "../../src/modules/larn/classifier";
 import { STATUS, STATUS_HEADER } from "../../src/modules/larn/statusRecords";
-import { loadKb } from "../../src/bot/kb";
-import metaFacts from "../../data/kb/meta/facts.json";
-import larnFacts from "../../data/kb/larn/facts.json";
-import larnPolicy from "../../data/kb/larn/policy.json";
-
 /** The shipped tuning with casting ENABLED. It ships off until measured, so a
  *  suite about the mechanism turns it on itself (the b5f.25 lesson). */
-const kb = () => loadKb({
-  meta: metaFacts, engine: larnFacts, policy: { ...larnPolicy, castAtRange: true },
-});
+const casting = { castAtRange: true };
 
 const HERO: [number, number] = [10, 8];
 
@@ -145,7 +138,7 @@ describe("the cast step", () => {
     const m = new LarnBotModel();
     room(m, [[14, 8]]);
     status(m, 1);
-    const action = new LarnBrain(kb()).decide(m);
+    const action = new LarnBrain(casting).decide(m);
     expect(action.intent).toBe("cast");
     expect(String.fromCharCode(action.key.code)).toBe("c");
     // spelcode[1] is "mle" (data.c:421). The bytes ride on the action because
@@ -160,23 +153,22 @@ describe("the cast step", () => {
     const m = new LarnBotModel();
     room(m, [[14, 8]]);
     status(m, 0);
-    expect(new LarnBrain(kb()).decide(m).intent).not.toBe("cast");
+    expect(new LarnBrain(casting).decide(m).intent).not.toBe("cast");
   });
 
   it("is off in the shipped policy", () => {
-    expect(larnPolicy.castAtRange).toBe(false);
+    expect(DEFAULT_TUNING.castAtRange).toBe(false);
     const m = new LarnBotModel();
     room(m, [[14, 8]]);
     status(m, 1);
-    const off = loadKb({ meta: metaFacts, engine: larnFacts, policy: larnPolicy });
-    expect(new LarnBrain(off).decide(m).intent).not.toBe("cast");
+    expect(new LarnBrain().decide(m).intent).not.toBe("cast");
   });
 
   it("answers the direction prompt with the direction it aimed", () => {
     const m = new LarnBotModel();
     room(m, [[10, 5]]); // due north
     status(m, 1);
-    const brain = new LarnBrain(kb());
+    const brain = new LarnBrain(casting);
     expect(brain.decide(m).intent).toBe("cast");
     // movementKey(0) is "k" — north in Larn's vi keys, which is exactly the
     // vocabulary dirsub() accepts.
@@ -190,7 +182,7 @@ describe("the cast step", () => {
     const m = new LarnBotModel();
     room(m); // nothing to shoot; nothing was ever aimed
     status(m, 1);
-    const ctx = new LarnBrain(kb()).promptContext(m);
+    const ctx = new LarnBrain(casting).promptContext(m);
     expect("hjklyubn").toContain(String.fromCharCode(ctx.castDirection.code));
   });
 });
@@ -199,7 +191,7 @@ describe("the follow-key queue", () => {
   const stubView = () => ({ onNotice: () => {}, handle: () => {}, nextKey: async () => null });
 
   it("drains the spell code into the nested reads, then falls back to the table", async () => {
-    const bot = new LarnBotPlayer(stubView(), kb(), 0);
+    const bot = new LarnBotPlayer(stubView(), 0, casting);
     bot.handle({ name: "map", records: mapWith([[14, 8]]) });
     bot.handle({ name: "status", record: statusRecord(1), names: new Uint8Array(0) });
 
@@ -220,7 +212,7 @@ describe("the follow-key queue", () => {
     // The safety property. If a cast ever queued bytes the engine did not read
     // — the no-charge path is the one that could — the next COMMAND drops them
     // rather than letting "m" answer someone else's question.
-    const bot = new LarnBotPlayer(stubView(), kb(), 0);
+    const bot = new LarnBotPlayer(stubView(), 0, casting);
     bot.handle({ name: "map", records: mapWith([[14, 8]]) });
     bot.handle({ name: "status", record: statusRecord(1), names: new Uint8Array(0) });
     expect(String.fromCharCode((await bot.nextKey(true, true))!.code)).toBe("c");

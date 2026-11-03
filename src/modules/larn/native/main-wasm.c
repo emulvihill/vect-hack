@@ -108,7 +108,7 @@ EM_JS(void, wasm_notice, (const char *s), {
 	globalThis.VectLarn.notice(UTF8ToString(s));
 });
 /* The map glyph of the creature the epitaph is about to name, or 0 for none
- * (protocol.ts's `death` event). This is the join the reflect digest cannot
+ * (protocol.ts's `death` event). This is the join the run digest cannot
  * make for itself: the screen prints "killed by a giant ant" in one place and
  * draws a 'G' in another, and only the engine knows they are the same being
  * (vect-hack-b5f.4). Sent as an int, not a string: it is one character. */
@@ -1487,7 +1487,7 @@ __wrap_died(int code)
 
 	if (code != -257)
 		saved_game = 0;
-	/* The killer's glyph, for the reflect digest (vect-hack-b5f.4).
+	/* The killer's glyph, for the run digest (vect-hack-b5f.4).
 	 * diedsub() (scores.c:734) prints "killed by a <monster[x].name>" for
 	 * x < 256 and whydead[x-256] otherwise, so a small x is exactly the
 	 * set of deaths a being caused, and monstnamelist[x] is the glyph the

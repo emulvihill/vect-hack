@@ -2,7 +2,7 @@
 // game into a scratch directory and check every artifact it promises — the
 // bot got real events (a level beyond the town), answered real prompts, and
 // the trajectory replays line for line.
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -27,10 +27,9 @@ if (!runDir) fail("no run directory");
 const s = JSON.parse(readFileSync(join(out, runDir, "summary.json"), "utf8"));
 if (!["capped", "died"].includes(s.outcome)) fail(`outcome ${s.outcome}: ${s.error} ${s.stderr.join(" | ")}`);
 if (s.game !== "larn") fail(`game ${s.game}`);
-// No --kb was named, so this run is the untaught seed bot and must say so. A
-// knowledge base sitting in the working tree reaching an unflagged run would
-// quietly move the frozen keystroke trace and the control arm of every A/B.
-if (s.kb !== "") fail(`unflagged run recorded kb ${JSON.stringify(s.kb)}, want ""`);
+// No --tuning was named, so this run is the bot as shipped and must say so: a
+// sweep arm is only attributable afterwards if every summary names its own.
+if (JSON.stringify(s.tuning) !== "{}") fail(`unflagged run recorded tuning ${JSON.stringify(s.tuning)}, want {}`);
 if (s.depth < 1) fail(`depth ${s.depth}: the bot never left the town — messages: ${s.lastMessages.join(" / ")}`);
 if (s.outcome === "capped" && s.commands < MAX) fail(`capped at ${s.commands} commands, want ${MAX}`);
 // Scaled to the commands actually played: a legitimate fast death is short, but
@@ -49,4 +48,22 @@ const cmds = lines.filter((l) => l.includes('"name":"getKey"') && l.includes('"c
 if (cmds !== s.commands) fail(`trajectory has ${cmds} command keys, summary counted ${s.commands}`);
 
 rmSync(out, { recursive: true, force: true });
+
+// A knob the bot does not have is refused, never played as the defaults under
+// the name of the arm that asked for it: the child exits before its game, and
+// the batch reports the game fatal and fails.
+const bad = mkdtempSync(join(tmpdir(), "vect-gym-"));
+const refused = spawnSync(process.execPath, [
+  "scripts/dev/bot-gym.mjs", "--game", "larn", "--games", "1", "--parallel", "1",
+  "--max-commands", String(MAX), "--timeout", "60", "--out", bad, "--tuning", '{"restLimt":300}',
+], { encoding: "utf8" });
+if (refused.status === 0) fail("a batch with an unknown tuning knob exited 0");
+if (!refused.stderr.includes('unknown tuning knob "restLimt"')) fail(`no refusal named the knob: ${refused.stderr}`);
+const badDir = readdirSync(bad).find((n) => n.startsWith("larn-"));
+const badSummary = badDir && JSON.parse(readFileSync(join(bad, badDir, "summary.json"), "utf8"));
+if (badSummary?.outcome !== "fatal" || badSummary.commands !== 0) {
+  fail(`unknown knob: want a fatal game with no commands, got ${JSON.stringify(badSummary?.outcome)} after ${badSummary?.commands}`);
+}
+rmSync(bad, { recursive: true, force: true });
+
 console.log(`OK: the gym played one Larn game to ${s.outcome} at depth ${s.depth} in ${s.commands} commands (${s.events} events)`);

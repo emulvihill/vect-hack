@@ -29,7 +29,6 @@ import { CONDITION_NAMES, ITEM_CLASS, decodeStatus } from "../../src/modules/lar
 import { LarnGrid } from "../../src/modules/larn/grid.ts";
 import { LarnBotPlayer } from "../../src/modules/larn/bot/LarnBotPlayer.ts";
 import { installLarnShim } from "../../src/modules/larn/shimBridge.ts";
-import { larnKb } from "../dev/bot-kb.mjs";
 
 const CORE = (name) => fileURLToPath(new URL(`../../public/modules/larn/${name}`, import.meta.url));
 const fail = (message) => { console.error("FAIL: " + message); process.exit(1); };
@@ -67,7 +66,7 @@ const gridView = {
   },
 };
 
-const bot = new LarnBotPlayer(gridView, larnKb(), 0); // no pacing: full speed
+const bot = new LarnBotPlayer(gridView, 0); // no pacing: full speed
 let status = null;
 let statusPushes = 0;
 let phase = "playing";

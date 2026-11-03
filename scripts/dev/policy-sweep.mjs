@@ -8,17 +8,19 @@
 // validated ONCE against held-out by hand
 // (docs/specs/2026-08-28-larn-bench-design.md).
 //
-// Each arm gets a whole KB directory of its own, with the shipped fact tiers
-// and one overridden knob, so every game records the compiled hash it played
-// under and no arm can be confused for another afterwards.
+// Each arm is a partial override of DEFAULT_TUNING
+// (src/modules/larn/bot/policy.ts), handed to the gym as --tuning, so every
+// game records the override it played under and no arm can be confused for
+// another afterwards.
 //
 //   node scripts/dev/policy-sweep.mjs --knob restBelowHpFraction --values 0.5,0.7,0.9
 //   node scripts/dev/policy-sweep.mjs --grid '[{"restBelowHpFraction":0.7,"restLimit":300}]'
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { resolveTuning } from "../../src/modules/larn/bot/policy.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = join(here, "..", "..");
@@ -48,29 +50,22 @@ else if (opts.knob && opts.values) {
   die("usage: policy-sweep.mjs --knob <name> --values a,b,c | --grid '<json array>' [--set bench] [--out DIR]");
 }
 
-const basePolicy = JSON.parse(readFileSync(join(repo, "data/kb/larn/policy.json"), "utf8"));
+// Every arm is checked against DEFAULT_TUNING before the first one plays, so
+// a misspelt knob cannot cost the arms ahead of it.
 for (const arm of arms) {
-  for (const k of Object.keys(arm)) {
-    if (!(k in basePolicy)) die(`unknown knob "${k}" — not in data/kb/larn/policy.json`);
-  }
+  try { resolveTuning(arm); } catch (e) { die(`arm ${JSON.stringify(arm)}: ${e.message}`); }
 }
 
 const label = (arm) => Object.entries(arm).map(([k, v]) => `${k}=${v}`).join(",");
 const rows = [];
 for (const arm of arms) {
   const name = label(arm).replace(/[^A-Za-z0-9=.,_-]/g, "_");
-  const kbDir = join(repo, opts.out, `kb-${name}`);
   const batch = join(repo, opts.out, `run-${name}`);
   rmSync(batch, { recursive: true, force: true });
-  mkdirSync(join(kbDir, "meta"), { recursive: true });
-  mkdirSync(join(kbDir, "larn"), { recursive: true });
-  writeFileSync(join(kbDir, "meta/facts.json"), readFileSync(join(repo, "data/kb/meta/facts.json")));
-  writeFileSync(join(kbDir, "larn/facts.json"), readFileSync(join(repo, "data/kb/larn/facts.json")));
-  writeFileSync(join(kbDir, "larn/policy.json"), JSON.stringify({ ...basePolicy, ...arm }, null, 2) + "\n");
 
   process.stderr.write(`\n=== ${label(arm)} ===\n`);
   const r = spawnSync(process.execPath, [
-    join(here, "bench-larn.mjs"), "--set", opts.set, "--kb", kbDir,
+    join(here, "bench-larn.mjs"), "--set", opts.set, "--tuning", JSON.stringify(arm),
     "--out", batch, "--parallel", opts.parallel,
   ], { stdio: ["ignore", "inherit", "inherit"], cwd: repo });
   if (r.status !== 0) die(`arm ${label(arm)} exited ${r.status}`);

@@ -5,7 +5,7 @@ import type { RunSummary } from "../../src/bot/scoreboard";
 const base: RunSummary = {
   game: "larn", id: "larn-20260818T101010Z-4242-0001",
   startedAt: "2026-08-18T10:10:10.000Z", endedAt: "2026-08-18T10:12:00.000Z",
-  outcome: "died", seed: 991, kb: "", depth: 3, xlevel: 2, hp: 0, hpmax: 19,
+  outcome: "died", seed: 991, tuning: {}, depth: 3, xlevel: 2, hp: 0, hpmax: 19,
   commands: 412, score: 1043, events: 5183, cause: "killed by a gnome", lastMessages: [],
   stderr: [], error: "",
 };

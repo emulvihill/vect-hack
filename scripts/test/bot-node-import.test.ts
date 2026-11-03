@@ -45,19 +45,16 @@ describe("the Larn bot chain loads under plain node", () => {
   });
 
   // A second head of the same chain: the digest builder is loaded from source
-  // by scripts/dev/bot-reflect.mjs and by nothing else, so an extensionless
-  // import there would fail only inside the reflect host, at batch time.
-  it("imports the Larn digest builder — the head of the reflect host's chain", () => {
+  // by scripts/test/test-larn-killer.mjs and scripts/dev/larn-shaft-survival.mjs,
+  // so an extensionless import there would fail only inside those, at run time.
+  it("imports the Larn digest builder — the head of the killer test's chain", () => {
     expect(importsUnderNode("../../src/modules/larn/bot/digest.ts", "buildLarnDigest")).toBe("function");
   });
 
-  // The KB is on the same chain: importing it here proves node can load it;
-  // the grep proves it does not need node to. The grep covers the whole of
-  // src/bot, not just kb.ts — the browser bot shares every file in there, so
-  // "no filesystem" binds the directory, and a new file that reached for node
-  // would otherwise land uncovered.
-  it("imports the KB loader; nothing in src/bot reaches for the filesystem", () => {
-    expect(importsUnderNode("../../src/bot/kb.ts", "loadKb")).toBe("function");
+  // The browser bot shares every file in src/bot, so "no filesystem" binds the
+  // whole directory, and a new file that reached for node would otherwise land
+  // uncovered.
+  it("nothing in src/bot reaches for the filesystem", () => {
     const dir = new URL("../../src/bot/", import.meta.url);
     for (const name of readdirSync(dir).filter((n) => n.endsWith(".ts"))) {
       expect(readFileSync(new URL(name, dir), "utf8"), name).not.toMatch(/from\s+"node:/);

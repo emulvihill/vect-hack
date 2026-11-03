@@ -12,7 +12,7 @@ describe("run summaries", () => {
   it("emptySummary carries the meta and zeros", () => {
     expect(emptySummary({ ...meta, outcome: "timeout" })).toEqual({
       game: "larn", id: "r1", startedAt: meta.startedAt, endedAt: meta.endedAt, outcome: "timeout", seed: 4242,
-      kb: "",
+      tuning: {},
       depth: 0, xlevel: 0, hp: 0, hpmax: 0, commands: 0, score: 0, events: 0, cause: "",
       lastMessages: [], details: {}, stderr: [], error: "",
     });
@@ -26,34 +26,33 @@ describe("run summaries", () => {
     );
     expect(s).toEqual({
       game: "larn", id: "r1", startedAt: meta.startedAt, endedAt: meta.endedAt, outcome: "died", seed: 4242,
-      kb: "",
+      tuning: {},
       depth: 4, xlevel: 5, hp: 0, hpmax: 31, commands: 812, score: 1043, events: 9001, cause: "killed by a gnome",
       lastMessages: ["You die"], details: { larn: { gold: 250 } }, stderr: ["x"], error: "",
     });
   });
 });
 
-// The A/B arm (spec 2026-08-19-bot-phase1b-larn-reflect-design.md, "The two
-// arms"): a summary that does not name the knowledge state it played under
-// cannot be assigned to an arm afterwards.
-describe("the knowledge state a run played under", () => {
-  it("buildRunSummary keeps the meta's kb hash", () => {
+// A sweep arm (scripts/dev/policy-sweep.mjs): a summary that does not name
+// the tuning it played under cannot be assigned to an arm afterwards.
+describe("the tuning a run played under", () => {
+  it("buildRunSummary keeps the meta's tuning override", () => {
     const s = buildRunSummary(
-      { ...meta, kb: "1a2b3c4d" },
+      { ...meta, tuning: { restLimit: 300 } },
       { depth: 1, xlevel: 1, hp: 3, hpmax: 12, commands: 40, score: 0, cause: "", lastMessages: [] },
       { events: 300 },
     );
-    expect(s.kb).toBe("1a2b3c4d");
+    expect(s.tuning).toEqual({ restLimit: 300 });
   });
 
   it("stays off the shared columns: the CSV is compared across engines", () => {
-    expect(SCOREBOARD_COLUMNS).not.toContain("kb");
+    expect(SCOREBOARD_COLUMNS).not.toContain("tuning");
   });
 });
 
 describe("scoreboard CSV", () => {
   const s: RunSummary = {
-    ...meta, kb: "", depth: 3, xlevel: 2, hp: 0, hpmax: 20, commands: 500, score: 1043, events: 12000,
+    ...meta, tuning: {}, depth: 3, xlevel: 2, hp: 0, hpmax: 20, commands: 500, score: 1043, events: 12000,
     cause: 'killed by a jackal, while "helpless"', lastMessages: [], stderr: [], error: "",
   };
   it("quotes fields with commas or quotes", () => {

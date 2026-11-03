@@ -5,9 +5,9 @@
 import { closeSync, mkdirSync, openSync, writeFileSync, writeSync } from "node:fs";
 import { parseArgs } from "node:util";
 
-/** --out <dir> --id <id> [--max-commands N] [--seed N] [--kb DIR|none];
- *  exits 2 on misuse. `kbDir` is null for "none" — the untaught seed bot,
- *  which is what a run gets unless the arm was named. */
+/** --out <dir> --id <id> [--max-commands N] [--seed N] [--tuning JSON];
+ *  exits 2 on misuse. `tuning` is the parsed override, {} — the bot as
+ *  shipped — unless one was named; the child checks its knob names. */
 export function childArgs(usage) {
   const { values } = parseArgs({
     options: {
@@ -15,18 +15,24 @@ export function childArgs(usage) {
       id: { type: "string" },
       "max-commands": { type: "string", default: "3000" },
       seed: { type: "string", default: "0" },
-      kb: { type: "string", default: "none" },
+      tuning: { type: "string", default: "{}" },
     },
   });
   if (!values.out || !values.id) {
-    console.error(`usage: ${usage} --out <dir> --id <id> [--max-commands N] [--seed N] [--kb DIR|none]`);
+    console.error(`usage: ${usage} --out <dir> --id <id> [--max-commands N] [--seed N] [--tuning JSON]`);
+    process.exit(2);
+  }
+  let tuning;
+  try { tuning = JSON.parse(values.tuning); } catch { tuning = undefined; }
+  if (typeof tuning !== "object" || tuning === null || Array.isArray(tuning)) {
+    console.error(`${usage}: --tuning must be a JSON object, got ${values.tuning}`);
     process.exit(2);
   }
   return {
     outDir: values.out, id: values.id,
     maxCommands: Number(values["max-commands"]),
     seed: Number(values.seed),
-    kbDir: values.kb === "none" ? null : values.kb,
+    tuning,
   };
 }
 

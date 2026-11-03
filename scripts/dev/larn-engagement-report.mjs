@@ -21,11 +21,11 @@
 // variants are printed by monster.c (1279, 1547-1643); `hitplayer` is the only
 // thing that prints them.
 //
-// **A capped run is data here, unlike in the A/B.** abReport drops a
-// harness-cut run from the score statistic because Larn prints no score line.
-// Melee per 100 commands is recorded live and survives a cap — and a treatment
-// that stopped fighting and ran out its budget is precisely what this metric
-// exists to catch, so dropping capped runs would blind it.
+// **A capped run is data here, unlike in the bench's score median**, which
+// drops a harness-cut run because Larn prints no score line. Melee per 100
+// commands is recorded live and survives a cap — and a bot that stopped
+// fighting and ran out its budget is precisely what this metric exists to
+// catch, so dropping capped runs would blind it.
 import { createReadStream, existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
@@ -35,9 +35,7 @@ import { LarnBotModel } from "../../src/modules/larn/bot/model.ts";
 
 /** The linear-interpolated R-7 quantile, the same definition
  *  scripts/dev/baseline-report.mjs states and uses. Copied rather than shared
- *  because that script does its work at import time; src/bot/abReport.ts
- *  deliberately uses the plain median instead, over per-seed deltas, and the
- *  two must not be confused. */
+ *  because that script does its work at import time. */
 function quantile(values, p) {
   if (values.length === 0) return 0;
   const v = [...values].sort((a, b) => a - b);
@@ -127,7 +125,7 @@ async function replay(path) {
       // of the previous write plus this one. What was already counted is then
       // CUT from the tail — carrying it forward would count the same blow once
       // per following write, which is the difference between 1 and 3 on the
-      // reflect fixture. Only the trailing text no match has consumed is kept,
+      // larn-digest fixture batch. Only the trailing text no match has consumed is kept,
       // and BLOW's match is far shorter than that.
       const window = blowTail + line.ev.text;
       let end = 0;

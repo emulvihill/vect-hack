@@ -1,8 +1,7 @@
 // The Larn bench metrics: a batch of RunSummary in, the numbers
 // docs/specs/2026-08-28-larn-bench-design.md pre-registered out.
 // Pure and filesystem-free — scripts/dev/bench-larn.mjs does every read and
-// write, the same split kb-ab-report.mjs uses, because this directory is also
-// loaded by the browser bot.
+// write, because this directory is also loaded by the browser bot.
 //
 // The one idea worth stating twice: DEPTH IS TWO NUMBERS, not one. Larn's town
 // holds a volcanic shaft that drops a level-1 character straight to internal 11
@@ -47,7 +46,7 @@ export interface BenchMetrics {
   commandsMedian: number;
   /** Median over runs that HAVE a score. A capped run's 0 is a hole, not a
    *  zero, and averaging it in would let a change that capped more games read
-   *  as a score regression (the same rule abReport.ts states for pairs). */
+   *  as a score regression. */
   scoreMedian: number;
   scored: number;
 }

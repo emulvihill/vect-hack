@@ -73,7 +73,7 @@ function blankComments(src: string): string {
 const SPECIFIER = /(?<![.\w])(?:from|import)\s*\(?\s*["']([^"']+)["']/g;
 
 /** A path relative to src/ -> the layer that owns it. `outside` is a relative
- *  import that leaves src/ altogether (main.ts reads ../data/kb). */
+ *  import that leaves src/ altogether. */
 function layerOf(relFromSrc: string): string {
   const rel = relFromSrc.split(path.sep).join("/");
   if (rel.startsWith("..")) return "outside";

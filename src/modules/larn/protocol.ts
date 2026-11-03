@@ -58,7 +58,7 @@ export type LarnEvent =
    *  glyph of the being the epitaph names, or "" when the epitaph names none
    *  — a trap, poison, a win, a quit, or a being the player never saw. No
    *  view reads this; it exists so the recorded trajectory carries the join
-   *  between the death message and the map, which the reflect digest cannot
+   *  between the death message and the map, which the run digest cannot
    *  make for itself (vect-hack-b5f.4).
    *
    *  It is not a game-over signal. died() returns when life protection spends

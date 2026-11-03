@@ -33,13 +33,13 @@ the file for an area before changing anything in it.**
   gates need a server already running. A gate drives only public diagnostics
   accessors, because **an assertion that cannot fail is worse than no
   assertion**.
-- `docs/BOT.md` — the Larn bot, the gym, the reflect loop, the knowledge base,
-  and the frozen bench. **No fact and no readiness bar can seal a level.** Ids,
-  confidence, merging and evidence scope are ours, never the model's. `data/kb`
-  is empty **by decision, not by omission** — Phase 1 and Phase 2 are both
-  closed. **Report `npm run bench:larn` beside `scripts/dev/bench-pair.mjs`,
-  always.** `policy-sweep.mjs` refuses `--set held-out`, and nothing in code
-  keeps a held-out seed out of a reflection — that wall is the runbook's.
+- `docs/BOT.md` — the Larn bot, the gym, and the frozen bench. **No readiness
+  bar can seal a level.** The bot learns nothing: its knobs are hand-tuned
+  constants (`DEFAULT_TUNING` in `src/modules/larn/bot/policy.ts`), and the
+  LLM learning apparatus is retired
+  (`docs/decisions/2026-11-03-retire-bot-learning.md`).
+  **Report `npm run bench:larn` beside `scripts/dev/bench-pair.mjs`, always.**
+  `policy-sweep.mjs` refuses `--set held-out`.
 - `docs/SAVES.md` — F3, F4, the reset row, session-only tabs, checkpoints and
   recovery. A blob is a whole volume: **replace, not merge**. F3 refuses a save
   with nobody in it (counting files is not the guard); F4 warns rather than
@@ -73,7 +73,7 @@ npm run test:render                 # vitest: all unit tests, every Module and s
 npm run test:nethack                # the NetHack engine tests: boot persist save-restore tabs autosave
 npm run test:angband                # the Angband engine tests: boot persist save-restore autosave borg borg-death
 npm run test:larn                   # the Larn engine tests: boot seed repro trace persist save-restore
-                                    #   autosave map-contract status savefile gym reflect killer
+                                    #   autosave map-contract status savefile gym killer
 npm run test:moria                  # the Moria engine tests: boot play checkpoint-native map-contract
                                     #   persist save-restore tabs autosave overlay build-contract
                                     # each is its own `test:<game>-<name>`; docs/TESTS.md says what each pins
@@ -91,16 +91,12 @@ npm run check:touch                 # real Chromium at 390x844: the ?touch schem
 npm run check:payload               # cold-cache Chromium: ?game=<M> must fetch no other Module's JS (needs no GPU, no server)
 .github/workflows/ci.yml            # CI: typecheck + test:render + check:payload on push. No engine build, no GPU — docs/GATES.md
 
-npm run bot:headless -- --game larn # bot gym: N games in child processes at full speed -> .gym/ (--games --parallel --max-commands --timeout --out --seed --kb)
-npm run bot:reflect -- --batch DIR  # one model reflection per played game -> data/kb (--kb --brain --replay --url --model --effort --probe-sample --archive --no-reuse --dry-run --ship)
-npm run bench:larn                  # the Phase 2 bench: a frozen seed set -> the pre-registered metrics (--set bench|held-out --kb --parallel --out --read-only)
+npm run bot:headless -- --game larn # bot gym: N games in child processes at full speed -> .gym/ (--games --parallel --max-commands --timeout --out --seed --tuning JSON)
+npm run bench:larn                  # the Phase 2 bench: a frozen seed set -> the pre-registered metrics (--set bench|held-out --tuning JSON --parallel --out --read-only)
 node scripts/dev/policy-sweep.mjs   # a knob over the bench, one arm per value: --knob N --values a,b,c | --grid JSON (refuses --set held-out)
-node scripts/dev/kb-ab-report.mjs   # the paired held-out A/B: --control DIR --treatment DIR [--out PREFIX --seed-master N --cohort N]
-node scripts/dev/kb-split.mjs       # one KB per claim kind, for attribution arms: --facts F --kinds threat,note --out DIR
 scripts/dev/worktree-setup.sh       # a fresh worktree has no build state; run this first
 scripts/dev/worktree-teardown.sh    # remove a finished worktree without breaking the primary's submodules (--list, --discard)
 node scripts/dev/larn-engagement-report.mjs --batch DIR   # what a batch did when a monster reached it: melee, never-swung, blows, capped
-node scripts/dev/reflect-prompt-probe.mjs --transcripts DIR --out F.jsonl  # re-ask archived reflections under the current prompt: which kinds it routes a lesson to
 ```
 
 `npm test` runs every Module's engine tests — there is no fast subset worth

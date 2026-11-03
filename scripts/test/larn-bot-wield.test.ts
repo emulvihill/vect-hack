@@ -10,14 +10,10 @@
 // spends its whole budget and caps.
 import { describe, expect, it } from "vitest";
 import { LarnBotModel } from "../../src/modules/larn/bot/model";
-import { LarnBrain } from "../../src/modules/larn/bot/policy";
+import { DEFAULT_TUNING, LarnBrain } from "../../src/modules/larn/bot/policy";
 import { GRID, GRID_STRIDE, TERRAIN, TOP } from "../../src/modules/larn/mapRecords";
 import { LARN_COLS, LARN_ROWS } from "../../src/modules/larn/classifier";
 import { ITEM_CLASS, SLOT, SLOT_STRIDE, STATUS, STATUS_HEADER } from "../../src/modules/larn/statusRecords";
-import { loadKb } from "../../src/bot/kb";
-import metaFacts from "../../data/kb/meta/facts.json";
-import larnFacts from "../../data/kb/larn/facts.json";
-import larnPolicy from "../../data/kb/larn/policy.json";
 
 /** The shipped tuning with the probe ENABLED. The shipped default is 0 — the
  *  probe failed its pre-registered bar and does not ship
@@ -25,9 +21,7 @@ import larnPolicy from "../../data/kb/larn/policy.json";
  *  suite about the mechanism has to turn it on itself. Asserting against the
  *  shipped knob would be vect-hack-b5f.25's mistake: a suite that goes red the
  *  day somebody changes a policy decision it was never about. */
-const kb = () => loadKb({
-  meta: metaFacts, engine: larnFacts, policy: { ...larnPolicy, wieldProbes: 40 },
-});
+const probing = { wieldProbes: 40 };
 
 /** An empty walled room with the hero in it and nothing else — the wield step
  *  declines while anything is visible, so every case here is a quiet room. */
@@ -71,7 +65,7 @@ const HELD = " (weapon in hand)";
 describe("the wield probe", () => {
   it("probes each carried weapon once and settles on the one Larn scored highest", () => {
     const m = new LarnBotModel();
-    const brain = new LarnBrain(kb());
+    const brain = new LarnBrain(probing);
     room(m);
 
     // Start: the dagger in hand at wc 3, a second weapon in the pack.
@@ -98,7 +92,7 @@ describe("the wield probe", () => {
 
   it("puts the best back when a probe measured worse", () => {
     const m = new LarnBotModel();
-    const brain = new LarnBrain(kb());
+    const brain = new LarnBrain(probing);
     room(m);
     // Measure the spear at 6...
     status(m, 6, [{ letter: "a", name: "a dagger" }, { letter: "b", name: "a spear" + HELD }]);
@@ -131,7 +125,7 @@ describe("the wield probe", () => {
     // the run caps. This is the loop guard, and it is the reason this file
     // exists.
     const m = new LarnBotModel();
-    const brain = new LarnBrain(kb());
+    const brain = new LarnBrain(probing);
     room(m);
     const pack = [{ letter: "a", name: "a dagger" + HELD }, { letter: "b", name: "a two handed sword" }];
     status(m, 3, pack);
@@ -158,7 +152,7 @@ describe("the wield probe", () => {
     // turn buying "You can't wield item c!" would be a turn wasted every time
     // the hero picked up a scroll.
     const m = new LarnBotModel();
-    const brain = new LarnBrain(kb());
+    const brain = new LarnBrain(probing);
     room(m);
     status(m, 3, [
       { letter: "a", name: "a dagger" + HELD },
@@ -183,10 +177,9 @@ describe("the wield probe", () => {
     // control arm of that A/B honest as well: with the knob at 0 the new code
     // is provably inert, so the two arms differed by the probe and nothing
     // else. Turning it on again is a decision, not an edit.
-    expect(larnPolicy.wieldProbes).toBe(0);
-    const off = loadKb({ meta: metaFacts, engine: larnFacts, policy: larnPolicy });
+    expect(DEFAULT_TUNING.wieldProbes).toBe(0);
     const m = new LarnBotModel();
-    const brain = new LarnBrain(off);
+    const brain = new LarnBrain();
     room(m);
     status(m, 3, [{ letter: "a", name: "a dagger" }, { letter: "b", name: "a spear" }]);
     expect(brain.decide(m).intent).not.toMatch(/^wield/);
@@ -197,7 +190,7 @@ describe("the wield probe", () => {
     // Swapping costs a turn, and a turn spent swapping beside a monster is a
     // free round for the monster. The same condition the rest step uses.
     const m = new LarnBotModel();
-    const brain = new LarnBrain(kb());
+    const brain = new LarnBrain(probing);
     room(m, [12, 12]);
     status(m, 3, [{ letter: "a", name: "a dagger" + HELD }, { letter: "b", name: "a spear" }]);
     expect(brain.decide(m).intent).not.toMatch(/^wield/);

@@ -5,11 +5,10 @@
 //   <out>/scoreboard.csv          one row per game, appended across runs and games
 //   <out>/<id>/summary.json       RunSummary (src/bot/scoreboard.ts)
 //   <out>/<id>/trajectory.jsonl.gz
-// Prints one line per game and a stats line at the end. This is Phase 0 of
-// the self-teaching bot (docs/specs/2026-08-17-self-teaching-bot-design.md):
-// the fast, observable, replayable environment; no LLM anywhere in it.
+// Prints one line per game and a stats line at the end: a fast, observable,
+// replayable environment for a deterministic bot, with no LLM anywhere in it.
 import { spawn } from "node:child_process";
-import { appendFileSync, createReadStream, createWriteStream, existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { appendFileSync, createReadStream, createWriteStream, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { availableParallelism } from "node:os";
 import { dirname, join } from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -29,18 +28,17 @@ const { values: opts } = parseArgs({
     timeout: { type: "string", default: "300" }, // seconds per game
     out: { type: "string", default: ".gym" },
     seed: { type: "string", default: "0" },
-    // The evaluation arm. "none" is the untaught seed bot, and it is the
-    // default on purpose: a KB sitting in the working tree must never reach a
-    // run that did not ask for it, or the control arm and the frozen
-    // keystroke trace would both quietly be measuring something else.
-    kb: { type: "string", default: "none" },
+    // A partial override of the bot's tuning knobs, as a JSON object merged
+    // over the shipped defaults (Larn: DEFAULT_TUNING in
+    // src/modules/larn/bot/policy.ts). "{}" plays the bot as shipped.
+    tuning: { type: "string", default: "{}" },
   },
 });
 const here = dirname(fileURLToPath(import.meta.url));
 const game = opts.game;
 const child = game ? join(here, `bot-gym-${game}.mjs`) : null;
 if (!child || !existsSync(child)) {
-  console.error(`usage: bot-gym.mjs --game <name> [--games N] [--parallel K] [--max-commands N] [--timeout S] [--out DIR] [--seed N] [--kb DIR|none]`);
+  console.error(`usage: bot-gym.mjs --game <name> [--games N] [--parallel K] [--max-commands N] [--timeout S] [--out DIR] [--seed N] [--tuning JSON]`);
   console.error(`  --game names scripts/dev/bot-gym-<name>.mjs; available: larn`);
   process.exit(2);
 }
@@ -64,11 +62,12 @@ const out = opts.out;
 // dungeon, which is what paired per-seed comparison later depends on.
 const master = intOpt("seed", 0);
 const seedFor = (i) => (master === 0 ? 0 : childSeed(master, i));
-// A misspelled KB directory must not quietly become the control arm: every
-// child would then play untaught and the batch would look like a valid run of
-// the arm it was asked for. Fail here, before the first game.
-if (opts.kb !== "none" && !(existsSync(opts.kb) && statSync(opts.kb).isDirectory())) {
-  console.error(`--kb must be "none" or an existing directory, got ${opts.kb}`);
+// Malformed JSON fails here, before the first game. Which knobs exist is the
+// game's to say, so each child checks the names and refuses an unknown one.
+let tuning;
+try { tuning = JSON.parse(opts.tuning); } catch { tuning = undefined; }
+if (typeof tuning !== "object" || tuning === null || Array.isArray(tuning)) {
+  console.error(`--tuning must be a JSON object, got ${opts.tuning}`);
   process.exit(2);
 }
 
@@ -110,7 +109,7 @@ async function playOne(i) {
   return new Promise((resolve) => {
     const proc = spawn(process.execPath, [
       child, "--out", dir, "--id", id, "--max-commands", String(maxCommands),
-      "--seed", String(seedFor(i)), "--kb", opts.kb,
+      "--seed", String(seedFor(i)), "--tuning", opts.tuning,
     ], { stdio: ["ignore", "inherit", "inherit"] });
     let killed = false;
     let settled = false;

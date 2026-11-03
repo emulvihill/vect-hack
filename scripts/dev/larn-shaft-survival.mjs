@@ -16,8 +16,8 @@
 // improve either one and they mean different things:
 //   - `rode` — runs that took the shaft. Their survival is the goal.
 //   - `declined` — runs that never did. A treatment that moves runs out of the
-//     first group and into this one has also progressed, and the migration
-//     counts in kb-ab-report.mjs are where that shows.
+//     first group and into this one has also progressed, and the two batches'
+//     `declined` counts are where that shows.
 //
 // Reads only.
 //

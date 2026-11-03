@@ -1,20 +1,14 @@
 // The Larn survivor: pure functions over a LarnBotModel. decide() is a
 // priority ladder — first matching need wins — over src/bot/pathing.ts.
-// This is the seed-policy baseline: survival common sense and how to
-// operate the game, nothing learned. The reflect loop (spec, Phase 1)
-// parameterizes and then replaces it.
-//
-// The ladder reads its knobs from the KB's tuning (src/bot/kb.ts) and
-// consults the KB's learned tables where Phase 1b will want them. Those
-// tables ship empty, and an empty table reproduces today's decisions
-// exactly — scripts/test/test-larn-trace.mjs is that promise, executable.
+// Survival common sense and how to operate the game, nothing learned: its
+// knobs are the hand-tuned constants in DEFAULT_TUNING, and
+// scripts/test/test-larn-trace.mjs pins the keystrokes they produce.
 //
 // ".ts" import extensions: the headless gym loads this straight from source.
 import type { LarnKey } from "../protocol.ts";
 import { movementKey } from "../keys.ts";
 import { TERRAIN_CATEGORIES } from "../../../backplane/cell.ts";
 import { DIRS, farthest, isFrontier, nextStep, posKey, type Dir, type Step } from "../../../bot/pathing.ts";
-import type { Kb, PolicyTuning } from "../../../bot/kb.ts";
 import type { LarnBotModel } from "./model.ts";
 import type { PromptContext } from "./prompts.ts";
 import { ITEM_CLASS, type LarnItem } from "../statusRecords.ts";
@@ -28,6 +22,86 @@ export interface LarnAction {
    *  printed between them (monster.c:251-260) — the prompt table matches TEXT,
    *  and there is none to match on the second and third. */
   follow?: LarnKey[];
+}
+
+/** The ladder's knobs: constants it was born with and that measurement has
+ *  tuned by hand against the bench (docs/BOT.md). Never learned.
+ *  scripts/dev/policy-sweep.mjs searches them through the gym's `--tuning`,
+ *  which resolveTuning() merges over DEFAULT_TUNING. */
+export interface PolicyTuning {
+  /** Consecutive rest turns before the ladder moves on anyway. */
+  restLimit: number;
+  /** Moves in a row that did not move the hero before the cell they aimed at
+   *  is blocked for the rest of the level. */
+  stuckLimit: number;
+  /** Fraction of hpmax below which the hero rests, while nothing is in view. */
+  restBelowHpFraction: number;
+  /** Experience level at or above which Larn's volcanic town shaft is a route
+   *  rather than a hole. It drops the hero to internal 11 whatever their level
+   *  (object.c:345), and at level 1 that was half of every batch dying in 19
+   *  commands. A bar rather than a ban: the volcano holds the potion the win
+   *  condition requires, so "never" would delete the win from the game
+   *  (docs/specs/2026-08-28-larn-descent-readiness.md). */
+  shaftMinXlevel: number;
+  /** Fraction of hpmax at or above which the hero will take an ORDINARY
+   *  downward exit. Ships at 0 — no bar — because raising it is a second
+   *  variable, and because it cannot exceed restBelowHpFraction without
+   *  deadlocking: the rest step stops resting at that fraction, so a higher
+   *  descent bar refuses every staircase for the rest of the game. */
+  descendMinHpFraction: number;
+  /** Most wield commands the bot will spend in one game measuring what it is
+   *  carrying (vect-hack-h9x.6). **0 disables the probe**, which is how the
+   *  control arm of its A/B is run.
+   *
+   *  A safety bound, not a tuning target. Measured over 30 real games the bot
+   *  spends about 8, or 1.2% of its commands; the bound exists because a
+   *  RENAMED item is a new item to the probe, and Larn renames one whenever its
+   *  enchantment moves — a rust monster walking a dagger down from -1 to -5
+   *  buys five fresh measurements. That is correct (the item really did change)
+   *  and it is still worth a ceiling. */
+  wieldProbes: number;
+  /** Open on a being at range with magic missile instead of closing
+   *  (vect-hack-h9x.4). **false disables it**, which is how the control arm of
+   *  its A/B is run. The hero knows the spell from character creation
+   *  (create.c:42) and the charge count is the engine's to report, so this is
+   *  a policy switch and not a budget. */
+  castAtRange: boolean;
+}
+
+/** What the bot plays with unless a caller overrides a knob. The wield probe
+ *  and the missile ship off until they earn their place against the bench
+ *  (docs/specs/2026-08-28-larn-wield-by-measurement.md,
+ *  docs/specs/2026-08-28-larn-cast-at-range.md). */
+export const DEFAULT_TUNING: Readonly<PolicyTuning> = Object.freeze({
+  restLimit: 150,
+  stuckLimit: 3,
+  restBelowHpFraction: 0.5,
+  shaftMinXlevel: 8,
+  descendMinHpFraction: 0,
+  wieldProbes: 0,
+  castAtRange: false,
+});
+
+/** DEFAULT_TUNING with a partial `override` merged over it — the gym's
+ *  `--tuning`, already parsed from JSON. A knob DEFAULT_TUNING does not name,
+ *  or a value of another type than the default's, is refused rather than
+ *  ignored: a misspelt knob would otherwise play the default and still report
+ *  itself as the arm it named. */
+export function resolveTuning(override: unknown): PolicyTuning {
+  if (typeof override !== "object" || override === null || Array.isArray(override)) {
+    throw new Error(`a tuning override must be a JSON object, got ${JSON.stringify(override)}`);
+  }
+  const tuning: Record<string, unknown> = { ...DEFAULT_TUNING };
+  for (const [knob, value] of Object.entries(override)) {
+    if (!Object.prototype.hasOwnProperty.call(DEFAULT_TUNING, knob)) {
+      throw new Error(`unknown tuning knob "${knob}"; the knobs are ${Object.keys(DEFAULT_TUNING).join(", ")}`);
+    }
+    if (typeof value !== typeof tuning[knob]) {
+      throw new Error(`tuning knob "${knob}" must be a ${typeof tuning[knob]}, got ${JSON.stringify(value)}`);
+    }
+    tuning[knob] = value;
+  }
+  return tuning as unknown as PolicyTuning;
 }
 
 const STAY: LarnKey = { code: ".".charCodeAt(0), mods: 0 };
@@ -74,50 +148,13 @@ const CAST_RANGE = 12;
 
 const itemKey = (item: LarnItem) => `${item.letter}:${item.name.replace(EQUIPPED_SUFFIX, "")}`;
 const inHand = (item: LarnItem) => item.name.includes("(weapon in hand)");
-/** The glyph Larn draws every pile of gold as — OGOLDPILE, OMAXGOLD, OKGOLD
- *  and ODGOLD alike (data.c objnamelist; the "$" in that table is the bank of
- *  Larn, which the exporter reports as terrain and never as an item).
- *
- *  Gold is the one thing the semantic map calls an item that no pack slot ever
- *  holds: all four ids dispatch to ogold() (object.c:46), which adds straight
- *  to c[GOLD] and calls bottomgold() (object.c:1250). It never reaches take(),
- *  so it asks no question and a full pack cannot refuse it. Everything else
- *  the map marks an item arrives at finditem() (object.c:517) or at one of the
- *  four typed prompts, and every one of those ends in take().
- *
- *  Hence the carve-out in the loot step: a pack refusal is a fact about the
- *  PACK, and gold is not in the pack. Without it, one refusal would stop the
- *  hero walking to gold for the rest of the game the moment the KB ever gives
- *  "*" a value. */
-const GOLD = "*";
-// The rest duty cycle and the stuck counter are tuning, not knowledge: knobs
-// the ladder was born with, so they live in data/kb/larn/policy.json (read
-// through kb.tuning) and not among the facts a provenance audit walks.
 
 /** May the hero step onto (x, y)? Larn walks floor, doors, stairs and
  *  features (they prompt; the prompt table declines) and onto items; not
  *  into walls, known traps, monsters (that is a fight, chosen on purpose)
- *  or the unseen — nor onto terrain the KB has learned to route around,
- *  which is nothing until the reflect loop fills that set.
- *
- *  The avoid key is "<category>:<ch>", never the bare category: Larn's
- *  volcanic shaft and an ordinary down staircase are both stairs of kind
- *  "down" (native/main-wasm.c:449-454) and differ only in the glyph, so a
- *  key without it could only say "avoid every staircase" — which would
- *  delete descent from the game. */
-export function passable(model: LarnBotModel, x: number, y: number, kb: Kb): boolean {
-  return walkable(model, x, y) && !avoided(model, x, y, kb);
-}
-
-/** passable() with nothing learned: what the map alone allows. Split out so
- *  the breach step can route through a learned avoidance the way it routes
- *  through a known trap — see decide() step 6b, whose contract this makes
- *  true. The invariant is worth naming: NO fact the reflect loop can write can
- *  make a cell permanently unreachable, because the step that fires when
- *  nothing else is reachable does not consult the KB at all. A learned
- *  avoidance is then a preference — take the other way while there is one —
- *  and never a wall (vect-hack-b5f.6). */
-function walkable(model: LarnBotModel, x: number, y: number): boolean {
+ *  or the unseen. The breach step (decide() 5b) is the one place that steps
+ *  onto a known trap anyway. */
+export function passable(model: LarnBotModel, x: number, y: number): boolean {
   if (x < 0 || x >= model.map.cols || y < 0 || y >= model.map.rows) return false;
   const c = model.map.at(x, y);
   if (c.hero) return true;
@@ -125,56 +162,6 @@ function walkable(model: LarnBotModel, x: number, y: number): boolean {
   if (c.category === "being") return false;
   if (!TERRAIN_CATEGORIES.has(c.category)) return false;
   return c.category !== "wall" && c.category !== "trap";
-}
-
-/** Has the KB learned to route around this cell? Read through an occupant the
- *  way the terrain rules are: an item lying on the volcanic shaft does not
- *  make the shaft something else. */
-function avoided(model: LarnBotModel, x: number, y: number, kb: Kb): boolean {
-  if (x < 0 || x >= model.map.cols || y < 0 || y >= model.map.rows) return false;
-  const c = model.map.at(x, y);
-  if (c.hero) return false;
-  const under = TERRAIN_CATEGORIES.has(c.category) ? c : c.terrain;
-  // The ceiling the hero has grown into, not today's wounds: an avoidance
-  // asks whether this character is big enough for what is on the other side,
-  // and a hero who is merely hurt should rest, not re-route (kb.avoidTerrain).
-  return under !== undefined && kb.avoidTerrain(`${under.category}:${under.ch}`, model.hpmax);
-}
-
-/** Should the hero start this fight? Phase 1b asked a different question and
- *  lost an A/B on the difference: it compared a learned threat to a constant
- *  (`fleeThreshold`), so a table of honest 1.0s — a giant ant IS lethal to a
- *  level-1 character — read as "never fight anything". 74 of 100 runs never
- *  swung and the surface stratum lost 475 score points at the median
- *  (docs/reports/2026-08-21-larn-1b-ab.md, vect-hack-b5f.3).
- *
- *  Threat is a claim about a BEING. Engagement is a decision about a FIGHT, so
- *  it is derived here from the being's threat and the hero's own state, and
- *  never stored as a fact.
- *
- *  `capacity` is deliberately not clamped above 1. Most of the rejected claims
- *  carried value 1.0, so a ceiling of exactly 1 makes `threat < capacity` false
- *  for a hero at full health and reproduces the whole regression under a new
- *  formula. The experience term is what lifts a healthy hero over any threat in
- *  0..1, and that is the property it exists for.
- *
- *  Larn has no hunger, so there is no scarcity term pushing the other way: one
- *  hit for hunger|starv|hungry in the whole source and it is flavour text in a
- *  beggar's letter (external/larn/bill.c:97). The mobul clock is the analogue
- *  and it is out of reach — the 1a baseline's median run elapses 2 mobuls of a
- *  300-mobul budget, so a pressure term could not fire. See the spec.
- *
- *  A hero with no hpmax has not had a status record yet; there is nothing to
- *  judge, so fight, which is what the bot did before it learned anything. */
-export function engage(
-  threat: number | null, hp: number, hpmax: number, xlevel: number, tuning: PolicyTuning,
-): boolean {
-  if (threat === null) return true;
-  if (hpmax <= 0) return true;
-  const experience = tuning.engageLevelCap > 0
-    ? Math.min(xlevel, tuning.engageLevelCap) / tuning.engageLevelCap * tuning.engageLevelWeight
-    : 0;
-  return threat < hp / hpmax + experience;
 }
 
 /** The nearest being standing on one of the eight rays out of the hero, with
@@ -205,7 +192,7 @@ export function rayTarget(model: LarnBotModel): Dir | null {
       }
       // Anything that is not open going is where the missile stops. Unseen
       // included: a cell the screen has not shown is not a clear line.
-      if (!walkable(model, x, y)) break;
+      if (!passable(model, x, y)) break;
       // A CLOSED door is walkable — the ladder opens it — but it is not
       // transparent, and godirect() stops the missile at it. Measured in the
       // first 30 games of real casting: "Your missiles hit the door" twice in
@@ -234,10 +221,8 @@ export function downExit(model: LarnBotModel, x: number, y: number): { shaft: bo
  *  whatever the hero's level; an ordinary staircase has a separate, lower bar
  *  which ships neutral (`descendMinHpFraction` 0).
  *
- *  It can never seal a level: the breach steps (decide() 6 and 6b) route on
- *  walkable() and ask this nothing, so a hero who can reach nothing else still
- *  crosses. That is the same contract a learned avoidance lives under
- *  (vect-hack-b5f.6). */
+ *  It can never seal a level: the breach steps (decide() 5 and 5b) ask this
+ *  nothing, so a hero who can reach nothing else still crosses. */
 export function readyToDescend(model: LarnBotModel, shaft: boolean, tuning: PolicyTuning): boolean {
   if (shaft) return model.xlevel >= tuning.shaftMinXlevel;
   if (tuning.descendMinHpFraction <= 0 || model.hpmax <= 0) return true;
@@ -254,10 +239,10 @@ function knownTrap(model: LarnBotModel, x: number, y: number): boolean {
   return c.category === "trap" || c.terrain?.category === "trap";
 }
 
-const MOVE_INTENTS = new Set(["loot", "explore", "descend", "breach", "wander", "shuffle"]);
+const MOVE_INTENTS = new Set(["explore", "descend", "breach", "wander", "shuffle"]);
 
 export class LarnBrain {
-  private kb: Kb;
+  private tuning: PolicyTuning;
   private blocked = new Set<number>();
   // -1, not 0: the first decide() then resets a brain that has nothing to
   // reset, rather than skipping the reset for the level it started on.
@@ -267,9 +252,6 @@ export class LarnBrain {
   private lastStep = -1;
   private stuck = 0;
   private rests = 0;
-  /** Consecutive disengage steps. Bounded by tuning.disengageLimit: Larn's
-   *  monsters move, so an unbounded retreat is a livelock with extra steps. */
-  private disengages = 0;
   private wanderTarget = -1;
   /** The wield probe (vect-hack-h9x.6). The bot carries no weapon table: it
    *  wields a thing and reads the weapon class Larn prints on the bottom line,
@@ -292,7 +274,8 @@ export class LarnBrain {
    *  promptContext() for dirsub()'s "In What Direction?" (monster.c:1009). */
   private castDir: Dir | null = null;
 
-  constructor(kb: Kb) { this.kb = kb; }
+  /** Knobs `tuning` does not name keep their DEFAULT_TUNING value. */
+  constructor(tuning: Partial<PolicyTuning> = {}) { this.tuning = { ...DEFAULT_TUNING, ...tuning }; }
 
   /** What the prompt table needs to know beyond the text it is matching. It is
    *  built here rather than on the model because both fields are POLICY read
@@ -304,7 +287,7 @@ export class LarnBrain {
   promptContext(model: LarnBotModel): PromptContext {
     return {
       packRoom: !model.packFull,
-      readyForShaft: readyToDescend(model, true, this.kb.tuning),
+      readyForShaft: readyToDescend(model, true, this.tuning),
       wieldLetter: this.wieldLetter,
       castDirection: movementKey((this.castDir ?? DIRS[0]!).compass, false),
     };
@@ -332,7 +315,7 @@ export class LarnBrain {
    *  direction is answered from the prompt table on sight rather than queued
    *  behind the spell code, where it would leak into the next command. */
   private castStep(model: LarnBotModel): LarnAction | null {
-    if (!this.kb.tuning.castAtRange) return null;
+    if (!this.tuning.castAtRange) return null;
     const status = model.status;
     if (!status || status.spells <= 0) return null;
     const dir = rayTarget(model);
@@ -359,7 +342,7 @@ export class LarnBrain {
   private wieldStep(model: LarnBotModel): LarnAction | null {
     const status = model.status;
     if (!status) return null;
-    if (this.wieldSpent >= this.kb.tuning.wieldProbes) return null;
+    if (this.wieldSpent >= this.tuning.wieldProbes) return null;
 
     // 1. Record. Done before the monster check, because the measurement is
     //    already paid for and dropping it would mean paying again later.
@@ -416,11 +399,9 @@ export class LarnBrain {
     if (model.levelEpoch !== this.lastEpoch) {
       this.lastEpoch = model.levelEpoch;
       this.blocked.clear(); this.stuck = 0; this.wanderTarget = -1;
-      this.disengages = 0;
     }
     if (this.lastPos !== -1 && chebyshev(model.map.cols, this.lastPos, here) > 3) {
       this.blocked.clear(); this.stuck = 0; this.wanderTarget = -1;
-      this.disengages = 0;
     }
     // Anti-stuck: a move that did not move us marks the cell it aimed at —
     // unless that cell still shows a CLOSED door, which is not a refusal
@@ -428,7 +409,7 @@ export class LarnBrain {
     if (MOVE_INTENTS.has(this.lastIntent)) {
       if (here === this.lastPos) {
         if (!closedDoor(model, this.lastStep)) {
-          if (++this.stuck >= this.kb.tuning.stuckLimit && this.lastStep !== -1) { this.blocked.add(this.lastStep); this.stuck = 0; }
+          if (++this.stuck >= this.tuning.stuckLimit && this.lastStep !== -1) { this.blocked.add(this.lastStep); this.stuck = 0; }
         }
       } else this.stuck = 0;
     }
@@ -442,43 +423,15 @@ export class LarnBrain {
 
   private pick(model: LarnBotModel, hero: { x: number; y: number }): LarnAction {
     this.lastStep = -1;
-    // 1. Fight an adjacent monster (walking into it attacks). WHICH one, and
-    //    whether at all, is engage()'s question — read its header for what
-    //    Phase 1b got wrong here. Every adjacent being is ranked by threat and
-    //    the least dangerous engageable one is attacked: declining to a whole
-    //    group is how a bot gets surrounded.
-    //
-    //    An unknown threat ranks 0 and ties keep DIRS order, so with an empty
-    //    table every rank is 0 and the first DIRS direction wins — which is
-    //    exactly the loop this replaced. test-larn-trace.mjs is that promise.
-    const adjacent: { d: Dir; threat: number | null }[] = [];
+    // 1. Fight an adjacent monster (walking into it attacks): the first in
+    //    DIRS order. Standing next to a monster taking free hits is strictly
+    //    worse than swinging, and a being the ladder would neither attack nor
+    //    walk around is a wall across the corridor, because passable() treats
+    //    it as one.
     for (const d of DIRS) {
       const c = model.map.at(hero.x + d.dx, hero.y + d.dy);
-      if (c.category === "being" && !c.hero) {
-        adjacent.push({ d, threat: this.kb.threat(c.ch, c.color, model.maxDepth) });
-      }
+      if (c.category === "being" && !c.hero) return { key: movementKey(d.compass, false), intent: "fight" };
     }
-    if (adjacent.length > 0) {
-      const t = this.kb.tuning;
-      const byThreat = adjacent
-        .map((a, i) => ({ ...a, i }))
-        .sort((a, b) => (a.threat ?? 0) - (b.threat ?? 0) || a.i - b.i);
-      const winnable = byThreat.find((a) => engage(a.threat, model.hp, model.hpmax, model.xlevel, t));
-      // 1a. Nothing here is worth starting: step away instead. One step, and
-      //     only disengageLimit of them in a row. Cornered, or out of
-      //     retreats, the ladder swings at the least dangerous of them anyway
-      //     — standing next to a monster taking free hits is strictly worse,
-      //     and a being the ladder will neither attack nor walk around is a
-      //     wall across the corridor, because passable() treats it as one.
-      //     That is where 1b's depth loss came from, with no second mechanism.
-      if (winnable === undefined && this.disengages < t.disengageLimit) {
-        const away = this.retreat(model, hero, adjacent.map((a) => a.d));
-        if (away !== null) { this.disengages++; return away; }
-      }
-      this.disengages = 0;
-      return { key: movementKey((winnable ?? byThreat[0]!).d.compass, false), intent: "fight" };
-    }
-    this.disengages = 0;
     // 1b. Nothing is adjacent. If something is in line at range and there is a
     //     charge, open with a missile instead of walking into its reach
     //     (vect-hack-h9x.4). Above rest for the obvious reason: resting while
@@ -489,8 +442,8 @@ export class LarnBrain {
     //    hp < hpmax * 0.5 is the old `hp * 2 < hpmax` exactly: halving and
     //    doubling are both exact in binary floating point at these magnitudes,
     //    so no integer HP pair can straddle the two forms.
-    if (model.hpmax > 0 && model.hp < model.hpmax * this.kb.tuning.restBelowHpFraction
-        && !this.monsterVisible(model) && this.rests < this.kb.tuning.restLimit) {
+    if (model.hpmax > 0 && model.hp < model.hpmax * this.tuning.restBelowHpFraction
+        && !this.monsterVisible(model) && this.rests < this.tuning.restLimit) {
       this.rests++;
       return { key: STAY, intent: "rest" };
     }
@@ -499,33 +452,14 @@ export class LarnBrain {
     //     step declines while anything is visible for exactly that reason.
     const wield = this.wieldStep(model);
     if (wield) return wield;
-    const rules = { passable: (x: number, y: number) => passable(model, x, y, this.kb), blocked: this.blocked };
-    // 3. Loot: walk to an item the KB values (pickup is automatic —
-    //    lookforobject() runs on every move, main.c:291, and the prompt table
-    //    answers "t" — so this is pure routing). The table is empty until the
-    //    reflect loop writes it, so this step never fires today.
-    //
-    //    A full pack turns most of those targets into a walk that buys a
-    //    refusal and changes nothing, so they are off while the engine says
-    //    the pack is full (vect-hack-b5f.10). Off wholesale, not cell by cell:
-    //    "You can't carry anything else" is a fact about the PACK, and a
-    //    per-cell memory of it only sends the hero to the next item to be told
-    //    the same thing.
-    //
-    //    Gold is the exception, and not as a courtesy: it is not carried at
-    //    all, so a full pack says nothing about it. See GOLD below.
-    const wantsItem = (x: number, y: number) => {
-      const c = model.map.at(x, y);
-      if (c.category !== "item") return false;
-      if (model.packFull && c.ch !== GOLD) return false;
-      return (this.kb.itemValue(c.ch) ?? 0) > 0;
-    };
-    const loot = nextStep(model.map, hero, wantsItem, rules);
-    if (loot) return this.walk(model, loot, "loot");
-    // 4. Explore the frontier.
+    const rules = { passable: (x: number, y: number) => passable(model, x, y), blocked: this.blocked };
+    // 3. Explore the frontier. Pickup is automatic — lookforobject() runs on
+    //    every move (main.c:291) and the prompt table answers "t" — so items
+    //    are collected wherever exploring happens to walk; nothing routes to
+    //    one.
     const explore = nextStep(model.map, hero, (x, y) => isFrontier(model.map, x, y, rules.passable), rules);
     if (explore) return this.walk(model, explore, "explore");
-    // 5. Descend: walk onto the down stairs / the dungeon entrance; Larn
+    // 4. Descend: walk onto the down stairs / the dungeon entrance; Larn
     //    asks and the prompt table answers "c"/"g". Standing on them already
     //    means we declined once — step off so the next arrival asks again.
     //
@@ -536,11 +470,11 @@ export class LarnBrain {
     //    steps below ask it nothing.
     const isDown = (x: number, y: number) => {
       const exit = downExit(model, x, y);
-      return exit !== null && readyToDescend(model, exit.shaft, this.kb.tuning);
+      return exit !== null && readyToDescend(model, exit.shaft, this.tuning);
     };
     if (isDown(hero.x, hero.y)) {
       for (const d of DIRS) {
-        if (passable(model, hero.x + d.dx, hero.y + d.dy, this.kb)) {
+        if (passable(model, hero.x + d.dx, hero.y + d.dy)) {
           this.lastStep = posKey(model.map, hero.x + d.dx, hero.y + d.dy);
           return { key: movementKey(d.compass, false), intent: "shuffle" };
         }
@@ -548,7 +482,7 @@ export class LarnBrain {
     }
     const down = nextStep(model.map, hero, isDown, rules);
     if (down) return this.walk(model, down, "descend");
-    // 6. Breach: nothing left to explore and no staircase to walk to, but a
+    // 5. Breach: nothing left to explore and no staircase to walk to, but a
     //    being borders the reachable region. passable() treats a being as
     //    impassable and must — walking into one is an attack, not a step — so
     //    a monster standing in the only corridor seals the hero into a pocket
@@ -558,37 +492,29 @@ export class LarnBrain {
     //    reachable, the region bounded by 103 walls and three monsters
     //    (vect-hack-b5f.5). Route to a cell beside one and let step 1 have the
     //    fight; nothing else in the ladder ever chooses to remove that wall.
-    const breach = nextStep(model.map, hero, (x, y) => this.bordersEngageable(model, x, y), rules);
+    const breach = nextStep(model.map, hero, (x, y) => bordersBeing(model, x, y), rules);
     if (breach) return this.walk(model, breach, "breach");
-    // 6b. The seal is not always a monster. passable() also refuses a known
+    // 5b. The seal is not always a monster. passable() also refuses a known
     //     trap, so a trap in the only corridor closes a level exactly the same
     //     way: held-out seed 238386701 reached the 24000-command cap with 2 of
     //     1139 cells reachable, the region bounded by 13 walls and one trap.
     //     Crossing it is a real cost; staying sealed in is a certain loss, so
-    //     the ladder pays it once nothing else is reachable. Terrain the KB
-    //     learned to avoid is crossed here too — an avoided cell that closes
-    //     the level is the same dead end under another name, and a learned
-    //     avoidance that can strand the bot is worse than none. That is why
-    //     this predicate is built on walkable() rather than passable(): it
-    //     asks what the MAP allows and consults nothing the reflect loop
-    //     wrote, so no fact can seal a level however wrong it is
-    //     (vect-hack-b5f.6 — the comment said this before the code did).
+    //     the ladder pays it once nothing else is reachable.
     const throughSeal = {
-      passable: (x: number, y: number) => walkable(model, x, y) || knownTrap(model, x, y),
+      passable: (x: number, y: number) => passable(model, x, y) || knownTrap(model, x, y),
       blocked: this.blocked,
     };
-    //     Readiness is dropped here for the same reason the KB is: this step
-    //     fires only when nothing else is reachable, and a hero sealed into a
-    //     pocket whose one exit is a shaft it is not ready for must still take
-    //     it. A certain loss now beats a bar that was only ever a preference
-    //     (vect-hack-h9x.5, and the b5f.6 contract it borrows).
+    //     Readiness is dropped here too: this step fires only when nothing
+    //     else is reachable, and a hero sealed into a pocket whose one exit is
+    //     a shaft it is not ready for must still take it. A certain loss now
+    //     beats a bar that was only ever a preference (vect-hack-h9x.5).
     const sealed = nextStep(
       model.map, hero,
       (x, y) => downExit(model, x, y) !== null || isFrontier(model.map, x, y, throughSeal.passable),
       throughSeal,
     );
     if (sealed) return this.walk(model, sealed, "breach");
-    // 7. Wander to the farthest reachable cell (a fresh view of a done level).
+    // 6. Wander to the farthest reachable cell (a fresh view of a done level).
     const here = posKey(model.map, hero.x, hero.y);
     if (this.wanderTarget === here) this.wanderTarget = -1;
     if (this.wanderTarget === -1) this.wanderTarget = farthest(model.map, hero, rules) ?? -1;
@@ -599,42 +525,6 @@ export class LarnBrain {
       this.wanderTarget = -1;
     }
     return { key: STAY, intent: "wait" };
-  }
-
-  /** Is (x, y) next to a being this hero would take on? Engageable, not merely
-   *  adjacent: routing the hero back to a monster step 1 will decline is an
-   *  oscillation, and disengageLimit cannot end it — that counter resets every
-   *  time the hero steps out of reach, which is exactly what a retreat does. */
-  private bordersEngageable(model: LarnBotModel, x: number, y: number): boolean {
-    for (const d of DIRS) {
-      const c = model.map.at(x + d.dx, y + d.dy);
-      if (c.category !== "being" || c.hero) continue;
-      const threat = this.kb.threat(c.ch, c.color, model.maxDepth);
-      if (engage(threat, model.hp, model.hpmax, model.xlevel, this.kb.tuning)) return true;
-    }
-    return false;
-  }
-
-  /** One step away from the beings we declined: the passable, unblocked
-   *  neighbour that maximises the minimum Chebyshev distance to them, DIRS
-   *  order breaking ties. The bar starts at 1, which is the distance we are
-   *  already at, so a step that stays adjacent is not a retreat and null means
-   *  cornered. */
-  private retreat(model: LarnBotModel, hero: { x: number; y: number }, beings: Dir[]): LarnAction | null {
-    const at = beings.map((d) => ({ x: hero.x + d.dx, y: hero.y + d.dy }));
-    let best: Dir | null = null;
-    let bestDist = 1;
-    for (const d of DIRS) {
-      const nx = hero.x + d.dx, ny = hero.y + d.dy;
-      if (!passable(model, nx, ny, this.kb)) continue;
-      if (this.blocked.has(posKey(model.map, nx, ny))) continue;
-      let min = Infinity;
-      for (const p of at) min = Math.min(min, Math.max(Math.abs(p.x - nx), Math.abs(p.y - ny)));
-      if (min > bestDist) { bestDist = min; best = d; }
-    }
-    if (best === null) return null;
-    this.lastStep = posKey(model.map, hero.x + best.dx, hero.y + best.dy);
-    return { key: movementKey(best.compass, false), intent: "disengage" };
   }
 
   private walk(model: LarnBotModel, step: Step, intent: string): LarnAction {
@@ -673,6 +563,16 @@ function closedDoor(model: LarnBotModel, key: number): boolean {
   const c = model.map.at(key % model.map.cols, (key / model.map.cols) | 0);
   const under = TERRAIN_CATEGORIES.has(c.category) ? c : c.terrain;
   return under?.category === "door";
+}
+
+/** Is (x, y) next to a being? Step 1 attacks whatever is adjacent, so a cell
+ *  beside one is where the breach step hands a sealing monster to the fight. */
+function bordersBeing(model: LarnBotModel, x: number, y: number): boolean {
+  for (const d of DIRS) {
+    const c = model.map.at(x + d.dx, y + d.dy);
+    if (c.category === "being" && !c.hero) return true;
+  }
+  return false;
 }
 
 function chebyshev(cols: number, a: number, b: number): number {
