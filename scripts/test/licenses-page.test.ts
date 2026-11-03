@@ -97,10 +97,13 @@ describe("the staged licenses pages", () => {
     }
   });
 
-  it("states the source offer with the repository and the built commit on every page", () => {
+  it("states the source offer with the repository, the version and the built commit on every page", () => {
+    const { version } = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+    expect(read("SOURCE.txt")).toMatch(new RegExp(`^VectHack ${version.replace(/\./g, "\\.")} — corresponding source\n`));
     for (const name of ["index.html", ...Object.keys(MODULES).map((id) => `${id}.html`)]) {
       const page = read(name);
       expect(page).toContain(SOURCE_URL);
+      expect(page).toContain(`VectHack ${version} — corresponding source`);
       expect(page).toMatch(/This build was produced from commit:\s+(?:[0-9a-f]{40}|UNKNOWN)/);
     }
   });

@@ -4,7 +4,9 @@
 //
 // Texts alone are not enough: object code also needs source-acquisition
 // information (NGPL ¶3, GPLv2 §3, GPLv3 §6). A bare link to a moving `main`
-// does not identify what was built, so SOURCE.txt records the exact commit.
+// does not identify what was built, so SOURCE.txt records the exact commit,
+// beside the release version from package.json (CHANGELOG.md says what each
+// version changed).
 //
 // Each game's Saves menu links its own page, <game>.html (vect-hack-a4c): VectHack's
 // terms and that game's, never another game's. index.html, for a URL with no
@@ -63,8 +65,13 @@ function builtCommit(root) {
   }
 }
 
-export function sourceText(commit, dirty) {
-  return `VectHack — corresponding source
+/** The release version, from package.json — the one place it is written. */
+function builtVersion(root) {
+  return JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
+}
+
+export function sourceText(version, commit, dirty) {
+  return `VectHack ${version} — corresponding source
 ================================
 
 This build was produced from commit:
@@ -141,7 +148,7 @@ export function stageLicenses(root, out) {
   mkdirSync(out, { recursive: true });
   for (const f of LICENSE_FILES) copyFileSync(join(root, f), join(out, f));
   const { commit, dirty } = builtCommit(root);
-  const source = sourceText(commit, dirty);
+  const source = sourceText(builtVersion(root), commit, dirty);
   writeFileSync(join(out, 'SOURCE.txt'), source);
   const text = (name) => ({ name, body: readFileSync(join(root, name), 'utf8') });
   const vecthack = [{ name: 'SOURCE.txt', body: source }, ...VECTHACK_FILES.map(text)];

@@ -191,7 +191,19 @@ Every one of these should tell a non-technical visitor what happened:
   notice goes in the file of the game that ships it, and `MODULES` in
   `scripts/build/stage-licenses.mjs` names each game's files.
 
-## 5. Deploy
+## 5. Version and tag
 
-`../vect-hack-www/scripts/deploy.sh` — preflight requires both trees clean.
-It logs to `docs/DEPLOYS.md`; commit that log after each deploy.
+A PR bumps `package.json` (`npm version X.Y.Z --no-git-tag-version`) and
+moves `CHANGELOG.md`'s `[Unreleased]` notes under `[X.Y.Z]`. After the
+squash-merge, tag the merge commit and publish its section:
+`git tag -a vX.Y.Z -m vX.Y.Z <merge-sha> && git push origin vX.Y.Z`, then
+`gh release create vX.Y.Z --notes-file <the section>`
+(`docs/decisions/2026-11-03-versioning.md`).
+
+## 6. Deploy
+
+`npm --prefix ../vect-hack-www/infra run deploy` (`scripts/deploy.sh`) —
+preflight requires both trees clean and at `origin/main`, and the game's HEAD
+to be the tag of its own version. Each deploy is recorded as a GitHub
+Deployment of that tag (environment `vecthack.com`), so it leaves nothing to
+commit.
