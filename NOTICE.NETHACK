@@ -1,0 +1,60 @@
+# NetHack Module — notices
+
+The NetHack Module is distributed under the NetHack General Public License
+([LICENSE.NETHACK](LICENSE.NETHACK)), independent of VectHack's own MIT
+license. These notices cover what the Module carries besides the NGPL code.
+
+## NetHack and VectHack's adaptation
+
+NetHack (external/NetHack, and the wasm build under public/modules/nethack/)
+is the official NetHack source, used under the NetHack General Public
+License (NGPL). See external/NetHack/dat/license. This repository's bridge
+and renderer talk to it through the windowport interface. The NetHack engine
+and the NetHack-derived components -- the wasm/JS artifacts and the worker
+bundle carrying src/modules/nethack/recoverSave.ts -- are NGPL-covered; the
+shared renderer and the other Modules are not. See LICENSING.md.
+
+## NetHack — non-NGPL sources
+
+`src/isaac64.c` (the ISAAC64 RNG, written by Timothy B. Terriberry 1999-2009,
+based on Robert J. Jenkins Jr.'s public-domain ISAAC) is **CC0 / public
+domain**, not NGPL, and is compiled into `nethack.wasm`. It is the one file
+in `external/NetHack/src/` that carries no NetHack copyright notice.
+
+## Lua 5.4.8
+
+NetHack 5.0 embeds Lua, so Lua is compiled into
+`public/modules/nethack/nethack.wasm`. It is not part of this repository:
+`scripts/build/build-nethack-wasm.sh` downloads it (sha256-verified) from
+<https://www.lua.org/> at build time. Verbatim notice from `src/lua.h`:
+
+```
+Copyright (C) 1994-2025 Lua.org, PUC-Rio.
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+
+## Source offer
+
+The corresponding source for this build is named in SOURCE.txt. Offering
+source by repository reference is the NGPL ¶3(b) archive-information route,
+which that licence makes available for noncommercial distribution only;
+commercial distribution requires accompanying the object code with source
+under ¶3(a).

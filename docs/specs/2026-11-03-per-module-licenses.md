@@ -55,11 +55,11 @@ keyed by the `?game=` id `main.ts` already dispatches on:
 
 ```js
 export const VECTHACK_FILES = ['LICENSE', 'THIRD_PARTY_NOTICES.md'];
-export const MODULE_FILES = {
-  nethack: ['LICENSE.NETHACK', 'NOTICE.NETHACK'],
-  angband: ['LICENSE.GPL2', 'NOTICE.ANGBAND'],
-  moria:   ['LICENSE.GPL3'],
-  larn:    ['LICENSE.LARN'],
+export const MODULES = {
+  nethack: { name: 'NetHack', license: '…', files: ['LICENSE.NETHACK', 'NOTICE.NETHACK'] },
+  angband: { name: 'Angband', license: '…', files: ['LICENSE.GPL2', 'NOTICE.ANGBAND'] },
+  moria:   { name: 'Umoria',  license: '…', files: ['LICENSE.GPL3'] },
+  larn:    { name: 'Larn',    license: '…', files: ['LICENSE.LARN'] },
 };
 ```
 
@@ -70,7 +70,7 @@ export const MODULE_FILES = {
 ```
 dist/licenses/
   index.html             VECTHACK_FILES only, SOURCE text inline (no game)
-  nethack.html           VECTHACK_FILES + MODULE_FILES.nethack, SOURCE text inline
+  nethack.html           VECTHACK_FILES + MODULES.nethack.files, SOURCE text inline
   angband.html  moria.html  larn.html
   LICENSE*  NOTICE.*  THIRD_PARTY_NOTICES.md  LICENSING.md  SOURCE.txt
                          every raw text, copied as-is, as today
@@ -99,7 +99,7 @@ shows is narrowed.
    `NOTICE.ANGBAND`; update the links in `LICENSING.md`, `LICENSE`'s trailer,
    `README.md` and `docs/RELEASE-CHECKLIST.md`.
 3. Rewrite `stage-licenses.mjs` around the table; fail the build if a `?game`
-   id has no `MODULE_FILES` entry or an entry names no known game (missing
+   id has no `MODULES` entry or an entry names no known game (missing
    files already fail through `copyFileSync`).
 4. Set `#licenseslink` per game; extend `scripts/test/licenses-page.test.ts`:
    each page names its own governing license, names no other game's, and

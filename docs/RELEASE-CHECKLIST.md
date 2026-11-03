@@ -186,7 +186,10 @@ Every one of these should tell a non-technical visitor what happened:
   Not a launch gate. What IS a gate: any monetisation breaks the grant's
   condition outright (`vect-hack-oab`), and removal must stay cheap — keep the
   Larn arm in `main.ts` and the `LICENSING.md` row scoped as they are.
-- `THIRD_PARTY_NOTICES.md` must still match what the build actually bundles.
+- `THIRD_PARTY_NOTICES.md` (every game) and `NOTICE.NETHACK` / `NOTICE.ANGBAND`
+  (one game each) must still match what the build actually bundles; a new
+  notice goes in the file of the game that ships it, and `MODULES` in
+  `scripts/build/stage-licenses.mjs` names each game's files.
 
 ## 5. Deploy
 
