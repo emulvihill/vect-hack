@@ -6,8 +6,7 @@
 // potion is carried, not drunk, while a closed door is opened because
 // everything behind it is otherwise unreachable. The two share the
 // phrase "(o) try to open it", so the chest rule is matched first by its own
-// wording. Nothing here knows what a monster or an item is worth: that is the
-// reflect loop's to learn (spec, seed policy).
+// wording. Nothing here knows what a monster or an item is worth.
 //
 // Two rules need more than the text they match, and both ask the same kind of
 // question: "is the hero in a position to say yes?". Taking an item needs a

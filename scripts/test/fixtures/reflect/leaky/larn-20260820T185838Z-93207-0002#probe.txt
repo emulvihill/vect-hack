@@ -1,9 +1,0 @@
-[
-  {
-    "op": "assert",
-    "claim": { "kind": "threat", "ch": "H", "color": 1, "depth": 1 },
-    "value": 0.4,
-    "text": "An H in colour 1 is dangerous at depth 1.",
-    "evidence": [{ "trajectory": "larn-20260820T185838Z-93207-0002", "from": 60, "to": 110 }]
-  }
-]

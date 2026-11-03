@@ -1,5 +1,5 @@
-// One finished Larn game reduced to its RunDigest — the only thing reflection
-// sees (spec: 2026-08-19-bot-phase1b-larn-reflect-design.md, "The digest").
+// One finished Larn game reduced to its RunDigest (src/bot/digest.ts; spec:
+// 2026-08-19-bot-phase1b-larn-reflect-design.md, "The digest").
 //
 // The whole trajectory is replayed through a fresh LarnBotModel, so every
 // observation here comes from the same public projection the bot itself played
@@ -17,7 +17,7 @@
 //     BEFORE the level changed, and it is detected on the status push that
 //     reports the new depth. That is what makes the town's volcanic shaft
 //     (`V`) distinguishable from an ordinary staircase (`%`) after the fact —
-//     the single most learnable fact in the 1a baseline.
+//     the single most consequential exit in the 1a baseline.
 //   - Everything is sampled per FRAME, not per command boundary. The spec says
 //     "over the final few frames" and means it: a death happens after the last
 //     command, so a boundary-sampled digest is blank in the runs it most needs
@@ -25,12 +25,12 @@
 //
 // All three were wrong in the first cut of this file and were caught only by
 // running it against real recorded runs (vect-hack-b5f.2.2, fixtures under
-// scripts/test/fixtures/reflect/batch/). None of the three timings is a
+// scripts/test/fixtures/larn-digest/batch/). None of the three timings is a
 // detail:
 //
 //   - Detecting the change at the next command boundary loses the descent
 //     entirely when the run ends on the new level, which is exactly the short
-//     shaft death the phase is trying to learn from: fixture run 0002 dies at
+//     shaft death: fixture run 0002 dies at
 //     depth 11 four commands in and never asks for another command. The status
 //     push is the earliest and the only guaranteed sighting of a new depth.
 //   - Reading the exit off the last command boundary names the wrong cell,
@@ -39,13 +39,13 @@
 //     the last command and the prompt answer, so the last command boundary
 //     still has the hero on the cell they came from. Fixture run 0001 read as
 //     `$` (the bank they stepped off) instead of the `E` entrance they left
-//     by. A wrong glyph is worse than none — it teaches the bot to route
-//     around terrain that never hurt it.
+//     by. A wrong glyph is worse than none — it names an exit the hero never
+//     took.
 //   - Sampling at boundaries left fixture run 0002 — killed by a xvart — with
 //     no adjacent being recorded at all, because the frame showing the xvart
-//     beside the hero is the last one the game ever drew. `threat` is one of
-//     only three claim kinds the policy can act on and the killer's glyph is
-//     its whole grounding, so that blindness lands where it costs most.
+//     beside the hero is the last one the game ever drew, and the killer join
+//     (vect-hack-b5f.4) has nothing else to go on, so that blindness lands
+//     where it costs most.
 //
 // A fall the hero did not choose keeps whatever the screen drew under them,
 // and an exit the screen never drew records "" rather than a guess.

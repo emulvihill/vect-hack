@@ -23,7 +23,7 @@ const run = (
 ): RunSummary => ({
   game: "larn", id: `larn-${seed}`,
   startedAt: "2026-08-28T10:00:00.000Z", endedAt: "2026-08-28T10:01:00.000Z",
-  outcome, seed, kb: "",
+  outcome, seed, tuning: {},
   depth: Math.max(dungeon, volcano),
   xlevel: 2, hp: 0, hpmax: 12, commands: 500, score: 100,
   events: 100, cause: "killed by a gnome", lastMessages: [], stderr: [], error: "",

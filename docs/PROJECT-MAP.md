@@ -95,9 +95,9 @@ wasm.
   front end.
 - `src/modules/larn/` — Larn Worker/session, terminal and semantic map adapter,
   vector/debug views, persistence/checkpoints, native porting shim, `shimBridge.ts`, and `bot/`
-  (the ?bot survivor: model, prompts, policy, LarnBotPlayer, recorder, and
-  `digest.ts` — one finished game reduced to the public projection a reflecting
-  model is allowed to see).
+  (the ?bot survivor: model, prompts, policy with `DEFAULT_TUNING` — the
+  ladder's hand-tuned knobs — LarnBotPlayer, recorder, `bench.ts`, and
+  `digest.ts`, one finished game reduced to its public projection).
 
   `shimBridge.ts` is the ONE implementation of the `globalThis.VectLarn` object
   that `main-wasm.c`'s `EM_JS` blocks call. Six hosts install it —
@@ -173,23 +173,10 @@ wasm.
 - `src/bot/` — shared, game-free bot substrate: `trajectory.ts` (the JSONL
   experience log), `scoreboard.ts` (run summaries, CSV, stats), `canonical.ts`
   (the fields two runs of one seed must agree on — everything a row carries
-  except its id and its wall clock), `kb.ts` (the knowledge base read path over
-  `data/kb/`: a meta tier and a per-engine tier of facts, each carrying
-  provenance — `seed`, or the trajectories that earned it — merged
-  engine-tier-wins; tuning knobs the ladder was born with live apart in
-  `policy.json`, and it touches no filesystem because the browser bot shares
-  it — `scripts/dev/bot-kb.mjs` reads the files for node hosts),
-  `kbCompile.ts` (those facts -> the threat/item/terrain tables the ladder
-  reads: derived on load and never stored, so a table cannot drift from the
-  provenance that justifies it), the reflect loop's pure half — `digest.ts`
-  (all one finished game may show a model, and `runGrounds()` — the subjects
-  that game may ground a policy claim on, derived once because the prompt and
-  the applier both read it), `reflect.ts` (the prompt and the
-  ablation probe), `factDelta.ts` (what a model may propose, and the applier
-  that is the only thing allowed to turn a proposal into knowledge),
-  `brain.ts` (the local/replay model hosts) — and `abReport.ts` (the paired
-  held-out A/B and its decision rule), `pathing.ts`
-  (BFS/frontier over a `CellGrid`). Imports only the backplane. Every file the
+  except its id and its wall clock), `digest.ts` (the shape of one finished
+  game's public projection, read by the killer test and the batch studies),
+  `pathing.ts` (BFS/frontier over a `CellGrid`). Imports only the backplane,
+  and touches no filesystem because the browser bot shares it. Every file the
   headless gym loads (`src/bot/`, `src/modules/larn/bot/`, and their imports —
   `classifier.ts`, `keys.ts`, `grid.ts`, `mapRecords.ts`, `protocol.ts`, `shimBridge.ts`,
   `backplane/cell.ts`, `persist.ts`) uses relative `.ts` import specifiers and
