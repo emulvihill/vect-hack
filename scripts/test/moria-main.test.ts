@@ -66,7 +66,13 @@ vi.mock("../../src/ui/gpuSupport", () => ({
 }));
 vi.mock("../../src/skins", () => ({ applySkinCss() {} }));
 
-class El { removed = false; remove() { this.removed = true; } }
+class El {
+  removed = false;
+  /** The Saves panel's licenses link starts at index.html's static href. */
+  href = "licenses/index.html";
+  remove() { this.removed = true; }
+  setAttribute(name: string, value: string) { if (name === "href") this.href = value; }
+}
 
 async function boot(search: string) {
   vi.resetModules();
@@ -78,7 +84,7 @@ async function boot(search: string) {
   seam.vector.look = {};
   seam.tty.onNotice.mockClear();
   seam.vector.onNotice.mockClear();
-  const els = new Map([["view", new El()], ["cmdbtn", new El()]]);
+  const els = new Map([["view", new El()], ["cmdbtn", new El()], ["licenseslink", new El()]]);
   const replace = vi.fn();
   (globalThis as any).window = {};
   (globalThis as any).location = { search, replace, pathname: "/play", hash: "#hud" };
@@ -130,6 +136,14 @@ it("forces WebGL only for the explicit Moria gl route", async () => {
   expect((window as any).__moriaView).toBe(seam.vector);
   expect(seam.vectorArgs).toEqual([els.get("view"), { forceWebGL: true }]);
   expect(els.get("view")!.removed).toBe(false);
+});
+
+// licenses-page.test.ts pins licensesHref() and the staged pages; this pins
+// that main.ts actually calls it, so the link a Moria player clicks opens
+// Moria's page and not the VectHack-only one.
+it("points the licenses link at Moria's own page", async () => {
+  const { els } = await boot("?game=moria");
+  expect(els.get("licenseslink")!.href).toBe("licenses/moria.html");
 });
 
 it("loads no other Module's code (vect-hack-l11)", async () => {

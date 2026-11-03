@@ -93,7 +93,10 @@ vi.mock("../../src/skins", () => ({ applySkinCss() {} }));
 
 class El {
   removed = false;
+  /** The Saves panel's licenses link starts at index.html's static href. */
+  href = "licenses/index.html";
   remove() { this.removed = true; }
+  setAttribute(name: string, value: string) { if (name === "href") this.href = value; }
 }
 
 /** One page load. Boot is not synchronous any more (vect-hack-l11): the arm
@@ -118,7 +121,7 @@ async function boot(search: string) {
   seam.installTouch.mockClear();
   seam.tty.onNotice.mockClear();
   seam.vectorNotice.mockClear();
-  const els = new Map([["view", new El()], ["cmdbtn", new El()]]);
+  const els = new Map([["view", new El()], ["cmdbtn", new El()], ["licenseslink", new El()]]);
   const replace = vi.fn();
   (globalThis as any).window = {};
   (globalThis as any).location = { search, replace, pathname: "/play", hash: "#hud" };
@@ -241,6 +244,14 @@ it("hands ?bot the view it just built, and a human game no bot at all", async ()
   expect(seam.handler).toBe(seam.tty);
 });
 
+// licenses-page.test.ts pins licensesHref() and the staged pages; this pins
+// that main.ts actually calls it, so the link a NetHack player clicks opens
+// NetHack's page and not the VectHack-only one.
+it("points the licenses link at NetHack's own page", async () => {
+  const { els } = await boot("?game=nethack");
+  expect(els.get("licenseslink")!.href).toBe("licenses/nethack.html");
+});
+
 it("loads no other Module's code (vect-hack-l11)", async () => {
   seam.gpu = true;
   // The widest arm on purpose: touch and the self-playing decorator both reach
@@ -253,7 +264,7 @@ it("loads no other Module's code (vect-hack-l11)", async () => {
 });
 
 it("redirects a URL with no game to NetHack without booting NetHack here", async () => {
-  const { replace } = await boot("?gl&trace");
+  const { els, replace } = await boot("?gl&trace");
   // NetHack is the default game, and the redirect keeps every other flag.
   expect(replace).toHaveBeenCalledOnce();
   expect(replace).toHaveBeenCalledWith("/play?gl=&trace=&game=nethack#hud");
@@ -261,4 +272,5 @@ it("redirects a URL with no game to NetHack without booting NetHack here", async
   // built here would be a doomed engine racing the navigation.
   expect(seam.handler).toBeNull();
   expect((window as any).__nhView).toBeUndefined();
+  expect(els.get("licenseslink")!.href).toBe("licenses/index.html");
 });

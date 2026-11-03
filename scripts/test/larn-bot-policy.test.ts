@@ -3,7 +3,7 @@ import { LarnBotModel } from "../../src/modules/larn/bot/model";
 import { DEFAULT_TUNING, LarnBrain, passable, readyToDescend, resolveTuning } from "../../src/modules/larn/bot/policy";
 import { GRID, GRID_STRIDE, KIND_NAMES, TERRAIN, TOP } from "../../src/modules/larn/mapRecords";
 import { LARN_COLS, LARN_ROWS } from "../../src/modules/larn/classifier";
-import { ITEM_CLASS, SLOT, SLOT_STRIDE, STATUS, STATUS_HEADER } from "../../src/modules/larn/statusRecords";
+import { STATUS, STATUS_HEADER } from "../../src/modules/larn/statusRecords";
 type Paint = {
   hero: [number, number];
   monsters?: [number, number][];
@@ -74,23 +74,11 @@ function paint(m: LarnBotModel, p: Paint) {
   }
   m.observe({ name: "map", records: r });
 }
-/** `slots` is the occupied inventory count the tap reports — what the
- *  pack-full latch clears against (src/modules/larn/bot/model.ts).
- *
- *  Every slot is a POTION, and deliberately: a potion is as full a pack slot as
- *  anything else, and it is one of the two classes Larn's wield() refuses
- *  (ycwi(), main.c:1021-1025), so the wield probe added by vect-hack-h9x.6
- *  never treats these as candidates. Without that these fixtures would be
- *  testing the loot step through a bot that first spends 26 turns trying each
- *  slot in its hand. The probe has its own suite, larn-bot-wield.test.ts. */
-function status(m: LarnBotModel, hp: number, hpmax: number, depth = 1, xlevel = 1, slots = 0) {
-  const record = new Int32Array(STATUS_HEADER + slots * SLOT_STRIDE);
+/** One status tap with an empty pack: no test here reads the inventory. */
+function status(m: LarnBotModel, hp: number, hpmax: number, depth = 1, xlevel = 1) {
+  const record = new Int32Array(STATUS_HEADER);
   record[STATUS.HP] = hp; record[STATUS.HPMAX] = hpmax; record[STATUS.DEPTH] = depth;
-  record[STATUS.XLEVEL] = xlevel; record[STATUS.SLOTS] = slots;
-  for (let i = 0; i < slots; i++) {
-    record[STATUS_HEADER + i * SLOT_STRIDE + SLOT.LETTER] = 97 + i;
-    record[STATUS_HEADER + i * SLOT_STRIDE + SLOT.CLASS] = ITEM_CLASS.POTION;
-  }
+  record[STATUS.XLEVEL] = xlevel;
   m.observe({ name: "status", record, names: new Uint8Array(0) });
 }
 const ch = (a: { key: { code: number } }) => String.fromCharCode(a.key.code);
