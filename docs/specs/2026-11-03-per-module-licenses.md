@@ -69,7 +69,7 @@ export const MODULE_FILES = {
 
 ```
 dist/licenses/
-  index.html             the four games, one link each, plus LICENSING.md
+  index.html             VECTHACK_FILES only, SOURCE text inline (no game)
   nethack.html           VECTHACK_FILES + MODULE_FILES.nethack, SOURCE text inline
   angband.html  moria.html  larn.html
   LICENSE*  NOTICE.*  THIRD_PARTY_NOTICES.md  LICENSING.md  SOURCE.txt
@@ -86,7 +86,8 @@ shows is narrowed.
 `index.html`'s `#licenseslink` gets its `href` from the booted game
 (`licenses/<game>.html`), set in the same place the game id is resolved.
 `?game` is never implicit, so with no game the link keeps
-`licenses/index.html`.
+`licenses/index.html`, which shows the VectHack set only (decided
+2026-11-03): MIT, three.js, Emscripten, musl, and the source offer.
 
 ## Steps
 
@@ -105,9 +106,3 @@ shows is narrowed.
    carries the VectHack set; the link resolves to the booted game's page.
 5. Decision file under `docs/decisions/`; `npm test`, `npm run build`,
    inspect `dist/licenses/`.
-
-## Open question
-
-Whether `dist/licenses/index.html` should list all four games or show only
-the VectHack set. The deploy contains all four games, so all texts stay in
-`dist/` either way.
