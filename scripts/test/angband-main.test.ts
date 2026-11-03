@@ -77,7 +77,10 @@ vi.mock("../../src/skins", () => ({ applySkinCss() {} }));
 
 class El {
   removed = false;
+  /** The Saves panel's licenses link starts at index.html's static href. */
+  href = "licenses/index.html";
   remove() { this.removed = true; }
+  setAttribute(name: string, value: string) { if (name === "href") this.href = value; }
 }
 
 /** One page load. Boot is not synchronous any more (vect-hack-l11): the arm
@@ -93,7 +96,7 @@ async function boot(search: string) {
   seam.describe.mockClear();
   seam.vector.look = {};
   seam.tty.onNotice.mockClear();
-  const els = new Map([["view", new El()], ["cmdbtn", new El()]]);
+  const els = new Map([["view", new El()], ["cmdbtn", new El()], ["licenseslink", new El()]]);
   (globalThis as any).window = {};
   (globalThis as any).location = { search };
   (globalThis as any).document = { getElementById: (id: string) => els.get(id) ?? null };
@@ -143,6 +146,14 @@ it("keeps the canvas and builds the vector view when a GPU is available", async 
   expect((window as any).__angbandView).toBe(seam.vector);
   expect(els.get("view")!.removed).toBe(false);
   expect(seam.vectorArgs).toEqual([els.get("view"), { forceWebGL: true }]);
+});
+
+// licenses-page.test.ts pins licensesHref() and the staged pages; this pins
+// that main.ts actually calls it, so the link a Angband player clicks opens
+// Angband's page and not the VectHack-only one.
+it("points the licenses link at Angband's own page", async () => {
+  const { els } = await boot("?game=angband");
+  expect(els.get("licenseslink")!.href).toBe("licenses/angband.html");
 });
 
 it("loads no other Module's code (vect-hack-l11)", async () => {
