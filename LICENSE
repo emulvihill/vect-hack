@@ -22,8 +22,5 @@ SOFTWARE.
 
 ---
 
-This license covers VectHack's own code. The four game Modules keep their
-own licenses: the NetHack General Public License, GPL-2.0-only (Angband),
-GPL-3.0-or-later (Umoria), and Noah Morgan's no-profit Larn grant. See
-LICENSING.md for the map, and LICENSE.NETHACK / LICENSE.GPL2 / LICENSE.GPL3
-/ LICENSE.LARN for the texts.
+This license covers VectHack's own code. Each game is covered by its own
+license, independent of this one; see LICENSING.md for the map.

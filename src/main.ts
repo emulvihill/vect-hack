@@ -6,6 +6,7 @@ import { onSessionOnly } from "./backplane/session";
 import { installNoKeyboardNotice } from "./ui/noKeyboard";
 import { touchRequested } from "./ui/touch/scheme";
 import { installSaveMenu } from "./ui/saveMenu";
+import { pointLicensesLink } from "./ui/licensesLink";
 import { VOLUMES } from "./backplane/volumes";
 // Every Module reference above this line is a TYPE, and that is the point
 // (vect-hack-l11). A `import type` is erased, so naming NetHackSession here
@@ -77,6 +78,8 @@ if (window.__vhBooted === 1) {
     // (vect-hack-d72). Say so, and offer the self-playing demo, which needs
     // none. A desktop matches neither media query and sees nothing.
     installNoKeyboardNotice({ game: params.get("game")!, search: location.search });
+    // The licenses link shows this game's terms and VectHack's, no other's.
+    pointLicensesLink(params.get("game"));
   }
   if (!params.has("game")) {
     params.set("game", "nethack");
