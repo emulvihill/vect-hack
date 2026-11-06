@@ -7,6 +7,15 @@ build names its version and commit in `/play/licenses/SOURCE.txt`.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-06
+
+### Changed
+
+- The site moved to https://vecthack.net: the page's `og:image` and the
+  release checklist point there (#9).
+- The release checklist's deploy step describes the gated deploy: upload
+  with no traffic, check the Access-gated Version URL, then promote.
+
 ## [0.2.0] - 2026-11-03
 
 ### Added
@@ -38,6 +47,7 @@ build names its version and commit in `/play/licenses/SOURCE.txt`.
 First public release: NetHack 5.0, Angband 4.2.6, BSD Larn 12.0 and Umoria
 5.7.15 in the browser, deployed to vecthack.com.
 
-[Unreleased]: https://github.com/emulvihill/vect-hack/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/emulvihill/vect-hack/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/emulvihill/vect-hack/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/emulvihill/vect-hack/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/emulvihill/vect-hack/releases/tag/v0.1.0

@@ -202,8 +202,10 @@ squash-merge, tag the merge commit and publish its section:
 
 ## 6. Deploy
 
-`npm --prefix ../vect-hack-www run deploy` (`scripts/deploy.sh`) —
-preflight requires both trees clean and at `origin/main`, and the game's HEAD
-to be the tag of its own version. Each deploy is recorded as a GitHub
-Deployment of that tag (environment `vecthack.com`), so it leaves nothing to
-commit.
+`npm --prefix ../vect-hack-www run deploy` (`scripts/deploy.sh`; `deploy:dry`
+first) — preflight requires both trees clean and at `origin/main`, the game's
+HEAD to be the tag of its own version, and the Cloudflare Access service token
+(`~/.config/vecthack/access.env`). The new version is uploaded with no
+traffic, checked at its Access-gated Version URL, and only then promoted.
+Each deploy is recorded as a GitHub Deployment of that tag (environment
+`vecthack.com`), so it leaves nothing to commit.
