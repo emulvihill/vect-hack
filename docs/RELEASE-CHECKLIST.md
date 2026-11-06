@@ -140,7 +140,7 @@ price.
 
 ```bash
 npm run check:payload           # no GPU and no server: it builds and serves its own
-curl -sI -H 'Accept-Encoding: br,gzip' https://vecthack.com/play/modules/nethack/nethack.wasm
+curl -sI -H 'Accept-Encoding: br,gzip' https://vecthack.net/play/modules/nethack/nethack.wasm
 ```
 
 - `check:payload` is a pass/fail gate, unlike the rest of this section, and
@@ -202,7 +202,7 @@ squash-merge, tag the merge commit and publish its section:
 
 ## 6. Deploy
 
-`npm --prefix ../vect-hack-www/infra run deploy` (`scripts/deploy.sh`) —
+`npm --prefix ../vect-hack-www run deploy` (`scripts/deploy.sh`) —
 preflight requires both trees clean and at `origin/main`, and the game's HEAD
 to be the tag of its own version. Each deploy is recorded as a GitHub
 Deployment of that tag (environment `vecthack.com`), so it leaves nothing to
