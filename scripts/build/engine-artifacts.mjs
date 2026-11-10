@@ -56,7 +56,12 @@ export function engineArtifacts(root) {
       const missing = missingEngines(root);
       if (missing.length) server.config.logger.warn(warning(missing));
       server.middlewares.use((req, res, next) => {
-        const path = decodeURIComponent((req.url ?? "").split("?")[0]);
+        let path;
+        try {
+          path = decodeURIComponent((req.url ?? "").split("?")[0]);
+        } catch {
+          return next(); // malformed escape: Vite's own handling answers it
+        }
         if (!path.startsWith(base + "modules/")) return next();
         const rel = path.slice(base.length);
         if (rel.includes("..") || existsSync(join(root, "public", rel))) return next();
