@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 # One-time toolchain setup: submodules + Emscripten SDK (external/emsdk, gitignored).
+# Usage: setup-toolchain.sh [--download-node]
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+
+download_node=0
+for arg in "$@"; do
+  case "$arg" in
+    --download-node) download_node=1 ;;
+    *) echo "setup-toolchain: unknown argument '$arg' (only --download-node)" >&2; exit 2 ;;
+  esac
+done
 
 git -C "$ROOT" submodule update --init external/NetHack
 git -C "$ROOT" submodule update --init external/angband
@@ -40,5 +49,70 @@ if [ "$emsdk_head" != "$EMSDK_COMMIT" ]; then
   exit 1
 fi
 
+# The full SDK (`emsdk install $EMSDK_VERSION`) bundles its own Node, ~190 MB,
+# that Emscripten runs its JS tools on. This project already needs Node for
+# npm, so install only the compiler and point Emscripten at the user's Node.
+# The bundled Node is downloaded only when there is no usable Node, and only
+# after a yes: at the prompt, or up front with --download-node (parsed above).
+releases_hash="$(python3 -c 'import json, sys
+print(json.load(open(sys.argv[1]))["releases"][sys.argv[2]])' \
+  "$EMSDK/emscripten-releases-tags.json" "$EMSDK_VERSION")"
+COMPILER="releases-$releases_hash-64bit"
+"$EMSDK/emsdk" install "$COMPILER"
+
+# Emscripten's own floor, read from the compiler just installed so a pin move
+# cannot leave a stale copy here.
+SHARED_PY="$EMSDK/upstream/emscripten/tools/shared.py"
+min_node="$(sed -n 's/^MINIMUM_NODE_VERSION = (\([0-9]*\), *\([0-9]*\), *\([0-9]*\)).*/\1.\2.\3/p' "$SHARED_PY")"
+if [ -z "$min_node" ]; then
+  echo "setup-toolchain: no MINIMUM_NODE_VERSION in $SHARED_PY; the check below would be guessing." >&2
+  exit 1
+fi
+
+user_node="$(command -v node || true)"
+user_node_version=""
+if [ -n "$user_node" ]; then
+  user_node_version="$("$user_node" -p process.versions.node 2>/dev/null || true)"
+fi
+
+if [ -n "$user_node_version" ] &&
+   printf '%s\n%s\n' "$min_node" "$user_node_version" | sort -V -C; then
+  "$EMSDK/emsdk" activate "$COMPILER"
+  # emsdk writes NODE_JS = 'nodejs' or 'node', whichever PATH finds first at
+  # build time; pin the one that was just checked instead.
+  python3 - "$EMSDK/.emscripten" "$user_node" <<'PY'
+import re, sys
+path, node = sys.argv[1], sys.argv[2]
+cfg = open(path).read()
+cfg, n = re.subn(r"^NODE_JS = .*$", lambda _: f"NODE_JS = {node!r}", cfg, flags=re.M)
+if n != 1:
+    sys.exit(f"setup-toolchain: expected one NODE_JS line in {path}, found {n}")
+open(path, "w").write(cfg)
+PY
+  echo "setup-toolchain: Emscripten uses your Node $user_node_version ($user_node)."
+  if [ -d "$EMSDK/node" ]; then
+    echo "  The bundled Node from an earlier setup is unused now; 'rm -rf $EMSDK/node' frees it."
+  fi
+  exit 0
+fi
+
+if [ -n "$user_node_version" ]; then
+  echo "setup-toolchain: your Node $user_node_version ($user_node) is older than Emscripten's minimum $min_node."
+else
+  echo "setup-toolchain: no Node on PATH."
+fi
+if [ "$download_node" = 0 ]; then
+  if [ -t 0 ]; then
+    read -r -p "Download Emscripten's bundled Node (~190 MB) into external/emsdk? [y/N] " answer
+    case "$answer" in [yY]|[yY][eE][sS]) download_node=1 ;; esac
+  else
+    echo "  Not a terminal, so not asking: rerun with --download-node to fetch it." >&2
+  fi
+fi
+if [ "$download_node" = 0 ]; then
+  echo "setup-toolchain: install Node $min_node or later (this project wants 24, see .nvmrc) and rerun." >&2
+  exit 1
+fi
+# The full SDK: the compiler is already installed, so this fetches only its Node.
 "$EMSDK/emsdk" install "$EMSDK_VERSION"
 "$EMSDK/emsdk" activate "$EMSDK_VERSION"
