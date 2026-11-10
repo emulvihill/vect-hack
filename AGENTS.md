@@ -60,6 +60,7 @@ the file for an area before changing anything in it.**
 ## Build, test, and run
 
 ```bash
+npm run setup                       # fresh clone: setup-toolchain.sh, then build:engines (all four below)
 scripts/build/setup-toolchain.sh    # once: engine submodules + emsdk (external/emsdk, gitignored)
 scripts/build/build-nethack-wasm.sh # NetHack -> targets/wasm/, copied to public/modules/nethack/ (gitignored)
 scripts/build/build-angband-wasm.sh # Angband 4.2.6 -> public/modules/angband/angband.*
@@ -98,6 +99,10 @@ scripts/dev/worktree-setup.sh       # a fresh worktree has no build state; run t
 scripts/dev/worktree-teardown.sh    # remove a finished worktree without breaking the primary's submodules (--list, --discard)
 node scripts/dev/larn-engagement-report.mjs --batch DIR   # what a batch did when a monster reached it: melee, never-swung, blows, capped
 ```
+
+`vite.config.ts` loads `scripts/build/engine-artifacts.mjs`: the dev server and
+`vite build` warn (never refuse; CI builds with no engines) when an engine is
+missing, and a missing `/modules/` file is a 404, not the SPA's `index.html`.
 
 `npm test` runs every Module's engine tests — there is no fast subset worth
 preferring; the groups name a failure, they are not permission to leave a
