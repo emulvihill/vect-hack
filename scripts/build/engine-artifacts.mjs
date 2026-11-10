@@ -10,7 +10,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-/** One row per game: the files its worker loads and the script that makes them. */
+/** One row per game: the files its worker loads; `npm run build:<game>` makes them. */
 export const ENGINES = [
   { game: "nethack", files: ["nethack.js", "nethack.wasm"] },
   { game: "angband", files: ["angband.js", "angband.wasm", "angband.data"] },
@@ -65,7 +65,7 @@ export function engineArtifacts(root) {
         if (!path.startsWith(base + "modules/")) return next();
         const rel = path.slice(base.length);
         if (rel.includes("..") || existsSync(join(root, "public", rel))) return next();
-        const game = rel.split("/")[1];
+        const game = (rel.split("/")[1] ?? "").replace(/-versions$/, ""); // moria-versions/ is Moria's
         res.statusCode = 404;
         res.setHeader("Content-Type", "text/plain");
         res.end(`${rel} is not built. Run: npm run build:${game}\n`);
