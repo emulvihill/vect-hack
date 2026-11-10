@@ -10,7 +10,7 @@ terminal it refuses.
 
 **Why:** everyone running the setup already has Node, because `npm` needs it.
 The bundled copy was a second Node nobody chose. `NODE_JS` is pinned to the
-path that was checked: emsdk's default (`nodejs`, then `node`, found on PATH at
-build time) can pick up an old distro `nodejs` ahead of the one npm uses. The
+path that was checked: emsdk's default (any `nodejs` on PATH, else a bare
+`node`) can pick up an old distro `nodejs` ahead of the one npm uses. The
 Node only runs Emscripten's JS tools: `larn.wasm` built on Node 24.21.0 and on
 the bundled 22.16.0 is byte-identical.

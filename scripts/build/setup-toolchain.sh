@@ -78,8 +78,8 @@ fi
 if [ -n "$user_node_version" ] &&
    printf '%s\n%s\n' "$min_node" "$user_node_version" | sort -V -C; then
   "$EMSDK/emsdk" activate "$COMPILER"
-  # emsdk writes NODE_JS = 'nodejs' or 'node', whichever PATH finds first at
-  # build time; pin the one that was just checked instead.
+  # emsdk writes NODE_JS as any `nodejs` on PATH, else a bare 'node' looked up
+  # at build time; pin the one that was just checked instead.
   python3 - "$EMSDK/.emscripten" "$user_node" <<'PY'
 import re, sys
 path, node = sys.argv[1], sys.argv[2]
@@ -97,9 +97,9 @@ PY
 fi
 
 if [ -n "$user_node_version" ]; then
-  echo "setup-toolchain: your Node $user_node_version ($user_node) is older than Emscripten's minimum $min_node."
+  echo "setup-toolchain: your Node $user_node_version ($user_node) is older than Emscripten's minimum $min_node." >&2
 else
-  echo "setup-toolchain: no Node on PATH."
+  echo "setup-toolchain: no Node on PATH." >&2
 fi
 if [ "$download_node" = 0 ]; then
   if [ -t 0 ]; then
