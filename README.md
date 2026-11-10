@@ -32,9 +32,8 @@ alone give you a page whose every game dies on load. `npm run dev` prints
 `engine not built: …` at startup when any engine is missing.
 
 `npm run setup` downloads the pinned Emscripten compiler (about 1.5 GB
-installed, into `external/emsdk/`) and the engine sources, then builds the
-engines. Emscripten runs on your own Node; it fetches its bundled Node (another
-~190 MB) only if yours is missing or too old, and asks first. The
+installed, into `external/emsdk/`; it runs on your Node) and the engine
+sources, then builds the engines. The
 download dominates; the four builds took about a minute on an 8-core machine.
 After a `git pull` that touches an engine's native code or build script,
 rebuild that one engine (`npm run build:<game>`) or all of them
@@ -91,7 +90,7 @@ is open reloads the page and reboots the engine, and an unsaved run is gone.
 | Command | What it does |
 |---|---|
 | `npm run setup` | First-time setup: `setup:toolchain`, then `build:engines`. |
-| `npm run setup:toolchain` | Engine submodules plus the pinned Emscripten compiler, run on your Node. Safe to rerun; `-- --download-node` fetches the SDK's bundled Node without asking when yours is missing. |
+| `npm run setup:toolchain` | Engine submodules plus the pinned Emscripten SDK. Safe to rerun. |
 | `npm run build:engines` | All four engines below, in order. |
 | `npm run build:nethack` | NetHack -> `public/modules/nethack/` |
 | `npm run build:angband` | Angband -> `public/modules/angband/` |
@@ -199,11 +198,6 @@ imported module" (Chrome): that engine is not built. Run
 `npm run build:<game>`, or `npm run setup` on a fresh clone, then reload. The
 running dev server picks the new files up without a restart. The message's
 suggestion to delete the stored save does not apply here.
-
-**`setup-toolchain.sh` stops at "no Node on PATH" or "older than Emscripten's
-minimum":** install Node 24 and rerun, or answer `y` to fetch Emscripten's
-bundled Node. With no terminal to ask on (CI, a pipe), it refuses unless run
-as `scripts/build/setup-toolchain.sh --download-node`.
 
 **`npm install` warns `EBADENGINE`, or a test driver fails on TypeScript
 syntax:** Node is older than 24. `node -v` must print v24 or later.
