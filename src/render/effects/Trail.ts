@@ -19,7 +19,8 @@
 // is exactly the accumulation described above; MAX is what keeps it bounded.
 import {
   CustomBlending, HalfFloatType, MaxEquation, MeshBasicNodeMaterial, OneFactor,
-  QuadMesh, RenderTarget, Vector2, type Camera, type Scene, type WebGPURenderer,
+  QuadMesh, RenderTarget, ReverseSubtractEquation, Vector2,
+  type Camera, type Scene, type WebGPURenderer,
 } from "three/webgpu";
 import { TOKENS } from "../palette";
 import { residual } from "./persistence";
@@ -73,8 +74,18 @@ export class Trail {
   private live = 0;
   /** A resized or brand-new buffer holds nothing worth trailing. */
   private stale = true;
+  /** Subtracts a flat amount from the residue (dst - src), clamped by the MAX
+   *  composite: anything driven below zero loses to the fresh draw's black. */
+  private readonly drainMat = new MeshBasicNodeMaterial({
+    depthTest: false, depthWrite: false,
+    blending: CustomBlending, blendEquation: ReverseSubtractEquation,
+    blendSrc: OneFactor, blendDst: OneFactor,
+  });
 
-  constructor(private halfLifeSeconds = TOKENS.glow.persistence_half_life_s) {}
+  constructor(
+    public halfLifeSeconds = TOKENS.glow.persistence_half_life_s,
+    public drainPerSecond = TOKENS.glow.persistence_drain_per_s,
+  ) {}
 
   /** Draw one frame through the trail. `dt` is the frame's wall-clock seconds. */
   render(renderer: WebGPURenderer, scene: Scene, camera: Camera, dt: number): void {
@@ -92,6 +103,16 @@ export class Trail {
     if (this.stale) {
       this.stale = false; // one frame of nothing to trail; `cur` is valid for the next
     } else {
+      if (this.drainPerSecond > 0) {
+        // Linear drain on top of the exponential: an exponential alone never
+        // reaches black, and its dim tail stays visible for seconds once the
+        // output is sRGB-encoded. Applied to `prev` before it is composited.
+        renderer.setRenderTarget(prev.target);
+        this.drainMat.color.setScalar(this.drainPerSecond * dt);
+        this.quad.material = this.drainMat;
+        this.quad.render(renderer);
+        renderer.setRenderTarget(cur.target);
+      }
       prev.composite.color.setScalar(residual(dt, this.halfLifeSeconds));
       this.quad.material = prev.composite;
       this.quad.render(renderer);
@@ -129,5 +150,6 @@ export class Trail {
 
   dispose(): void {
     for (const b of this.buffers) b.dispose();
+    this.drainMat.dispose();
   }
 }
