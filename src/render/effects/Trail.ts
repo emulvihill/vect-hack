@@ -2,7 +2,8 @@
 // drawn fresh, then the previous frame's decayed residue is composited back over
 // it with a MAX blend, and the result is blitted to the canvas. What survives is
 // a fading sharp stamp of the prior frames — not motion blur — and it halves
-// every half-life of wall-clock time whatever the frame rate.
+// every half-life of wall-clock time whatever the frame rate, less a small
+// linear drain that takes the tail to true black.
 //
 // This is the ping-pong `max(new, prev·decay)` tier the model's §3.4 records
 // as the deferred upgrade over the shipped single-FBO fade. vect-hack needs the
@@ -23,7 +24,7 @@ import {
   type Camera, type Scene, type WebGPURenderer,
 } from "three/webgpu";
 import { TOKENS } from "../palette";
-import { residual } from "./persistence";
+import { drain, residual } from "./persistence";
 
 /** An 8-bit residual quantizes: the last counts never reach zero and stick as
  *  permanent ghosts, so the trail has to hold float. */
@@ -83,8 +84,8 @@ export class Trail {
   });
 
   constructor(
-    public halfLifeSeconds = TOKENS.glow.persistence_half_life_s,
-    public drainPerSecond = TOKENS.glow.persistence_drain_per_s,
+    private readonly halfLifeSeconds = TOKENS.glow.persistence_half_life_s,
+    private readonly drainPerSecond = TOKENS.glow.persistence_drain_per_s,
   ) {}
 
   /** Draw one frame through the trail. `dt` is the frame's wall-clock seconds. */
@@ -104,11 +105,10 @@ export class Trail {
       this.stale = false; // one frame of nothing to trail; `cur` is valid for the next
     } else {
       if (this.drainPerSecond > 0) {
-        // Linear drain on top of the exponential: an exponential alone never
-        // reaches black, and its dim tail stays visible for seconds once the
-        // output is sRGB-encoded. Applied to `prev` before it is composited.
+        // Linear drain on top of the exponential (persistence.ts `drain`),
+        // applied to `prev` before it is composited.
         renderer.setRenderTarget(prev.target);
-        this.drainMat.color.setScalar(this.drainPerSecond * dt);
+        this.drainMat.color.setScalar(drain(dt, this.drainPerSecond));
         this.quad.material = this.drainMat;
         this.quad.render(renderer);
         renderer.setRenderTarget(cur.target);
