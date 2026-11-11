@@ -37,7 +37,7 @@ export const sidebar = (grid) =>
  * native side polls — omit it and no checkpoint is ever due.
  */
 // `bridge` adds fields to globalThis.VectAngband the way worker.ts does for a
-// page flag (borgDelayMs, borgMenuDelayMs for ?borg=<ms>).
+// page flag (borgDelayMs for ?borg=<ms>).
 export async function bootAngband({ play, checkpoint, onQuit, onEvent, keys, onPoll, bridge } = {}) {
   const grid = new AngbandGrid();
   let persist;

@@ -33,7 +33,7 @@
     "test:angband-save-restore": "timeout 180 node scripts/test/test-angband-save-restore.mjs",
     "test:angband-autosave": "timeout 180 node scripts/test/test-angband-autosave.mjs",
     "test:angband-borg": "timeout 120 node scripts/test/test-angband-borg.mjs",
-    "test:angband-borg-pace": "timeout 200 node scripts/test/test-angband-borg-pace.mjs",
+    "test:angband-borg-pace": "timeout 60 node scripts/test/test-angband-borg-pace.mjs",
     "test:angband-borg-death": "timeout 120 node scripts/test/test-angband-borg-death.mjs",
     "test:angband": "npm run test:angband-boot && npm run test:angband-persist && npm run test:angband-save-restore && npm run test:angband-autosave && npm run test:angband-borg && npm run test:angband-borg-pace && npm run test:angband-borg-death",
     "test:larn-boot": "timeout 120 node scripts/test/test-larn-boot.mjs",
