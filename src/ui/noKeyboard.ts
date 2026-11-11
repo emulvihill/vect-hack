@@ -11,6 +11,9 @@
 // self-playing demo. ?bot hands NetHack and Larn to their bot players and
 // ?borg hands Angband to its own built-in borg (src/main.ts is where all
 // three are wired, and SELF_PLAY_FLAG below has to keep agreeing with it).
+// A Module with no self-player (Moria, until vect-hack-s77l) gets the
+// explanation and no offer: sending its visitor to another game's demo read
+// as the site opening the wrong game.
 //
 // The detection is the part worth being careful about. `(pointer: coarse)`
 // alone is not evidence of no keyboard: a touchscreen laptop matches it while
@@ -42,8 +45,8 @@ export function isTouchOnly(env: PointerEnvironment): boolean {
  *  Read off src/main.ts, the only place these are wired: ?bot builds
  *  BotPlayer for NetHack and LarnBotPlayer for Larn, ?borg hands Angband to
  *  the engine's own borg. Moria is absent because it has neither, and a demo
- *  that does not exist must never be offered — watchDemoFor sends that
- *  visitor to NetHack's instead of to a button that does nothing. */
+ *  that does not exist must never be offered — watchDemoFor answers null and
+ *  the notice shows no button. */
 export const SELF_PLAY_FLAG: Record<string, "bot" | "borg" | undefined> = {
   nethack: "bot",
   angband: "borg",
@@ -58,23 +61,17 @@ export const GAME_LABELS: Record<string, string | undefined> = {
   moria: "Moria",
 };
 
-/** The Module a visitor is sent to when the one they asked for has no
- *  self-player. It is also the Module a bare URL redirects to, so it is what
- *  almost every shared link means anyway. */
-export const FALLBACK_DEMO_GAME = "nethack";
-
 export interface WatchDemo {
   game: string;
   flag: "bot" | "borg";
 }
 
-/** The demo to offer someone currently pointed at `game`: its own, when it has
- *  one, and NetHack's otherwise. A visitor who reached ?game=moria on a phone
- *  still gets something to watch rather than a dead end. */
-export function watchDemoFor(game: string): WatchDemo {
+/** The demo to offer someone currently pointed at `game`: its own, or none.
+ *  Never another Module's — a visitor who picked Moria and was handed NetHack
+ *  saw the wrong game open, not a demo. */
+export function watchDemoFor(game: string): WatchDemo | null {
   const flag = SELF_PLAY_FLAG[game];
-  if (flag) return { game, flag };
-  return { game: FALLBACK_DEMO_GAME, flag: SELF_PLAY_FLAG[FALLBACK_DEMO_GAME] ?? "bot" };
+  return flag ? { game, flag } : null;
 }
 
 /** Whether this page is already the demo. Asked so that pressing the button
@@ -113,8 +110,7 @@ export const WATCH_DEMO_NOTICE =
   "The game can play itself, though — no keys needed. Drag to spin the camera "
   + "while you watch.";
 
-/** The button. Names the Module, because the demo may not be the game the URL
- *  asked for. */
+/** The button. Names the Module the demo plays. */
 export function watchDemoLabel(demo: WatchDemo): string {
   return `Watch ${GAME_LABELS[demo.game] ?? demo.game} play itself`;
 }
@@ -178,14 +174,20 @@ export function installNoKeyboardNotice(ui: NoKeyboardUi): void {
   const demo = watchDemoFor(ui.game);
   const text = dom.getElementById(NOTICE_TEXT_ID);
   if (text) text.textContent = NO_KEYBOARD_NOTICE;
+  // No self-player: the offer and its button stay out of the page entirely.
   const offer = dom.getElementById(NOTICE_OFFER_ID);
-  if (offer) offer.textContent = WATCH_DEMO_NOTICE;
-
+  if (offer) {
+    offer.hidden = !demo;
+    if (demo) offer.textContent = WATCH_DEMO_NOTICE;
+  }
   const watch = dom.getElementById(WATCH_BUTTON_ID);
   if (watch) {
-    watch.textContent = watchDemoLabel(demo);
-    const go = ui.navigate ?? browserNavigate;
-    watch.addEventListener("click", () => go(watchDemoSearch(ui.search, demo)));
+    watch.hidden = !demo;
+    if (demo) {
+      watch.textContent = watchDemoLabel(demo);
+      const go = ui.navigate ?? browserNavigate;
+      watch.addEventListener("click", () => go(watchDemoSearch(ui.search, demo)));
+    }
   }
   const dismiss = dom.getElementById(DISMISS_BUTTON_ID);
   if (dismiss) {

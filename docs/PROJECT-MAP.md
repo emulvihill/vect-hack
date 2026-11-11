@@ -169,7 +169,8 @@ wasm.
   dismissal lasts one page load and is never stored), `noKeyboard.ts` (what a touch-only visitor gets instead of an inert
   canvas: `(pointer: coarse) and (hover: none)` decided as a pure function, the
   explanation, and the `?bot`/`?borg` demo — `SELF_PLAY_FLAG` there has to keep
-  agreeing with `main.ts`, and Moria, which has neither, is offered NetHack's).
+  agreeing with `main.ts`, and Moria, which has neither, is offered no demo,
+  never another game's).
 - `src/bot/` — shared, game-free bot substrate: `trajectory.ts` (the JSONL
   experience log), `scoreboard.ts` (run summaries, CSV, stats), `canonical.ts`
   (the fields two runs of one seed must agree on — everything a row carries

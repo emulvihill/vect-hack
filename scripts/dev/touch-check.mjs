@@ -440,9 +440,17 @@ for (const game of ["nethack", "larn", "angband", "moria"]) {
   const inside = (b) => b && b.left >= 0 && b.right <= VIEWPORT.width;
   check(f.docScroll <= VIEWPORT.width && f.innerWidth <= VIEWPORT.width,
     `${game}: the page does not widen the viewport (scrollWidth ${f.docScroll}, innerWidth ${f.innerWidth})`);
-  check(f.notice && inside(f.watch) && inside(f.dismiss),
-    `${game}: the no-keyboard button and link are both on screen`
-    + ` (watch ${JSON.stringify(f.watch)}, dismiss ${JSON.stringify(f.dismiss)})`);
+  // Moria has no self-player (SELF_PLAY_FLAG in src/ui/noKeyboard.ts), so its
+  // notice must show no watch button at all, never another game's demo.
+  if (game === "moria") {
+    check(f.notice && f.watch === null && inside(f.dismiss),
+      `${game}: the no-keyboard link is on screen and no demo button is offered`
+      + ` (watch ${JSON.stringify(f.watch)}, dismiss ${JSON.stringify(f.dismiss)})`);
+  } else {
+    check(f.notice && inside(f.watch) && inside(f.dismiss),
+      `${game}: the no-keyboard button and link are both on screen`
+      + ` (watch ${JSON.stringify(f.watch)}, dismiss ${JSON.stringify(f.dismiss)})`);
+  }
   if (game !== "nethack") {
     check(f.overlayUp && inside(f.overlay),
       `${game}: and its opening text window is up and inside the width (${JSON.stringify(f.overlay)})`);

@@ -172,7 +172,7 @@ Every one of these should tell a non-technical visitor what happened:
 | Engine fatal or worker error | on-screen notice asking the player to reload |
 | Persistence declined | one-time notice, and a marked Saves button while it lasts |
 | Web Locks unavailable, or a second tab | one-time notice naming the cause, plus a `nosave` Saves button |
-| Phone or tablet | full-page explanation, plus the self-playing demo |
+| Phone or tablet | full-page explanation, plus the game's own self-playing demo (none for Moria) |
 
 ## 4. Licensing
 
