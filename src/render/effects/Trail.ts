@@ -2,7 +2,8 @@
 // drawn fresh, then the previous frame's decayed residue is composited back over
 // it with a MAX blend, and the result is blitted to the canvas. What survives is
 // a fading sharp stamp of the prior frames — not motion blur — and it halves
-// every half-life of wall-clock time whatever the frame rate.
+// every half-life of wall-clock time whatever the frame rate, less a small
+// linear drain that takes the tail to true black.
 //
 // This is the ping-pong `max(new, prev·decay)` tier the model's §3.4 records
 // as the deferred upgrade over the shipped single-FBO fade. vect-hack needs the
@@ -19,10 +20,11 @@
 // is exactly the accumulation described above; MAX is what keeps it bounded.
 import {
   CustomBlending, HalfFloatType, MaxEquation, MeshBasicNodeMaterial, OneFactor,
-  QuadMesh, RenderTarget, Vector2, type Camera, type Scene, type WebGPURenderer,
+  QuadMesh, RenderTarget, ReverseSubtractEquation, Vector2,
+  type Camera, type Scene, type WebGPURenderer,
 } from "three/webgpu";
 import { TOKENS } from "../palette";
-import { residual } from "./persistence";
+import { drain, residual } from "./persistence";
 
 /** An 8-bit residual quantizes: the last counts never reach zero and stick as
  *  permanent ghosts, so the trail has to hold float. */
@@ -73,8 +75,18 @@ export class Trail {
   private live = 0;
   /** A resized or brand-new buffer holds nothing worth trailing. */
   private stale = true;
+  /** Subtracts a flat amount from the residue (dst - src), clamped by the MAX
+   *  composite: anything driven below zero loses to the fresh draw's black. */
+  private readonly drainMat = new MeshBasicNodeMaterial({
+    depthTest: false, depthWrite: false,
+    blending: CustomBlending, blendEquation: ReverseSubtractEquation,
+    blendSrc: OneFactor, blendDst: OneFactor,
+  });
 
-  constructor(private halfLifeSeconds = TOKENS.glow.persistence_half_life_s) {}
+  constructor(
+    private readonly halfLifeSeconds = TOKENS.glow.persistence_half_life_s,
+    private readonly drainPerSecond = TOKENS.glow.persistence_drain_per_s,
+  ) {}
 
   /** Draw one frame through the trail. `dt` is the frame's wall-clock seconds. */
   render(renderer: WebGPURenderer, scene: Scene, camera: Camera, dt: number): void {
@@ -92,6 +104,15 @@ export class Trail {
     if (this.stale) {
       this.stale = false; // one frame of nothing to trail; `cur` is valid for the next
     } else {
+      if (this.drainPerSecond > 0) {
+        // Linear drain on top of the exponential (persistence.ts `drain`),
+        // applied to `prev` before it is composited.
+        renderer.setRenderTarget(prev.target);
+        this.drainMat.color.setScalar(drain(dt, this.drainPerSecond));
+        this.quad.material = this.drainMat;
+        this.quad.render(renderer);
+        renderer.setRenderTarget(cur.target);
+      }
       prev.composite.color.setScalar(residual(dt, this.halfLifeSeconds));
       this.quad.material = prev.composite;
       this.quad.render(renderer);
@@ -129,5 +150,6 @@ export class Trail {
 
   dispose(): void {
     for (const b of this.buffers) b.dispose();
+    this.drainMat.dispose();
   }
 }

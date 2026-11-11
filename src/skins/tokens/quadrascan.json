@@ -14,6 +14,7 @@
     "flare_spikes": 4,
     "flare_min_energy": 0.15,
     "persistence_half_life_s": 0.30,
+    "persistence_drain_per_s": 0.10,
     "energy_release_s": 0.80
   },
   "arc": {
