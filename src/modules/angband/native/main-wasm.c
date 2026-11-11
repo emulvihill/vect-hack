@@ -10,8 +10,8 @@
  *
  * GPLv2 section 2(a) notice: this file is modified from Shelob's
  * main-emscripten.c. Changed by VectHack on 2026-08-02, 2026-08-03,
- * 2026-08-04, 2026-08-18 and 2026-08-21. Later modifiers should append the
- * date of their change here.
+ * 2026-08-04, 2026-08-18, 2026-08-21 and 2026-11-11. Later modifiers should
+ * append the date of their change here.
  *
  * The JS side of every EM_*JS block is globalThis.VectAngband, installed by
  * src/modules/angband/worker.ts (browser) or scripts/test/test-angband-boot.mjs
@@ -353,6 +353,53 @@ static void arm_effect_handlers(void)
 	event_add_handler(EVENT_EXPLOSION, on_explosion, NULL);
 }
 
+/*
+ * ?borg=<ms> pacing inside menus. The borg's only pause is once per dungeon
+ * move (borg_think_dungeon, borg-think-dungeon.c:1237); in the inventory and
+ * in a store it queues a whole key sequence and hands each key straight to
+ * inkey_ex through inkey_hack (ui-input.c:225), so the menu flashes past at
+ * any pace. The borg installs that hook itself on activation (borg.c:176) and
+ * clears it on its own way out (borg.c:179, :245), so rather than patch the
+ * engine we stand in front of whatever borg hook is current: every term_xtra
+ * call re-checks, which is always before the first menu key, since a menu is
+ * drawn (Term_fresh) before it reads one.
+ *
+ * Only keys read while a screen is saved are paced: every inventory, object
+ * and store menu opens with screen_save() (ui-object.c, ui-store.c), and the
+ * dungeon already has its own pause, which this must not double.
+ *
+ * borg_menu_delay_ms is read once per world entry from VectAngband, which
+ * worker.ts sets from ?borg=<ms> (borgConfig.ts borgMenuDelayMs); 0 — no
+ * pace asked for — leaves inkey_hack untouched.
+ */
+extern struct keypress (*inkey_hack)(int flush_first);
+static struct keypress (*borg_hook)(int flush_first);
+static int borg_menu_delay_ms;
+static int borg_menu_pauses;
+
+static struct keypress paced_borg_hook(int flush_first)
+{
+	if (screen_save_depth > 0) {
+		borg_menu_pauses++;
+		emscripten_sleep(borg_menu_delay_ms);
+	}
+	return borg_hook(flush_first);
+}
+
+static void pace_borg_hook(void)
+{
+	if (borg_menu_delay_ms <= 0 || !inkey_hack || inkey_hack == paced_borg_hook)
+		return;
+	borg_hook = inkey_hack;
+	inkey_hack = paced_borg_hook;
+}
+
+/* How many menu keys were paced: the engine test's only view of the above. */
+EMSCRIPTEN_KEEPALIVE int vect_angband_borg_menu_pauses(void)
+{
+	return borg_menu_pauses;
+}
+
 static void on_enter_world(game_event_type type, game_event_data *data, void *user)
 {
 	(void)type;
@@ -362,6 +409,9 @@ static void on_enter_world(game_event_type type, game_event_data *data, void *us
 
 	if (EM_ASM_INT({ return globalThis.VectAngband.borgDelayMs === undefined ? 0 : 1; }))
 		player->opts.delay_factor = 0;
+	borg_menu_delay_ms = EM_ASM_INT({
+		return globalThis.VectAngband.borgMenuDelayMs | 0;
+	});
 }
 
 static int grid_flags(const struct grid_data *g)
@@ -584,6 +634,7 @@ static bool wasm_handle_event(int wait)
 
 static errr term_xtra_wasm(int n, int v)
 {
+	pace_borg_hook();
 	switch (n) {
 	case TERM_XTRA_EVENT:
 		(void)wasm_handle_event(v);

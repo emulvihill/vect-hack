@@ -30,7 +30,9 @@ other flag — no code may depend on an implicit default game. For Angband, add
 `?borg` to hand it to Angband's own built-in borg, which births a
 character and then plays unattended (`src/modules/angband/ui/BorgPlayer.ts`) —
 `?borg=<ms>` paces it like `?bot=<ms>`, via the engine's own
-borg_delay_factor in the volume's borg.txt (`src/modules/angband/borgConfig.ts`).
+borg_delay_factor in the volume's borg.txt (`src/modules/angband/borgConfig.ts`);
+the borg never pauses inside a menu, so the front end waits a fifth of that
+pace before each key it feeds the inventory or a store (`native/main-wasm.c`).
 When the borg dies or retires, the native tombstone menu hands input back to
 the player for inspection and quitting. The borg stops pressing keys throughout
 those screens. Angband writes the dead character's save after the player leaves

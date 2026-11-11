@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { borgDelayFactor, withBorgDelay } from "../../src/modules/angband/borgConfig";
+import { borgDelayFactor, borgMenuDelayMs, withBorgDelay } from "../../src/modules/angband/borgConfig";
 
 describe("?borg pacing via borg.txt", () => {
   it("maps ms to the factor the engine will square back", () => {
@@ -8,6 +8,12 @@ describe("?borg pacing via borg.txt", () => {
     expect(borgDelayFactor(250)).toBe(16);
     expect(borgDelayFactor(1000)).toBe(32);
     expect(borgDelayFactor(0)).toBe(0);
+  });
+
+  it("paces menu keys at a fifth of the delivered dungeon pace", () => {
+    expect(borgMenuDelayMs(500)).toBe(97);   // factor 22 -> 484ms -> 96.8
+    expect(borgMenuDelayMs(250)).toBe(51);   // 256 / 5
+    expect(borgMenuDelayMs(0)).toBe(0);      // bare ?borg: no wrapper at all
   });
 
   it("replaces the existing line wherever the parser would accept it", () => {
