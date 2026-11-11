@@ -31,12 +31,12 @@ the clone (`public/modules/` is gitignored). `npm install` and `npm run dev`
 alone give you a page whose every game dies on load. `npm run dev` prints
 `engine not built: …` at startup when any engine is missing.
 
-`npm run setup` downloads the pinned Emscripten SDK (about 1.7 GB installed,
-into `external/emsdk/`) and the engine sources, then builds the engines. The
-download dominates; the four builds took about a minute on an 8-core machine.
-After a `git pull` that touches an engine's native code or build script,
-rebuild that one engine (`npm run build:<game>`) or all of them
-(`npm run build:engines`).
+`npm run setup` downloads the pinned Emscripten compiler (about 1.5 GB
+installed, into `external/emsdk/`; it runs on your Node) and the engine
+sources, then builds the engines. The download dominates; the four builds took
+about a minute on an 8-core machine. After a `git pull` that touches an
+engine's native code or build script, rebuild that one engine
+(`npm run build:<game>`) or all of them (`npm run build:engines`).
 
 Then open one game per URL:
 

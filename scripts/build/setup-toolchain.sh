@@ -3,6 +3,11 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
+if ! command -v node >/dev/null; then
+  echo "setup-toolchain: no node on PATH. Install Node 24 (see .nvmrc) and rerun." >&2
+  exit 1
+fi
+
 git -C "$ROOT" submodule update --init external/NetHack
 git -C "$ROOT" submodule update --init external/angband
 git -C "$ROOT" submodule update --init external/umoria
@@ -40,5 +45,11 @@ if [ "$emsdk_head" != "$EMSDK_COMMIT" ]; then
   exit 1
 fi
 
-"$EMSDK/emsdk" install "$EMSDK_VERSION"
-"$EMSDK/emsdk" activate "$EMSDK_VERSION"
+# Only the compiler, not the full SDK: `emsdk install $EMSDK_VERSION` also
+# bundles a second Node (~190 MB). npm already needs one, and with no Node
+# active emsdk points Emscripten at the one on PATH.
+COMPILER="releases-$(python3 -c 'import json, sys
+print(json.load(open(sys.argv[1]))["releases"][sys.argv[2]])' \
+  "$EMSDK/emscripten-releases-tags.json" "$EMSDK_VERSION")-64bit"
+"$EMSDK/emsdk" install "$COMPILER"
+"$EMSDK/emsdk" activate "$COMPILER"
