@@ -78,6 +78,8 @@ onmessage = (e: MessageEvent<AngbandMainToWorker>) => {
     // player's delay_factor when a pace was asked for, because the borg's
     // pause is delay_factor² + borg_delay_factor² and delay_factor defaults
     // to 40 — a 1.6s floor borg.txt alone cannot go under.
+    // The same flag also arms main-wasm.c's menu pacing, which reads the
+    // pace back from borg.txt's factor in the engine (pace_borg_hook).
     (globalThis as unknown as { VectAngband: Record<string, unknown> })
       .VectAngband.borgDelayMs = e.data.ms;
     applyBorgDelayWhenReady();
