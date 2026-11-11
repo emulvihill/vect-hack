@@ -36,7 +36,9 @@ export const sidebar = (grid) =>
  * should (1 with a key staged, 0 for none). `checkpoint` is the cadence the
  * native side polls — omit it and no checkpoint is ever due.
  */
-export async function bootAngband({ play, checkpoint, onQuit, onEvent, keys, onPoll } = {}) {
+// `bridge` adds fields to globalThis.VectAngband the way worker.ts does for a
+// page flag (borgDelayMs for ?borg=<ms>).
+export async function bootAngband({ play, checkpoint, onQuit, onEvent, keys, onPoll, bridge } = {}) {
   const grid = new AngbandGrid();
   let persist;
   let phase = "opening";
@@ -129,6 +131,7 @@ export async function bootAngband({ play, checkpoint, onQuit, onEvent, keys, onP
       if (++opening > 40) fail(`never reached play (phase=${phase}):\n` + text);
       return press(KC_ENTER);
     },
+    ...bridge,
   };
 
   const opts = {

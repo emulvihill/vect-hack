@@ -10,8 +10,8 @@
  *
  * GPLv2 section 2(a) notice: this file is modified from Shelob's
  * main-emscripten.c. Changed by VectHack on 2026-08-02, 2026-08-03,
- * 2026-08-04, 2026-08-18 and 2026-08-21. Later modifiers should append the
- * date of their change here.
+ * 2026-08-04, 2026-08-18, 2026-08-21 and 2026-11-11. Later modifiers should
+ * append the date of their change here.
  *
  * The JS side of every EM_*JS block is globalThis.VectAngband, installed by
  * src/modules/angband/worker.ts (browser) or scripts/test/test-angband-boot.mjs
@@ -44,6 +44,7 @@
 #include "ui-output.h"     /* screen_save_depth */
 #include "ui-prefs.h"      /* arg_name, display tables */
 #include "ui-term.h"       /* term, Term_*, TERM_XTRA_* */
+#include "borg/borg.h"     /* borg_cfg, BORG_DELAY_FACTOR, inkey_hack (ALLOW_BORG) */
 #include "z-color.h"       /* angband_color_table, MAX_COLORS */
 #include "z-util.h"        /* argv0, quit_aux, quit, my_strcpy */
 #include "z-virt.h"        /* string_make, string_free */
@@ -353,6 +354,68 @@ static void arm_effect_handlers(void)
 	event_add_handler(EVENT_EXPLOSION, on_explosion, NULL);
 }
 
+/*
+ * ?borg=<ms> pacing inside menus. The borg's only pause is once per dungeon
+ * move (borg_think_dungeon, borg-think-dungeon.c:1161 and :1237); in the
+ * inventory and in a store it queues a whole key sequence and hands each key
+ * straight to inkey_ex through inkey_hack (ui-input.c:225), so the menu
+ * flashes past at any pace. The borg installs that hook itself on activation
+ * (borg.c:176) and clears it on its own way out (borg.c:179, :245), so rather
+ * than patch the engine we stand in front of whatever borg hook is current,
+ * re-checked on every term_xtra call. The borg reaches term_xtra itself before
+ * its first key is read — its Term_fresh (borg.c:237) and its non-blocking
+ * abort poll (borg.c:438) — so the wrapper is in place from its second key on.
+ *
+ * Only keys read while a screen is saved are paced: every inventory, object
+ * and store menu opens with screen_save() (ui-object.c, ui-store.c), and the
+ * dungeon already has its own pause, which this must not double. The pace is
+ * the engine's own move pause, computed the way borg_think_dungeon computes
+ * it, so menu and move agree by construction; borg_cfg is read per key
+ * because the borg frees it (NULL) on its way out (borg-init.c:161).
+ *
+ * Nothing in a menu calls Term_fresh between drawing it and reading its key
+ * (screen_save does not either), so the wrapper flushes the menu before it
+ * sleeps — otherwise each pause would hold the frame from before the menu.
+ * The sleep must stay here, after Term_fresh has returned: pace_borg_hook
+ * runs under Term_fresh and Term_activate, both on the Asyncify removelist
+ * (scripts/build/angband-wasm.mk), where a suspend corrupts the unwind.
+ */
+static struct keypress (*borg_hook)(int flush_first);
+static bool borg_paced;
+static int borg_menu_pauses;
+
+static int borg_pace_ms(void)
+{
+	int f = borg_cfg ? borg_cfg[BORG_DELAY_FACTOR] : 0;
+	int d = player->opts.delay_factor;
+	return d * d + f * f;
+}
+
+static struct keypress paced_borg_hook(int flush_first)
+{
+	int ms = screen_save_depth > 0 ? borg_pace_ms() : 0;
+	if (ms > 0) {
+		Term_fresh();
+		borg_menu_pauses++;
+		emscripten_sleep(ms);
+	}
+	return borg_hook(flush_first);
+}
+
+static void pace_borg_hook(void)
+{
+	if (!borg_paced || !inkey_hack || inkey_hack == paced_borg_hook)
+		return;
+	borg_hook = inkey_hack;
+	inkey_hack = paced_borg_hook;
+}
+
+/* How many menu keys were paced: the engine test's only view of the above. */
+EMSCRIPTEN_KEEPALIVE int vect_angband_borg_menu_pauses(void)
+{
+	return borg_menu_pauses;
+}
+
 static void on_enter_world(game_event_type type, game_event_data *data, void *user)
 {
 	(void)type;
@@ -360,7 +423,11 @@ static void on_enter_world(game_event_type type, game_event_data *data, void *us
 	(void)user;
 	arm_effect_handlers();
 
-	if (EM_ASM_INT({ return globalThis.VectAngband.borgDelayMs === undefined ? 0 : 1; }))
+	/* ?borg=<ms> asked for a pace: the player's delay_factor (default 40)
+	 * would add a 1.6s floor to every borg pause (see worker.ts), and the
+	 * borg's menu keys get paced too (pace_borg_hook above). */
+	borg_paced = EM_ASM_INT({ return globalThis.VectAngband.borgDelayMs === undefined ? 0 : 1; });
+	if (borg_paced)
 		player->opts.delay_factor = 0;
 }
 
@@ -584,6 +651,7 @@ static bool wasm_handle_event(int wait)
 
 static errr term_xtra_wasm(int n, int v)
 {
+	pace_borg_hook();
 	switch (n) {
 	case TERM_XTRA_EVENT:
 		(void)wasm_handle_event(v);
