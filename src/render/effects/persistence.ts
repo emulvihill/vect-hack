@@ -14,3 +14,12 @@ export function fadeAlpha(dtS: number, halfLifeS: number): number {
 export function residual(dtS: number, halfLifeS: number): number {
   return 2 ** (-dtS / halfLifeS);
 }
+
+/** The flat amount subtracted from the residue this frame, before it is scaled
+ *  by `residual`. An exponential alone never reaches black: at the 0.30s
+ *  half-life the sRGB-encoded tail of a full-scale stamp stays visible for about
+ *  3.5s, and an overbright one for 4.4s. The drain ends it in about 1.4–2.3s
+ *  while leaving the first few tenths of a second nearly unchanged. */
+export function drain(dtS: number, perS: number): number {
+  return perS * dtS;
+}
