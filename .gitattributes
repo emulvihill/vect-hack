@@ -1,0 +1,4 @@
+# scripts/build/VERSION: git archive (and so GitHub's release source zips)
+# writes the release tag's description into it; stage-licenses.mjs reads it
+# when there is no .git to ask (docs/decisions/2026-11-11-version-is-the-tag.md).
+scripts/build/VERSION export-subst

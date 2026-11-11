@@ -65,9 +65,37 @@ function builtCommit(root) {
   }
 }
 
-/** The release version, from package.json — the one place it is written. */
-function builtVersion(root) {
-  return JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
+/** A `git describe` answer as a version: `v0.2.2` -> `0.2.2`, and a build
+ *  past a tag keeps its distance and commit, `v0.2.2-3-g248d26f` ->
+ *  `0.2.2-3-g248d26f`. Anything that is not a v-tag description — an empty
+ *  answer, or VERSION's `$Format:...$` placeholder left unexpanded — is null. */
+export function versionFromDescribe(text) {
+  const m = /^v(\d+\.\d+\.\d+\S*)$/.exec(String(text ?? '').trim());
+  return m ? m[1] : null;
+}
+
+/** The release version: the release tag is the version, and nothing in the
+ *  tree is edited to cut one (docs/decisions/2026-11-11-version-is-the-tag.md).
+ *  A checkout asks git; a GitHub source zip has no .git, so VERSION carries the
+ *  same description, written by `git archive` through export-subst
+ *  (.gitattributes); a checkout that cannot see a tag (CI's shallow clone)
+ *  says so rather than guess. */
+export function builtVersion(root) {
+  try {
+    const described = execFileSync('git', ['describe', '--tags', '--match', 'v[0-9]*'],
+      { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    const v = versionFromDescribe(described);
+    if (v) return v;
+  } catch {
+    // no git, or no v-tag reachable: try the archive's stamp
+  }
+  try {
+    const v = versionFromDescribe(readFileSync(join(root, 'scripts/build/VERSION'), 'utf8'));
+    if (v) return v;
+  } catch {
+    // no stamp file
+  }
+  return 'unversioned';
 }
 
 export function sourceText(version, commit, dirty) {

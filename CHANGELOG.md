@@ -1,11 +1,14 @@
 # Changelog
 
-Each release is a `vX.Y.Z` tag on `main`, from the version in `package.json`.
+Each release is a `vX.Y.Z` tag on `main`, and the tag is the version.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The live
 build names its version and commit in `/play/licenses/SOURCE.txt`.
 
-## [Unreleased]
+**Frozen at 0.2.1.** Since then the release tag is the version and each
+release's notes are its GitHub Release
+(https://github.com/emulvihill/vect-hack/releases;
+`docs/decisions/2026-11-11-version-is-the-tag.md`).
 
 ## [0.2.1] - 2026-11-06
 
@@ -47,7 +50,6 @@ build names its version and commit in `/play/licenses/SOURCE.txt`.
 First public release: NetHack 5.0, Angband 4.2.6, BSD Larn 12.0 and Umoria
 5.7.15 in the browser, deployed to vecthack.com.
 
-[Unreleased]: https://github.com/emulvihill/vect-hack/compare/v0.2.1...HEAD
 [0.2.1]: https://github.com/emulvihill/vect-hack/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/emulvihill/vect-hack/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/emulvihill/vect-hack/releases/tag/v0.1.0
