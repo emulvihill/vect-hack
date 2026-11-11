@@ -33,11 +33,10 @@ alone give you a page whose every game dies on load. `npm run dev` prints
 
 `npm run setup` downloads the pinned Emscripten compiler (about 1.5 GB
 installed, into `external/emsdk/`; it runs on your Node) and the engine
-sources, then builds the engines. The
-download dominates; the four builds took about a minute on an 8-core machine.
-After a `git pull` that touches an engine's native code or build script,
-rebuild that one engine (`npm run build:<game>`) or all of them
-(`npm run build:engines`).
+sources, then builds the engines. The download dominates; the four builds took
+about a minute on an 8-core machine. After a `git pull` that touches an
+engine's native code or build script, rebuild that one engine
+(`npm run build:<game>`) or all of them (`npm run build:engines`).
 
 Then open one game per URL:
 
