@@ -9,7 +9,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import {
-  LICENSE_FILES, MODULES, SOURCE_URL, VECTHACK_FILES, escapeHtml, stageLicenses,
+  LICENSE_FILES, MODULES, SOURCE_URL, VECTHACK_FILES, builtVersion, escapeHtml, stageLicenses,
+  versionFromDescribe,
 } from "../build/stage-licenses.mjs";
 import { VOLUMES } from "../../src/backplane/volumes";
 import { licensesHref } from "../../src/ui/licensesLink";
@@ -98,7 +99,7 @@ describe("the staged licenses pages", () => {
   });
 
   it("states the source offer with the repository, the version and the built commit on every page", () => {
-    const { version } = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+    const version = builtVersion(root);
     expect(read("SOURCE.txt")).toMatch(new RegExp(`^VectHack ${version.replace(/\./g, "\\.")} — corresponding source\n`));
     for (const name of ["index.html", ...Object.keys(MODULES).map((id) => `${id}.html`)]) {
       const page = read(name);
@@ -121,5 +122,26 @@ describe("the staged licenses pages", () => {
     const moria = read("moria.html");
     expect(moria).not.toContain("<https://www.gnu.org");
     expect(moria).toContain("&lt;https://www.gnu.org");
+  });
+});
+
+describe("the release tag is the version", () => {
+  it("reads a tag's description, with or without commits past it", () => {
+    expect(versionFromDescribe("v0.2.2\n")).toBe("0.2.2");
+    expect(versionFromDescribe("v0.2.2-3-g248d26f")).toBe("0.2.2-3-g248d26f");
+  });
+
+  it("refuses what is not a v-tag description, so the stamp falls through", () => {
+    // VERSION as committed: git archive expands it, a checkout never does.
+    expect(versionFromDescribe("$Format:%(describe:tags=true,match=v[0-9]*)$")).toBeNull();
+    expect(versionFromDescribe("")).toBeNull();
+    expect(versionFromDescribe("release-7")).toBeNull();
+    expect(versionFromDescribe(undefined)).toBeNull();
+  });
+
+  it("never stamps a build with package.json's version, which is not maintained", () => {
+    const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+    expect(pkg.version).toBe("0.0.0");
+    expect(builtVersion(root)).not.toBe("0.0.0");
   });
 });
