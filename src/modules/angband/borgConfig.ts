@@ -25,11 +25,11 @@ export function borgDelayFactor(ms: number): number {
 }
 
 /** The pause before each key the borg feeds a menu (inventory, store):
- *  a fifth of the dungeon pace it actually runs at (factor², not the asked-for
+ *  half the dungeon pace it actually runs at (factor², not the asked-for
  *  ms), whole milliseconds. borg.txt has no such knob — the borg never pauses
  *  in a menu — so main-wasm.c applies it itself, in front of inkey_hack. */
 export function borgMenuDelayMs(ms: number): number {
-  return Math.round(borgDelayFactor(ms) ** 2 / 5);
+  return Math.round(borgDelayFactor(ms) ** 2 / 2);
 }
 
 /** borg.txt with its borg_delay_factor line set to `ms`'s factor — replaced

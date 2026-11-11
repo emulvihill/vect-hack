@@ -10,9 +10,9 @@ describe("?borg pacing via borg.txt", () => {
     expect(borgDelayFactor(0)).toBe(0);
   });
 
-  it("paces menu keys at a fifth of the delivered dungeon pace", () => {
-    expect(borgMenuDelayMs(500)).toBe(97);   // factor 22 -> 484ms -> 96.8
-    expect(borgMenuDelayMs(250)).toBe(51);   // 256 / 5
+  it("paces menu keys at half the delivered dungeon pace", () => {
+    expect(borgMenuDelayMs(500)).toBe(242);  // factor 22 -> 484ms / 2
+    expect(borgMenuDelayMs(250)).toBe(128);  // 256 / 2
     expect(borgMenuDelayMs(0)).toBe(0);      // bare ?borg: no wrapper at all
   });
 
