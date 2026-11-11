@@ -193,18 +193,18 @@ Every one of these should tell a non-technical visitor what happened:
 
 ## 5. Version and tag
 
-A PR bumps `package.json` (`npm version X.Y.Z --no-git-tag-version`) and
-moves `CHANGELOG.md`'s `[Unreleased]` notes under `[X.Y.Z]`. After the
-squash-merge, tag the merge commit and publish its section:
-`git tag -a vX.Y.Z -m vX.Y.Z <merge-sha> && git push origin vX.Y.Z`, then
-`gh release create vX.Y.Z --notes-file <the section>`
-(`docs/decisions/2026-11-03-versioning.md`).
+The tag is the version; nothing in the tree is edited to cut a release
+(`docs/decisions/2026-11-11-version-is-the-tag.md`). On GitHub: Releases →
+Draft a new release → a new tag `vX.Y.Z` on `main` → Generate release notes →
+Publish. The notes list every PR merged since the last tag, and one release
+may carry several. Pick the bump from them: a fix only is a patch, anything a
+player can newly do is a minor, a break in saves or URLs is a major.
 
 ## 6. Deploy
 
 `npm --prefix ../vect-hack-www run deploy` (`scripts/deploy.sh`; `deploy:dry`
 first) — preflight requires both trees clean and at `origin/main`, the game's
-HEAD to be the tag of its own version, and the Cloudflare Access service token
+HEAD to carry a `v*` release tag, and the Cloudflare Access service token
 (`~/.config/vecthack/access.env`). The new version is uploaded with no
 traffic, checked at its Access-gated Version URL, and only then promoted.
 Each deploy is recorded as a GitHub Deployment of that tag (environment

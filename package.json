@@ -1,6 +1,6 @@
 {
   "name": "vect-hack",
-  "version": "0.2.1",
+  "version": "0.0.0",
   "description": "VectHack — NetHack 5.0, Angband 4.2, Larn 12.0, and Umoria 5.7 cores compiled to WebAssembly and rendered as vector graphics",
   "author": "Eric Mulvihill <eric.mulvihill@gmail.com>",
   "license": "SEE LICENSE IN LICENSING.md",
