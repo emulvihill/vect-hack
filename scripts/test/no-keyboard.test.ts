@@ -11,7 +11,7 @@
 // rather than this notice again.
 import { describe, expect, it } from "vitest";
 import {
-  DISMISS_BUTTON_ID, DISMISS_LABEL, FALLBACK_DEMO_GAME, NOTICE_ID, NOTICE_OFFER_ID,
+  DISMISS_BUTTON_ID, DISMISS_LABEL, NOTICE_ID, NOTICE_OFFER_ID,
   NOTICE_TEXT_ID, NO_KEYBOARD_NOTICE, SELF_PLAY_FLAG, WATCH_BUTTON_ID,
   WATCH_DEMO_NOTICE, demoRunning, installNoKeyboardNotice, isTouchOnly,
   watchDemoFor, watchDemoLabel, watchDemoSearch,
@@ -80,16 +80,15 @@ describe("which demo is offered", () => {
     expect(watchDemoFor("angband")).toEqual({ game: "angband", flag: "borg" });
   });
 
-  it("sends a Module with no self-player to one that has it", () => {
-    // Moria has neither flag. A button that started nothing would be the same
-    // inert page this bead is about, so that visitor is offered NetHack's.
+  it("offers a Module with no self-player no demo at all, never another game's", () => {
+    // Moria has neither flag. Offering NetHack's demo there read as the site
+    // opening the wrong game (vect-hack-s77l will give Moria its own).
     expect(SELF_PLAY_FLAG.moria).toBeUndefined();
-    expect(watchDemoFor("moria")).toEqual({ game: FALLBACK_DEMO_GAME, flag: "bot" });
-    expect(watchDemoLabel(watchDemoFor("moria"))).toBe("Watch NetHack play itself");
+    expect(watchDemoFor("moria")).toBeNull();
   });
 
   it("keeps every other flag on the way to the demo", () => {
-    const search = watchDemoSearch("?game=larn&gl&skin=ghost", watchDemoFor("larn"));
+    const search = watchDemoSearch("?game=larn&gl&skin=ghost", watchDemoFor("larn")!);
     const params = new URLSearchParams(search);
     expect(params.get("game")).toBe("larn");
     expect(params.has("bot")).toBe(true);
@@ -98,11 +97,12 @@ describe("which demo is offered", () => {
     expect(params.get("skin")).toBe("ghost");
   });
 
-  it("switches the game when the demo belongs to another Module", () => {
-    const params = new URLSearchParams(watchDemoSearch("?game=moria", watchDemoFor("moria")));
-    expect(params.get("game")).toBe("nethack");
-    expect(params.has("bot")).toBe(true);
-    expect(params.has("borg")).toBe(false);
+  it("sets Angband's own flag, not ?bot", () => {
+    const params = new URLSearchParams(watchDemoSearch("?game=angband", watchDemoFor("angband")!));
+    expect(params.get("game")).toBe("angband");
+    expect(params.has("borg")).toBe(true);
+    expect(params.has("bot")).toBe(false);
+    expect(watchDemoLabel(watchDemoFor("angband")!)).toBe("Watch Angband play itself");
   });
 });
 
@@ -115,8 +115,23 @@ describe("a touch-only visitor", () => {
     expect(dom.el(NOTICE_OFFER_ID).textContent).toBe(WATCH_DEMO_NOTICE);
     expect(dom.el(WATCH_BUTTON_ID).textContent).toBe("Watch NetHack play itself");
 
+    expect(dom.el(NOTICE_OFFER_ID).hidden).toBe(false);
+    expect(dom.el(WATCH_BUTTON_ID).hidden).toBe(false);
+
     dom.el(WATCH_BUTTON_ID).click();
     expect(went).toEqual(["?game=nethack&bot="]);
+  });
+
+  it("on Moria gets the explanation and the way through, but no offer and no button", () => {
+    const { dom, went } = install({ game: "moria", search: "?game=moria" });
+    expect(dom.el(NOTICE_ID).hidden).toBe(false);
+    expect(dom.el(NOTICE_TEXT_ID).textContent).toBe(NO_KEYBOARD_NOTICE);
+    expect(dom.el(NOTICE_OFFER_ID).hidden).toBe(true);
+    expect(dom.el(WATCH_BUTTON_ID).hidden).toBe(true);
+    expect(dom.el(WATCH_BUTTON_ID).textContent).toBeNull();
+    expect(dom.el(DISMISS_BUTTON_ID).textContent).toBe(DISMISS_LABEL);
+    dom.el(WATCH_BUTTON_ID).click();
+    expect(went).toEqual([]);
   });
 
   it("does not explain over the demo it just started", () => {
