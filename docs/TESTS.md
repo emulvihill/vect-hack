@@ -31,6 +31,7 @@ it, `package.json` is right and this file is stale.
 | `test:angband-save-restore` | Ctrl-X save, reload, same character (real engine) |
 | `test:angband-autosave` | a checkpoint alone survives a tab that never quit |
 | `test:angband-borg` | the built-in borg plays unattended, no fatal |
+| `test:angband-borg-pace` | with borg.txt's factor set as `?borg=<ms>` sets it, every inventory and store key waits the move pace, each pause holding the menu frame rather than the dungeon (the wrapper took the hook, the overlay order and the clock agree) |
 | `test:angband-borg-death` | native retirement reaches a stable manual tombstone, Information inspection remains manual, and leaving the menu quits cleanly |
 
 ## Larn — `npm run test:larn`

@@ -23,7 +23,8 @@ export interface Tokens {
   track_palette: string[];
   glow: {
     beam_layers: number; flare_budget: number; flare_spikes: number;
-    flare_min_energy: number; persistence_half_life_s: number; energy_release_s: number;
+    flare_min_energy: number; persistence_half_life_s: number; persistence_drain_per_s: number;
+    energy_release_s: number;
   };
   arc: {
     seg_len_px: number; seg_var: number; base_amp_px: number; energy_amp_px: number;

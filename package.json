@@ -1,6 +1,6 @@
 {
   "name": "vect-hack",
-  "version": "0.2.1",
+  "version": "0.0.0",
   "description": "VectHack — NetHack 5.0, Angband 4.2, Larn 12.0, and Umoria 5.7 cores compiled to WebAssembly and rendered as vector graphics",
   "author": "Eric Mulvihill <eric.mulvihill@gmail.com>",
   "license": "SEE LICENSE IN LICENSING.md",
@@ -33,8 +33,9 @@
     "test:angband-save-restore": "timeout 180 node scripts/test/test-angband-save-restore.mjs",
     "test:angband-autosave": "timeout 180 node scripts/test/test-angband-autosave.mjs",
     "test:angband-borg": "timeout 120 node scripts/test/test-angband-borg.mjs",
+    "test:angband-borg-pace": "timeout 60 node scripts/test/test-angband-borg-pace.mjs",
     "test:angband-borg-death": "timeout 120 node scripts/test/test-angband-borg-death.mjs",
-    "test:angband": "npm run test:angband-boot && npm run test:angband-persist && npm run test:angband-save-restore && npm run test:angband-autosave && npm run test:angband-borg && npm run test:angband-borg-death",
+    "test:angband": "npm run test:angband-boot && npm run test:angband-persist && npm run test:angband-save-restore && npm run test:angband-autosave && npm run test:angband-borg && npm run test:angband-borg-pace && npm run test:angband-borg-death",
     "test:larn-boot": "timeout 120 node scripts/test/test-larn-boot.mjs",
     "test:larn-seed": "timeout 240 node scripts/test/test-larn-seed.mjs",
     "test:larn-repro": "timeout 420 node scripts/test/test-larn-repro.mjs",
