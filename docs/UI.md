@@ -18,6 +18,9 @@ view for the tty-style one; `?gl` forces the WebGL backend; `?skin=name`
 (`quadrascan` | `ghost` | `high-contrast`) picks the active skin and persists
 to localStorage — `VECT_SKIN=name` selects it for `npm test` / `npm run
 preview` instead; `?bot` runs the self-playing bot at one second per turn (`?bot=fast` unthrottles it, `?bot=<ms>` picks the pace; `src/modules/nethack/bot/`, wired only in `main.ts`).
+`?return=<url>` (every Module) shows a **Quit to main page** row in the Saves
+panel linking to that URL, same-origin only; without it there is no row
+(`docs/SAVES.md`).
 `?touch` (NetHack only, vect-hack-21k) adds the touch scheme: a nine-key thumb
 pad over the shared gaze layer, a seven-slot action bar, and a first-person
 toggle — the shared layer is `src/ui/touch/` and the adapter is
