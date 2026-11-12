@@ -7,6 +7,7 @@ import { installNoKeyboardNotice } from "./ui/noKeyboard";
 import { touchRequested } from "./ui/touch/scheme";
 import { installSaveMenu } from "./ui/saveMenu";
 import { pointLicensesLink } from "./ui/licensesLink";
+import { pointReturnLink } from "./ui/returnLink";
 import { VOLUMES } from "./backplane/volumes";
 // Every Module reference above this line is a TYPE, and that is the point
 // (vect-hack-l11). A `import type` is erased, so naming NetHackSession here
@@ -80,6 +81,8 @@ if (window.__vhBooted === 1) {
     installNoKeyboardNotice({ game: params.get("game")!, search: location.search });
     // The licenses link shows this game's terms and VectHack's, no other's.
     pointLicensesLink(params.get("game"));
+    // The way back to whichever page launched this one, if it said (?return).
+    pointReturnLink(params, location.href);
   }
   if (!params.has("game")) {
     params.set("game", "nethack");

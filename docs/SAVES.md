@@ -68,6 +68,14 @@ GPL notices have to reach a player who arrived on a `?game=` link and never
 saw the landing page. The href is relative so it resolves under any deploy
 base; `scripts/test/licenses-page.test.ts` pins it to the page the build
 stages.
+
+Above it, **Quit to main page** appears only when the launcher passed
+`?return=<url>` (`src/ui/returnLink.ts`): the site's links add `&return=/`, so
+this repo never names the site that hosts it, and a URL without the parameter
+shows no row. Only a same-origin URL counts — anything else, `javascript:`
+included, leaves the row hidden, so the parameter is no open redirect. It is a
+plain link: leaving is the same as closing the tab, and the character resumes
+from its last checkpoint. `scripts/test/return-link.test.ts` pins it.
 A death **before the engine has sent one message of its own** adds a sentence
 pointing at it (`EngineSession.resetAdvice`); a death mid-game does not, since
 that advice would cost a running character.

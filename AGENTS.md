@@ -113,7 +113,7 @@ Dev URL flags, in full in `docs/UI.md`: `?game=<module>` (`nethack` | `angband`
 | `larn` | `moria`, never implicit), `?trace`, `?view=debug`, `?gl`,
 `?skin=<quadrascan|ghost|high-contrast>` (`VECT_SKIN=name` for `npm test` and
 `npm run preview`), `?bot` / `?bot=fast` / `?bot=<ms>`, `?borg` / `?borg=<ms>`
-(Angband only), `?touch` (NetHack only). In-game: **F2** first person, the
+(Angband only), `?touch` (NetHack only), `?return=<url>` (the Saves panel's quit row). In-game: **F2** first person, the
 **Saves** button with **F3** export / **F4** import, keypad 5 to face north.
 
 ## Playtesting in the browser

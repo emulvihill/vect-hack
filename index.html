@@ -115,6 +115,9 @@
       font: inherit; padding: 3px 12px; cursor: pointer;
     }
     #savepanel a { box-sizing: border-box; text-decoration: none; }
+    /* The id rule above outranks the UA's [hidden] rule, so restate it: the
+       quit row stays out of the panel until ?return names a page. */
+    #savepanel a[hidden] { display: none; }
     #savepanel button:hover, #savepanel a:hover { background: var(--vh-hover-bg); color: var(--vh-bright); }
     /* The at-risk mark on the Saves button (vect-hack-h4q): worn for as long
        as this browser has not promised to keep the origin's storage, so the
@@ -307,6 +310,9 @@
            (vect-hack-a4c). Relative, so it resolves under any deploy base;
            the pages are staged by scripts/build/stage-licenses.mjs, and
            src/ui/licensesLink.ts points this at the booted game's own. -->
+      <!-- Hidden unless the launcher passed ?return=<same-origin url>
+           (src/ui/returnLink.ts): a plain link out, like closing the tab. -->
+      <a id="returnlink" href="#" tabindex="-1" hidden>Quit to main page</a>
       <a id="licenseslink" href="licenses/index.html" target="_blank" rel="noopener" tabindex="-1">Licenses &amp; source</a>
     </div>
     <!-- Both notices carry no copy of their own: every string is set from
