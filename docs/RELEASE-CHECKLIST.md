@@ -155,12 +155,9 @@ curl -sI -H 'Accept-Encoding: br,gzip' https://vecthack.net/play/modules/nethack
   Moria 13 kB, Angband 12 kB — plus **840 kB shared**, which is `three/webgpu`
   and the render layer and is 90% of the download. That is the number worth
   watching here, and `vect-hack-po4` is where it is being attacked.
-- The `curl` must show `content-encoding`. CloudFront should compress
-  `application/wasm` under 10 MB and CDK defaults `compress` to true. **Checked
-  against the live distribution on 2026-08-27** (`8177a13`): all four Modules'
-  wasm came back `content-encoding: br` with `content-type: application/wasm`.
-  Note the endpoint that answered was the distribution's CloudFront endpoint,
-  not `vecthack.com` — the registrar DNS is still unhooked.
+- The `curl` must show `content-encoding`. **Checked against the live site on
+  2026-11-13**: all four Modules' wasm came back `content-encoding: br` with
+  `content-type: application/wasm`.
 
 ## 3. First-run and degrade paths
 
@@ -204,8 +201,8 @@ player can newly do is a minor, a break in saves or URLs is a major.
 
 `npm --prefix ../vect-hack-www run deploy` (`scripts/deploy.sh`; `deploy:dry`
 first) — preflight requires both trees clean and at `origin/main`, the game's
-HEAD to carry a `v*` release tag, and the Cloudflare Access service token
-(`~/.config/vecthack/access.env`). The new version is uploaded with no
+HEAD to carry a `v*` release tag, and the Cloudflare Access service token.
+The new version is uploaded with no
 traffic, checked at its Access-gated Version URL, and only then promoted.
 Each deploy is recorded as a GitHub Deployment of that tag (environment
 `vecthack.com`), so it leaves nothing to commit.

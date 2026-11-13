@@ -122,7 +122,7 @@ async function load(browser, url, viewGlobal) {
 // "transferred" is what vite preview sent the page: gzip (preview compresses),
 // and only the page's own fetches — a worker's requests are on the worker's
 // performance timeline, so the worker chunk and the engine glue never count.
-// vecthack.com's CloudFront serves brotli where the browser accepts it. So
+// The live site serves brotli where the browser accepts it. So
 // beside it, every request the load recorded, page and worker alike, is
 // compressed from the built file it maps to: what a visitor pays, both ways.
 // A request with no built file behind it — the engine glue on a machine that

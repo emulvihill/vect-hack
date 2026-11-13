@@ -27,8 +27,8 @@ paths and host names generalised. The retired proof of concept the effects
 and token file grew from is no longer named anywhere; the physics is "the
 vector-CRT model".
 
-**Why:** The review printed live CDN identifiers and a step-by-step cost
-attack against the live site; redaction would have left a document that was mostly holes. The codename
+**Why:** The review contained operational detail about the live site;
+redaction would have left a document that was mostly holes. The codename
 pointed agents at a repository nobody can open and produced false
 provenance and licensing findings (NOTICE, LICENSING reviews).
 
@@ -525,7 +525,7 @@ The deploy then greps the artifact — `dist/index.html` for `/play/assets/`,
 built at base `/`. The flag was a no-op for the life of the deploy script. The
 base is load-bearing for the engine and not just for asset hrefs: all four
 workers build their module URL from `import.meta.env.BASE_URL`, so a wrong base
-403s `/modules/*` as well as `/assets/*` behind CloudFront OAC. Nothing could
+breaks `/modules/*` as well as `/assets/*`. Nothing could
 catch it — the chunk names are identical either way, `npm test` never builds for
 a sub-path, and a smoke test that checks `/play/index.html` returns 200 passes
 against an app that cannot load a single script. Hence a guard on the artifact

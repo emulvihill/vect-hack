@@ -85,10 +85,8 @@ list; the whole arm is 2.49 MB pre-minify):
    "WebGPU, WebGL fallback" (`AGENTS.md`), and 68 kB gzip does not buy that.
 4. **The visitor pays ~180 kB, not 840.** The bead's figure, and
    `check:payload`'s "transferred" column, are uncompressed bytes from
-   `vite preview`. vecthack.com is served by a CloudFront distribution with
-   compression on (CDK `Distribution` default) and the `CACHING_OPTIMIZED`
-   policy, which keys on gzip and brotli: the same chunk arrives as 221 kB
-   gzip or 180 kB brotli. Filed as `vect-hack-8gd7.1`: the gate should report
+   `vite preview`. The live site serves gzip and brotli: the same chunk
+   arrives as 221 kB gzip or 180 kB brotli. Filed as `vect-hack-8gd7.1`: the gate should report
    a compressed column so its numbers match what is served.
 5. **Cache stability is the open question, not size.** The three chunk and
    `src/render` are one file, so every render fix changes the hash and a

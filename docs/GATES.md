@@ -310,7 +310,7 @@ the wire it is ~180 kB brotli. The "transferred" column is what `vite preview`
 sent, which is gzip, and only the page's own fetches: a worker's requests sit
 on the worker's timeline, so the worker chunk and the engine glue go uncounted.
 The `gzip` and `brotli` columns beside it compress the built file behind every
-recorded request, page and worker alike, because CloudFront serves brotli
+recorded request, page and worker alike, because the live site serves brotli
 (vect-hack-8gd7.1; `docs/reports/2026-11-02-three-webgpu-attribution-correction.md`).
 A request with no built file behind it — the engine glue wherever the engines
 were never built, CI included — adds nothing to either column and is listed as
