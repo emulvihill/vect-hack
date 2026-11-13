@@ -295,7 +295,7 @@ Engine tests (already in `npm test`, one assertion each):
 Browser gate (`npm run check:browser`): on each Module/backend, move the
 pointer over the hero, wait, and require the label to contain text and the
 renderer's highlight accessor to report that cell — accessors, never a
-private (docs/DECISIONS.md, vect-hack-azf).
+private (vect-hack-azf).
 
 Build guards: `build-nethack-wasm.sh` greps the artifact for
 `_do_screen_description` (as it does for `_save_currentstate`); the Angband,

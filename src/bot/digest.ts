@@ -93,7 +93,7 @@ export interface TerrainStep {
  *  This is the narrow reading, and it was contested: an adversarial review
  *  argued that any native join is out of bounds however it is fenced, because
  *  the screen never drew the sentence "this glyph is the one the epitaph
- *  names" (docs/DECISIONS.md, 2026-08-21). The alternative on the table was to
+ *  names". The alternative on the table was to
  *  drop per-being threat claims outright.
  *
  *  null is the honest majority case, and every reader must treat it as "this

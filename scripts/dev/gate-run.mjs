@@ -31,7 +31,7 @@
 //   4. The hosted gates, in sequence, output streamed so a human sees live
 //      progress and captured so a nightly run leaves something to read.
 //   5. The artifact, under ~/.local/state/vect-hack/gates/<stamp>/ — outside
-//      the repo on purpose (§4 of the brief, and docs/DECISIONS.md 2026-08-26):
+//      the repo on purpose (§4 of the brief):
 //      the deploy preflight requires a clean tree, so a nightly run that wrote
 //      anything tracked would block deploys until someone committed a date.
 //

@@ -175,7 +175,7 @@ export class DungeonRenderer {
   /**
    * The cell the look ring is on, for scripts/dev/browser-check.mjs. A public
    * accessor rather than a reach into the private: an assertion that cannot
-   * fail is worse than no assertion (docs/DECISIONS.md, vect-hack-azf).
+   * fail is worse than no assertion (vect-hack-azf).
    */
   get highlightedCell(): { x: number; y: number } | null {
     return this.highlight;

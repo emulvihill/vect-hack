@@ -69,7 +69,7 @@ assert.ok(loser.FS.analyzePath("/moria-seed/game.sav").exists,
 // Nothing reads writer.FS here. The writer's MEMFS lives in its own Emscripten
 // heap and the losing engine cannot reach it under any implementation, so
 // comparing it against itself is an assertion no behaviour could falsify
-// (docs/DECISIONS.md, vect-hack-azf). IndexedDB is the substrate the two
+// (vect-hack-azf). IndexedDB is the substrate the two
 // engines share, and it is what the checks below read.
 const remoteAfterLoserGame = await readRemote(gamePath);
 const remoteAfterLoserScores = await readRemote(scoresPath);

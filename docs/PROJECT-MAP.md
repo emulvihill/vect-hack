@@ -26,7 +26,7 @@ pins the two together (vect-hack-z80c).
 ## The vendored engines
 
 - `external/NetHack` — official source, submodule pinned to the `NetHack-5.0` branch tip
-  (release-tag wasm bugs were fixed on the branch; see docs/DECISIONS.md). Never
+  (release-tag wasm bugs were fixed on the branch). Never
   patched: it stays a clean external dependency anyone can compile as instructed.
   `build-nethack-wasm.sh` pins `SUPPORTED_NETHACK` and refuses to build a different
   release, because `src/modules/nethack/recoverSave.ts` depends on NetHack's on-disk save

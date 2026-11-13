@@ -59,7 +59,7 @@ the run is evidence; the same sentence written afterwards is not.
 > was abandoned: the reflect prompt now routes a terrain lesson to the
 > `avoid-terrain` claim instead of a note, the applier gates that claim on the
 > exits the run chose, and the ladder's breach step crosses learned avoidance
-> when it is the only route (`docs/DECISIONS.md`, 2026-08-21). A successor's
+> when it is the only route. A successor's
 > "what moves" section must be written against that tree, and its volcano
 > stratum is no longer expected to tie.
 

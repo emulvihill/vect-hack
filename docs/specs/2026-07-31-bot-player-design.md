@@ -6,7 +6,7 @@ Date: 2026-07-31. Bead: `vect-hack-m6c`.
 
 Two uses, one mechanism:
 
-- **Automated playtesting.** Every fix in DECISIONS.md from 2026-07-27 came out
+- **Automated playtesting.** Every fix from 2026-07-27 came out
   of one manual tutorial run. A bot that plays unattended multiplies that
   coverage for free.
 - **Attract mode.** A self-playing game in the 3D view is the arcade demo

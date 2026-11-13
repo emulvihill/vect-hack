@@ -46,7 +46,7 @@ depending on scene size; the floor is 0.5. Both glow shots are frozen stills dra
 phosphor trail, so the pair differs by the bloom stack and nothing else — its ghost
 of every moving glyph reads as halo the beam stack never drew. It drives only
 `DungeonRenderer`'s diagnostics accessors, never a private: an assertion that
-cannot fail is worse than no assertion (docs/DECISIONS.md, vect-hack-azf).
+cannot fail is worse than no assertion (vect-hack-azf).
 
 ### The two degrade arms
 

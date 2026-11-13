@@ -119,7 +119,7 @@ if (describe(-1, -1)) fail("vect_angband_describe answered an out-of-range grid"
 // on. There is no `fatal` check here, because there could not be an honest
 // one: bootAngband is handed keys/onEvent/onPoll and no notice channel, so
 // view.onNotice never runs and the flag it writes can never be set — reading
-// it would be an assertion that cannot fail (docs/DECISIONS.md, vect-hack-azf).
+// it would be an assertion that cannot fail (vect-hack-azf).
 // An engine that died would stop playing, so the wait below is the assertion:
 // it proves the engine survived being asked, which is the whole risk.
 //

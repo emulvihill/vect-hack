@@ -28,7 +28,7 @@
 //  - "turning is free" counts windowport events rather than reading a turn
 //    counter, because NetHack's `time` option is off by default and there is no
 //    T: on the status line to watch. Watching it would be an assertion that
-//    cannot fail (docs/DECISIONS.md, vect-hack-azf).
+//    cannot fail (vect-hack-azf).
 //  - the prompt check asserts only that the camera did not turn. What an
 //    invalid key does to a getobj prompt is NetHack's business, not this port's.
 //

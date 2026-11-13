@@ -11,7 +11,7 @@
 //
 // Nothing here resizes the canvas. Every element is absolutely positioned
 // inside #stage, the same shape the storage notice takes and for the same
-// reason (docs/DECISIONS.md: a WebGPU resize rebuilds the trail targets).
+// reason: a WebGPU resize rebuilds the trail targets.
 import { resolve, type GazeAction } from "../gaze";
 import type { GazeCamera } from "../gazeControls";
 import {

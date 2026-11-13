@@ -476,8 +476,8 @@ preview images, and any Angband Cell tests (no Cells until phase 3).
   gates for the epic branch (vect-hack-3vk.4: the Angband borg playing in
   3D crash-free, plus his manual playtest) are phase-3+ deliverables, and
   phase 2 must not make the borg path harder. The borg is engine-internal
-  C (`ALLOW_BORG`, an Engine Build concern — currently compiled empty per
-  DECISIONS.md): it drives the game from inside the engine, emitting the
+  C (`ALLOW_BORG`, an Engine Build concern — currently compiled empty):
+  it drives the game from inside the engine, emitting the
   same term stream and simply pulling fewer keys. Checked against this
   design: the Backplane holds no assumption a borg would violate — input is
   pull-model (`KeyQueue.next` may just never be asked), the grid is

@@ -319,7 +319,7 @@ export function bytesEqual(a, b) {
  * IndexedDB is the only substrate two Emscripten heaps share. A session's own
  * MEMFS is unreachable to every other module instance, so reading one engine's
  * memory to find out what another engine did is an assertion no behaviour
- * could falsify (docs/DECISIONS.md, vect-hack-azf). Reading only: nothing here
+ * could falsify (vect-hack-azf). Reading only: nothing here
  * writes, so an inspection can never repair the damage it is looking for.
  */
 export async function readDurableFiles(root, prefix = "") {

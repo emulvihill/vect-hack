@@ -51,8 +51,7 @@ the file for an area before changing anything in it.**
   game. A URL without `?touch` builds none of the touch scheme. The Look HUD
   sends the engine nothing, and an ambiguous hit draws nothing rather than a
   guessed pulse. Larn has no `hitInference.ts` and never flashes.
-- `docs/decisions/` (one file per decision; `docs/DECISIONS.md` is the frozen
-  log before 2026-10-22), `docs/RELEASE-CHECKLIST.md`,
+- `docs/decisions/` (one file per decision), `docs/RELEASE-CHECKLIST.md`,
   `LICENSING.md`, `src/backplane/CONTEXT.md`. `docs/specs/` holds the dated
   design documents and `docs/reports/` the measured runs that `docs/BOT.md`
   and `docs/GATES.md` cite; both are **frozen history**: add, never rewrite.

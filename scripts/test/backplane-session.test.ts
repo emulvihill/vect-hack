@@ -56,7 +56,7 @@ function harness(opts: { noticeThrows?: boolean } = {}) {
   // need this rather than `worker.posted`: the toy delegate answers an
   // unknown type with null, so a Backplane reply that leaked through to
   // dispatch() would post nothing either and an empty `posted` would prove
-  // nothing (docs/DECISIONS.md, vect-hack-azf).
+  // nothing (vect-hack-azf).
   const dispatched: ToyIn[] = [];
   const delegate: SessionDelegate<ToyIn, ToyOut> = {
     onNotice: (text) => {

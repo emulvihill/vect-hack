@@ -49,8 +49,8 @@ Candidates:
 Pick rule: submodule the cleanest-compiling candidate with the simplest
 interception surface. If every candidate needs source patches, vendor the
 NetBSD-modernized snapshot into `external/larn/` with the pinned NetBSD
-source revision cited in a `README`, and record the deviation in
-`docs/DECISIONS.md`. Whichever lands:
+source revision cited in a `README`, and record the deviation. Whichever
+lands:
 
 - Pin the commit in `scripts/build/build-larn-wasm.sh` and refuse to build a
   different commit (the Angband pin-guard pattern).

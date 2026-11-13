@@ -1,6 +1,6 @@
 # Vect platform — ubiquitous language
 
-Glossary only. No implementation details. See `docs/DECISIONS.md` for decisions.
+Glossary only. No implementation details. See `docs/decisions/` for decisions.
 
 ## Terms
 
