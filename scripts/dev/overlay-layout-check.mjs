@@ -24,8 +24,8 @@ const browser = await chromium.launch({
 try {
   for (const sample of SAMPLES) {
     const started = performance.now();
-    // index.html's scripts must not run: no engine here. The page's own script
-    // execution is off; the evaluate calls below run regardless.
+    // The page's own scripts stay off: index.html's module entry would boot the
+    // app. page.evaluate still runs, because it goes through the debugger.
     const page = await browser.newPage({
       viewport: { width: sample.width, height: sample.height }, javaScriptEnabled: false,
     });
