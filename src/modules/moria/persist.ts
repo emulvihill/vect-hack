@@ -21,7 +21,7 @@ import { validateMoriaImport, type MoriaImportFS } from "./saveImport.ts";
 
 export const MORIA_SEED_ROOT = "/moria-seed";
 
-/** Literal stage-moria-seed.sh allow-list. Keep the build and runtime copy
+/** Literal build-moria-wasm.sh seed allow-list. Keep the build and runtime copy
  * contracts identical: extra build output must never become user data merely
  * because it happened to appear beside the seed. */
 export const MORIA_RUNTIME_FILES = [

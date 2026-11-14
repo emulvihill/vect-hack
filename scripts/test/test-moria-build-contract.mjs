@@ -170,7 +170,6 @@ const stubArtifact = (label, extension) =>
 
 const buildScript = `${ROOT}/scripts/build/build-moria-wasm.sh`;
 const makefile = `${ROOT}/scripts/build/moria-wasm.mk`;
-const stageScript = `${ROOT}/scripts/build/stage-moria-seed.sh`;
 const guardScript = `${ROOT}/scripts/build/guard-host-paths.sh`;
 const mainNative = `${ROOT}/src/modules/moria/native/main-wasm.cpp`;
 const uiNative = `${ROOT}/src/modules/moria/native/ui_io_wasm.cpp`;
@@ -180,7 +179,7 @@ const checkpointNative = `${ROOT}/src/modules/moria/native/checkpoint-wasm.cpp`;
 const checkpointHeader = `${ROOT}/src/modules/moria/native/checkpoint-wasm.h`;
 const gameSaveNative = `${ROOT}/src/modules/moria/native/game-save-wasm.cpp`;
 for (const path of [
-  buildScript, makefile, stageScript, guardScript, mainNative, uiNative, semanticNative, semanticHeader,
+  buildScript, makefile, guardScript, mainNative, uiNative, semanticNative, semanticHeader,
   checkpointNative, checkpointHeader, gameSaveNative,
 ]) {
   assert.ok(existsSync(path), `missing Moria build input: ${relative(ROOT, path)}`);
@@ -357,51 +356,6 @@ assert.equal(gameRunDungeonMaps.length, 1,
 
 const scratch = mkdtempSync(join(tmpdir(), "vect-moria-contract-"));
 try {
-  const unsafeCommandBin = join(scratch, "unsafe-stage-command-bin");
-  mkdirSync(unsafeCommandBin);
-  for (const command of ["cp", "mkdir", "mktemp", "mv", "rm"]) {
-    const path = join(unsafeCommandBin, command);
-    writeFileSync(path, `#!/usr/bin/env bash\necho 'unsafe staging reached ${command}' >&2\nexit 97\n`);
-    chmodSync(path, 0o755);
-  }
-  const unsafeStageOptions = {
-    cwd: scratch,
-    env: { ...process.env, PATH: `${unsafeCommandBin}:${process.env.PATH}` },
-  };
-  for (const unsafe of ["relative-seed", "-dash-seed"]) {
-    const target = join(scratch, unsafe);
-    mkdirSync(target);
-    writeFileSync(join(target, "keep"), "must survive rejected staging\n");
-    const result = run(stageScript, [MORIA, unsafe], unsafeStageOptions);
-    assert.notEqual(result.status, 0, `seed stager accepted unsafe relative target ${unsafe}`);
-    assert.match(`${result.stdout}${result.stderr}`, /destination must be an absolute path/,
-      `seed stager rejected ${unsafe} only after reaching a mutating command`);
-    assert.equal(readFileSync(join(target, "keep"), "utf8"), "must survive rejected staging\n",
-      `seed stager modified rejected relative target ${unsafe}`);
-  }
-
-  const overlapSource = join(scratch, "overlap-source");
-  mkdirSync(join(overlapSource, "data"), { recursive: true });
-  for (const unsafe of ["/", overlapSource, `${overlapSource}/data`, dirname(overlapSource)]) {
-    const result = run(stageScript, [overlapSource, unsafe], unsafeStageOptions);
-    assert.notEqual(result.status, 0, `seed stager accepted destructive/overlapping target ${unsafe}`);
-    assert.match(`${result.stdout}${result.stderr}`, /refusing unsafe destination|overlaps/,
-      `seed stager rejected ${unsafe} only after reaching a mutating command`);
-  }
-
-  const overlapFixture = join(scratch, "overlap-fixture");
-  const overlapFixtureScript = join(overlapFixture, "scripts/build/stage-moria-seed.sh");
-  const overlapFixtureSeed = join(overlapFixture, "build/moria/seed");
-  mkdirSync(dirname(overlapFixtureScript), { recursive: true });
-  mkdirSync(join(overlapFixtureSeed, "data"), { recursive: true });
-  copyFileSync(stageScript, overlapFixtureScript);
-  for (const source of [overlapFixture, join(overlapFixtureSeed, "data")]) {
-    const result = run(overlapFixtureScript, [source, overlapFixtureSeed], unsafeStageOptions);
-    assert.notEqual(result.status, 0, `seed stager accepted overlapping source ${source}`);
-    assert.match(`${result.stdout}${result.stderr}`, /overlaps/,
-      `seed stager did not identify the source/destination overlap for ${source}`);
-  }
-
   assert.equal(git("-C", EMSDK, "rev-parse", "HEAD"), EMSDK_PIN,
     "external/emsdk is not at the approved toolchain pin");
   const mismatch = join(scratch, "mismatched-source");
@@ -581,7 +535,6 @@ try {
   mkdirSync(join(fixtureRoot, "external"), { recursive: true });
   copyFileSync(buildScript, join(fixtureRoot, "scripts/build/build-moria-wasm.sh"));
   copyFileSync(makefile, join(fixtureRoot, "scripts/build/moria-wasm.mk"));
-  copyFileSync(stageScript, join(fixtureRoot, "scripts/build/stage-moria-seed.sh"));
   copyFileSync(guardScript, join(fixtureRoot, "scripts/build/guard-host-paths.sh"));
   copyFileSync(mainNative, join(fixtureRoot, "src/modules/moria/native/main-wasm.cpp"));
   copyFileSync(uiNative, join(fixtureRoot, "src/modules/moria/native/ui_io_wasm.cpp"));
@@ -629,14 +582,15 @@ try {
   checked(fixtureScript, ["--stage-only"], { cwd: fixtureRoot });
   assert.ok(!existsSync(stale), "compiler-flag change reused a stale Moria object");
 
-  const fixtureStageScript = join(fixtureRoot, "scripts/build/stage-moria-seed.sh");
+  // The build script is the seed generator, so an output-preserving change to it
+  // must still discard what the old generator produced.
   const seedBeforeGeneratorChange = allowList.map((path) =>
     readFileSync(join(fixtureRoot, "build/moria/seed", path)));
   mkdirSync(join(fixtureRoot, "build/moria/obj"), { recursive: true });
   writeFileSync(stale, "stale generator object\n");
   const staleArtifact = join(fixtureRoot, "build/moria/moria.data");
   writeFileSync(staleArtifact, "stale generator artifact\n");
-  appendFileSync(fixtureStageScript, "\n# output-preserving generator mutation\n");
+  appendFileSync(fixtureScript, "\n# output-preserving generator mutation\n");
   checked(fixtureScript, ["--stage-only"], { cwd: fixtureRoot });
   assert.ok(!existsSync(stale), "seed-generator change reused a stale Moria object");
   assert.ok(!existsSync(staleArtifact), "seed-generator change reused a stale packaged artifact");
@@ -668,7 +622,6 @@ done
   const fixedBuildInputs = [
     fixtureScript,
     fixtureMakefile,
-    fixtureStageScript,
     join(fixtureRoot, "src/modules/moria/native/main-wasm.cpp"),
     join(fixtureRoot, "src/modules/moria/native/ui_io_wasm.cpp"),
   ];
@@ -704,7 +657,6 @@ done
   copyFileSync(buildScript, seedlessScript);
   writeFileSync(seedlessScript, seedlessBuildScript);
   copyFileSync(makefile, join(seedlessRoot, "scripts/build/moria-wasm.mk"));
-  copyFileSync(stageScript, join(seedlessRoot, "scripts/build/stage-moria-seed.sh"));
   copyFileSync(guardScript, join(seedlessRoot, "scripts/build/guard-host-paths.sh"));
   copyFileSync(mainNative, join(seedlessRoot, "src/modules/moria/native/main-wasm.cpp"));
   copyFileSync(uiNative, join(seedlessRoot, "src/modules/moria/native/ui_io_wasm.cpp"));
@@ -876,7 +828,6 @@ printf 'dirtied during link\\n' >> "${guardedSource}/CHANGELOG.md"
   mkdirSync(join(atomicRoot, "external"), { recursive: true });
   copyFileSync(buildScript, join(atomicRoot, "scripts/build/build-moria-wasm.sh"));
   copyFileSync(makefile, join(atomicRoot, "scripts/build/moria-wasm.mk"));
-  copyFileSync(stageScript, join(atomicRoot, "scripts/build/stage-moria-seed.sh"));
   copyFileSync(guardScript, join(atomicRoot, "scripts/build/guard-host-paths.sh"));
   copyFileSync(mainNative, join(atomicRoot, "src/modules/moria/native/main-wasm.cpp"));
   copyFileSync(uiNative, join(atomicRoot, "src/modules/moria/native/ui_io_wasm.cpp"));

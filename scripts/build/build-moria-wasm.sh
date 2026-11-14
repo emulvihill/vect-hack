@@ -7,7 +7,6 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 MORIA="$ROOT/external/umoria"
 OUT="$ROOT/build/moria"
 MK="$ROOT/scripts/build/moria-wasm.mk"
-STAGER="$ROOT/scripts/build/stage-moria-seed.sh"
 EMSDK="$ROOT/external/emsdk"
 STAGE_ONLY=0
 
@@ -82,7 +81,7 @@ NATIVE_SEMANTIC_HEADER="$ROOT/src/modules/moria/native/semantic-wasm.h"
 NATIVE_CHECKPOINT="$ROOT/src/modules/moria/native/checkpoint-wasm.cpp"
 NATIVE_CHECKPOINT_HEADER="$ROOT/src/modules/moria/native/checkpoint-wasm.h"
 NATIVE_GAME_SAVE="$ROOT/src/modules/moria/native/game-save-wasm.cpp"
-for input in "$MK" "$STAGER" "$NATIVE_MAIN" "$NATIVE_UI" "$NATIVE_SEMANTIC" "$NATIVE_SEMANTIC_HEADER" \
+for input in "$MK" "$NATIVE_MAIN" "$NATIVE_UI" "$NATIVE_SEMANTIC" "$NATIVE_SEMANTIC_HEADER" \
   "$NATIVE_CHECKPOINT" "$NATIVE_CHECKPOINT_HEADER" "$NATIVE_GAME_SAVE"; do
   if [ ! -f "$input" ]; then
     echo "build-moria-wasm: missing build input: $input" >&2
@@ -105,21 +104,82 @@ remove_link_outputs() {
 }
 
 # Stage exactly the immutable seed volume. The later persistence layer copies
-# this tree into /vect-moria before making that writable volume the cwd.
+# this tree into /vect-moria before making that writable volume the cwd. It is
+# built in a sibling and swapped in whole, so a failed stage leaves no partial
+# seed behind.
 SEED="$OUT/seed"
-version="$("$STAGER" "$MORIA" "$SEED")"
+SEED_STAGING="$(mktemp -d "$OUT/.moria-seed.XXXXXX")"
+trap 'rm -rf -- "$SEED_STAGING"' EXIT
+
+mkdir -p "$SEED_STAGING/data"
+for file in help.txt help_wizard.txt rl_help.txt rl_help_wizard.txt \
+  welcome.txt death_tomb.txt death_royal.txt; do
+  cp "$MORIA/data/$file" "$SEED_STAGING/data/$file"
+done
+cp "$MORIA/data/scores.dat" "$SEED_STAGING/scores.dat"
+cp "$MORIA/AUTHORS" "$MORIA/LICENSE" "$SEED_STAGING/"
+
+# splash.txt and versions.txt are CMake templates upstream. Fill them from
+# version.h and the release's CHANGELOG date, never today's, so the seed bytes
+# are the same on every build.
+version_header="$MORIA/src/version.h"
+major="$(sed -nE 's/.*CURRENT_VERSION_MAJOR = ([0-9]+);.*/\1/p' "$version_header")"
+minor="$(sed -nE 's/.*CURRENT_VERSION_MINOR = ([0-9]+);.*/\1/p' "$version_header")"
+patch="$(sed -nE 's/.*CURRENT_VERSION_PATCH = ([0-9]+);.*/\1/p' "$version_header")"
+if [ -z "$major" ] || [ -z "$minor" ] || [ -z "$patch" ]; then
+  echo "build-moria-wasm: could not derive the version from src/version.h" >&2
+  exit 1
+fi
+version="$major.$minor.$patch"
+release_date="$(sed -nE "s/^## ${version//./\\.} \\(([0-9]{4}-[0-9]{2}-[0-9]{2})\\)$/\\1/p" "$MORIA/CHANGELOG.md" | head -n 1)"
+if [ -z "$release_date" ]; then
+  echo "build-moria-wasm: CHANGELOG.md has no release date for $version" >&2
+  exit 1
+fi
+for file in splash.txt versions.txt; do
+  sed -e "s/\${umoria_version}/$version/g" \
+      -e "s/\${current_date}/$release_date/g" \
+      "$MORIA/data/$file.in" > "$SEED_STAGING/data/$file"
+done
+
+# The literal allow-list. MORIA_RUNTIME_FILES in src/modules/moria/persist.ts
+# is the runtime copy of it; keep the two identical.
+EXPECTED_SEED=(
+  AUTHORS
+  LICENSE
+  data/death_royal.txt
+  data/death_tomb.txt
+  data/help.txt
+  data/help_wizard.txt
+  data/rl_help.txt
+  data/rl_help_wizard.txt
+  data/splash.txt
+  data/versions.txt
+  data/welcome.txt
+  scores.dat
+)
+mapfile -t actual_seed < <(cd "$SEED_STAGING" && find . -type f -printf '%P\n' | LC_ALL=C sort)
+if ! diff -u <(printf '%s\n' "${EXPECTED_SEED[@]}") <(printf '%s\n' "${actual_seed[@]}"); then
+  echo "build-moria-wasm: staged runtime tree differs from the literal allow-list" >&2
+  exit 1
+fi
+
+rm -rf -- "$SEED"
+mv -- "$SEED_STAGING" "$SEED"
+trap - EXIT
 
 # make tracks source mtimes, not compile/link flags or preload-file contents.
 # Fingerprint every project-owned build input plus the staged bytes themselves.
-# The generator script hash catches output-preserving logic changes; the seed
-# digest independently catches any byte change caused by templates or tools.
+# This script's own hash catches output-preserving changes to the staging
+# above; the seed digest independently catches any byte change caused by
+# templates or tools.
 # Either one relinks packaged data, just as flags/native changes recompile.
 # BEGIN seed-content-fingerprint
 seed_sha="$(cd "$SEED" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)"
 # END seed-content-fingerprint
 fingerprint="$({
   printf '%s\n' "pin=$SUPPORTED_MORIA" "emsdk=$SUPPORTED_EMSDK" "em++=$empp_version" "seed=$seed_sha"
-  sha256sum "$ROOT/scripts/build/build-moria-wasm.sh" "$MK" "$STAGER" "$NATIVE_MAIN" "$NATIVE_UI" \
+  sha256sum "$ROOT/scripts/build/build-moria-wasm.sh" "$MK" "$NATIVE_MAIN" "$NATIVE_UI" \
     "$NATIVE_SEMANTIC" "$NATIVE_SEMANTIC_HEADER" "$NATIVE_CHECKPOINT" \
     "$NATIVE_CHECKPOINT_HEADER" "$NATIVE_GAME_SAVE"
 } | sha256sum | cut -d' ' -f1)"
