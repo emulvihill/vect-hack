@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# One-shot vendor of NetBSD games/larn into external/larn/ for the Larn
-# Module spike. Not a build step — run once during the spike (Task 1) to
-# drop the NetBSD snapshot into the tree, then commit it.
+# Vendors NetBSD games/larn into external/larn/, the Larn Module's engine
+# source.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 DEST="$ROOT/external/larn"
