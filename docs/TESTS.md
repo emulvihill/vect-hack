@@ -91,6 +91,16 @@ output now carries it, through one `STUB_EXPORTS` constant the readback
 assertion also reads. Proved by deleting the source-dirtied guard: green
 against the old fixtures, red against the repaired ones.
 
+The rebuild that replaces an already-published `public/modules/moria` pointer
+runs under a strict `mv` shim (vect-hack-ujde). The build used `mv -fT` for that
+swap, which GNU mv does as a plain rename(2) but uutils mv — `/usr/bin/mv` on
+recent Ubuntu — refuses, because it dereferences the destination symlink and
+finds a directory. Every Moria rebuild after the first failed on such a host,
+while the test stayed green on a GNU one. The build now renames through Node,
+and the shim refuses as uutils does, so going back to `mv -T` fails on any host.
+Proved by putting GNU mv first on PATH: green before the shim, red with it
+until the build stopped using mv for the swap.
+
 ## Unit tests
 
 `npm run test:render` is `vitest run` — every unit test, every Module and the

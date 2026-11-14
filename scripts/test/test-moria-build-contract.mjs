@@ -797,7 +797,38 @@ printf '%s\\n' '[asyncify] (anonymous namespace)::readBlockingKey(bool) can chan
     assert.ok(!existsSync(join(fixtureRoot, `build/moria/moria.${extension}`)),
       `incomplete cached canary left moria.${extension} reusable`);
   }
-  checked(fixtureScript, [], { cwd: fixtureRoot });
+  // This rebuild replaces the pointer symlink the earlier build published. GNU
+  // `mv -T` renames over a symlink to a directory; uutils `mv` dereferences it
+  // and refuses ("cannot overwrite directory ... with non-directory"). Run it
+  // under a mv with the uutils refusal so a GNU host catches the regression too.
+  const strictMvBin = join(scratch, "strict-mv-bin");
+  mkdirSync(strictMvBin);
+  const realMv = checked("which", ["mv"]).stdout.trim();
+  writeFileSync(join(strictMvBin, "mv"), `#!/usr/bin/env bash
+set -euo pipefail
+no_target=0
+for arg in "$@"; do
+  case "$arg" in
+    --) break ;;
+    --no-target-directory) no_target=1 ;;
+    --*) ;;
+    -*T*) no_target=1 ;;
+  esac
+done
+destination="\${!#}"
+if [ "$no_target" = 1 ] && [ -L "$destination" ] && [ -d "$destination" ]; then
+  echo "mv: cannot overwrite directory '$destination' with non-directory" >&2
+  exit 1
+fi
+exec "${realMv}" "$@"
+`);
+  chmodSync(join(strictMvBin, "mv"), 0o755);
+  assert.ok(lstatSync(join(fixtureRoot, "public/modules/moria")).isSymbolicLink(),
+    "republish fixture does not start from a published pointer");
+  checked(fixtureScript, [], {
+    cwd: fixtureRoot,
+    env: { ...process.env, PATH: `${strictMvBin}:${process.env.PATH}` },
+  });
 
   const guardedSource = join(scratch, "publication-source");
   checked("git", ["clone", "-q", "--no-hardlinks", MORIA, guardedSource]);
@@ -912,7 +943,6 @@ exec "${realCp}" "$@"
     "failed publication left a version candidate behind");
 
   rmSync(join(atomicBin, "cp"));
-  const realMv = checked("which", ["mv"]).stdout.trim();
   writeFileSync(join(atomicBin, "mv"), `#!/usr/bin/env bash
 set -euo pipefail
 destination="\${!#}"

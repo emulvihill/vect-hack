@@ -328,7 +328,11 @@ if [ -d "$PUBLIC" ] && [ ! -L "$PUBLIC" ]; then
   rm -rf -- "$PREVIOUS"
   PREVIOUS=""
 else
-  mv -fT -- "$LINK_TMP_DIR/moria" "$PUBLIC"
+  # rename(2) replaces the previous pointer atomically. Not `mv -T`: GNU mv
+  # does the same rename, but uutils mv dereferences a destination symlink,
+  # sees the version directory, and refuses to replace it.
+  node -e 'require("node:fs").renameSync(process.argv[1], process.argv[2])' \
+    "$LINK_TMP_DIR/moria" "$PUBLIC"
 fi
 rmdir -- "$LINK_TMP_DIR"
 LINK_TMP_DIR=""
