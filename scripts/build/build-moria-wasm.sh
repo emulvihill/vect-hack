@@ -328,10 +328,11 @@ if [ -d "$PUBLIC" ] && [ ! -L "$PUBLIC" ]; then
   rm -rf -- "$PREVIOUS"
   PREVIOUS=""
 else
-  # rename(2) replaces the previous pointer atomically. Not `mv -T`: GNU mv
-  # does the same rename, but uutils mv dereferences a destination symlink,
-  # sees the version directory, and refuses to replace it.
-  node -e 'require("node:fs").renameSync(process.argv[1], process.argv[2])' \
+  # rename(2) replaces the previous pointer atomically. Not `mv -T`: the new
+  # link's relative target (moria-versions/...) dangles from inside
+  # $LINK_TMP_DIR, and uutils mv follows both links, sees a non-directory
+  # going onto a directory, and refuses. GNU mv just does the rename(2).
+  python3 -c 'import os, sys; os.replace(sys.argv[1], sys.argv[2])' \
     "$LINK_TMP_DIR/moria" "$PUBLIC"
 fi
 rmdir -- "$LINK_TMP_DIR"

@@ -797,10 +797,11 @@ printf '%s\\n' '[asyncify] (anonymous namespace)::readBlockingKey(bool) can chan
     assert.ok(!existsSync(join(fixtureRoot, `build/moria/moria.${extension}`)),
       `incomplete cached canary left moria.${extension} reusable`);
   }
-  // This rebuild replaces the pointer symlink the earlier build published. GNU
-  // `mv -T` renames over a symlink to a directory; uutils `mv` dereferences it
-  // and refuses ("cannot overwrite directory ... with non-directory"). Run it
-  // under a mv with the uutils refusal so a GNU host catches the regression too.
+  // This rebuild replaces the pointer symlink the earlier build published, with
+  // a new link whose relative target dangles from its temp directory. GNU
+  // `mv -T` just renames; uutils `mv` follows both links, sees a non-directory
+  // going onto a directory, and refuses. Run it under a mv with the uutils
+  // refusal so a GNU host catches the regression too.
   const strictMvBin = join(scratch, "strict-mv-bin");
   mkdirSync(strictMvBin);
   const realMv = checked("which", ["mv"]).stdout.trim();
@@ -815,8 +816,9 @@ for arg in "$@"; do
     -*T*) no_target=1 ;;
   esac
 done
+source="\${@: -2:1}"
 destination="\${!#}"
-if [ "$no_target" = 1 ] && [ -L "$destination" ] && [ -d "$destination" ]; then
+if [ "$no_target" = 1 ] && [ ! -d "$source" ] && [ -d "$destination" ]; then
   echo "mv: cannot overwrite directory '$destination' with non-directory" >&2
   exit 1
 fi
