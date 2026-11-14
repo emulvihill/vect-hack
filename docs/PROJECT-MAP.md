@@ -38,8 +38,10 @@ pins the two together (vect-hack-z80c).
   `build-angband-wasm.sh` pins the commit and refuses to build anything else.
 - `external/umoria` — official source, clean submodule pinned to
   `3bf8abc4f76812810e59d738492c7b61fb8f1bb6`. Never patch it;
-  `build-moria-wasm.sh` pins source/toolchain/flags/seed bytes and publishes the
-  complete JS/WASM/data set atomically.
+  `build-moria-wasm.sh` pins source/toolchain/flags/seed bytes, stages the
+  12-file runtime seed itself (the allow-list `MORIA_RUNTIME_FILES` in
+  `src/modules/moria/persist.ts` mirrors), and publishes the complete
+  JS/WASM/data set atomically.
 - `external/larn` — vendored NetBSD BSD-Larn-12.0 source under its original
   no-profit permission; see `LICENSING.md` before distribution changes.
 ### What each build script guards
