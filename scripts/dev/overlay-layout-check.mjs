@@ -16,8 +16,7 @@ const SAMPLES = [
   { width: 960, height: 360, rows: 80, scrollY: true },
   { width: 390, height: 844, rows: 24, touch: true, scrollX: true },
 ];
-const html = (await readFile(new URL("../../index.html", import.meta.url), "utf8"))
-  .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+const html = await readFile(new URL("../../index.html", import.meta.url), "utf8");
 const skin = JSON.parse(await readFile(new URL("../../src/skins/quadrascan.json", import.meta.url), "utf8"));
 const browser = await chromium.launch({
   headless: true, args: ["--disable-gpu", "--disable-3d-apis"],
@@ -25,7 +24,11 @@ const browser = await chromium.launch({
 try {
   for (const sample of SAMPLES) {
     const started = performance.now();
-    const page = await browser.newPage({ viewport: { width: sample.width, height: sample.height } });
+    // The page's own scripts stay off: index.html's module entry would boot the
+    // app. page.evaluate still runs, because it goes through the debugger.
+    const page = await browser.newPage({
+      viewport: { width: sample.width, height: sample.height }, javaScriptEnabled: false,
+    });
     try {
       await page.setContent(html);
       await page.evaluate((skin) => {
