@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# One-shot vendor of NetBSD games/larn into external/larn/ for the Larn
-# Module spike. Not a build step — run once during the spike (Task 1) to
-# drop the NetBSD snapshot into the tree, then commit it.
+# Vendors NetBSD games/larn into external/larn/, the Larn Module's engine
+# source. Not a build step: the snapshot is committed, and this is how it was
+# fetched (2026-08-06, external/larn/README.vect-hack). It pulls
+# NetBSD-current, so a rerun can move the source set; build-larn-wasm.sh then
+# refuses to build until LARN_PIN is re-checked. datfiles/ is not fetched here.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 DEST="$ROOT/external/larn"
