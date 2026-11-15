@@ -1,13 +1,4 @@
 // The Phase 2 bench metrics (vect-hack-h9x.1).
-//
-// The load-bearing test is `distinguishes a shaft ride from a staircase
-// descent`. AGENTS.md: a test that pins a CHOICE must be shown failing on the
-// wrong choice — so that test asserts BOTH halves. It pins the new
-// chain-separated median AND asserts that the old pooled `depth` column gives
-// a different, wrong answer on the same fixture. Drop the chain split and the
-// first assertion fails; make `depth` mean the new thing and the second one
-// does. Either way the test cannot pass by accident, which is exactly what the
-// old fixture-with-one-terrain mistake (vect-hack-b5f.6) taught.
 import { describe, expect, it } from "vitest";
 import { benchMetrics, chainDepths, median } from "../../src/modules/larn/bot/bench";
 import type { Outcome, RunSummary } from "../../src/bot/scoreboard";

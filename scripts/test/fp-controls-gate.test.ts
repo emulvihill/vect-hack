@@ -58,9 +58,6 @@ describe("the NetHack arm of the control gate", () => {
   // up to angbandSection, which would sweep in the Angband helpers that sit
   // between them and whose polls legitimately sleep between asks.
   const end = source.indexOf("\n}\n", start);
-  // Read once, loudly: a slice of nothing satisfies "no fixed sleep here" for
-  // the wrong reason, which is the assertion that cannot fail this repo keeps
-  // finding (AGENTS.md, vect-hack-azf).
   const arm = () => {
     if (start < 0 || end <= start) throw new Error("no nethackSection body to read");
     return source.slice(start, end);

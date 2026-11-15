@@ -217,10 +217,6 @@ async function nethackSection(browser) {
   check(/[Aa]rrows walk where you look/.test(s.msg), `the mode message names the controls`);
 
   // --- turning is free ---
-  // NetHack's `time` option is off by default, so there is no T: to watch. Count
-  // windowport traffic instead: a turn that costs game time makes the engine
-  // redraw, a free one produces no events at all. Patching __nhView.handle is the
-  // sanctioned way to see what the engine actually sends (AGENTS.md).
   await page.evaluate(() => {
     const v = window.__nhView;
     window.__evs = 0;
@@ -549,10 +545,6 @@ async function angbandSection(browser) {
   const apage = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   console.log("\n--- Angband ---");
 
-  // Everything below reads the engine's own traffic: which key the view handed
-  // the engine, and which events came back. Patching the view's handle/nextKey is
-  // the sanctioned way to see that (AGENTS.md); both wrappers forward.
-  //
   // Installed by intercepting the assignment rather than polling for it, because
   // both halves are lost by a wrapper that arrives late: main.ts constructs
   // AngbandSession in the same turn it sets __angbandView, so the first blocking
@@ -1223,15 +1215,6 @@ async function moriaSection(browser) {
 // live game shows is the composition, so this leg asserts the byte the engine
 // actually consumed and the cell it actually moved the hero into.
 //
-// The prompt arm is the sharp one, and it is deliberately a PAIR. Larn is the
-// only Module where the two answers are both legal bytes: at a command read a
-// gazed ArrowUp is the vi letter for the compass eighth the camera faces, and
-// at a prompt the same key is plain 'k'. The gate presses ArrowUp twice at one
-// heading — once inside qshowstr()'s more() pager, once at the next command —
-// and asserts the two bytes differ in exactly the documented way. Checking
-// only the prompt half would pass on a build that never armed gaze at all
-// (AGENTS.md: an assertion that cannot fail is worse than no assertion).
-//
 // Keep the startup oddities here, not in the shared control harness or public
 // Module interface.
 
@@ -1537,15 +1520,6 @@ async function larnSection(browser) {
     await lpage.waitForTimeout(TURN_MS * 2);
 
     // Numpad5 arrives as key "Clear" with NumLock off — Playwright's default.
-    //
-    // Moria's leg also asserts that Clear reaches the engine with no key, and
-    // Larn's deliberately does not. There, original mode sends keypad digits, so
-    // a keypad 5 that leaked through would be a real byte; here Larn has no
-    // keypad path at all — mapKey has no "Clear" case and returns null — so
-    // while the binding exists gazeKey answers first and mapKey is unreachable,
-    // and when the binding is gone the reset assertion below already fails. It
-    // would be an assertion that cannot fail (AGENTS.md, vect-hack-azf), so it
-    // is left out rather than left in looking like coverage.
     await larnDecline(lpage);
     await larnParked(lpage, true);
     await lpage.keyboard.press("Numpad5");

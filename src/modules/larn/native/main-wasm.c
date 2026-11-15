@@ -719,13 +719,6 @@ vect_larn_describe(int x, int y)
 }
 
 /* ---- Dirty guard + overlay detection ----
- * map_dirty is set by the --wrap=showcell/--wrap=drawscreen wrappers before
- * the real function runs, so any lflush() that follows packs the map. Intra-
- * TU calls within display.c (draws()->drawscreen(), seemagic()->drawscreen())
- * are not wrapped, but the next cross-TU showcell/drawscreen catches up —
- * acceptable (Codex flagged packing on every lflush; this avoids it for the
- * common side-panel-only flushes).
- *
  * Overlay heuristic: there is no save_screen/restore_screen in 12.0. A bare
  * CLEAR not preceded by a wrapped map draw means a full-screen screen started
  * via clear(). Small inventory/listing screens instead begin with

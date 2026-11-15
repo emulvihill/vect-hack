@@ -86,9 +86,6 @@ export class DungeonRenderer {
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
-    /** The Module's view constructs and owns the grid; the renderer only
-     *  reads it. `map` keeps its name — browser-check.mjs and the AGENTS.md
-     *  page helpers read renderer.map. */
     readonly map: CellGrid,
     opts: DungeonRendererOptions = {},
   ) {

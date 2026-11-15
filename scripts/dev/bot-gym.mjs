@@ -5,8 +5,6 @@
 //   <out>/scoreboard.csv          one row per game, appended across runs and games
 //   <out>/<id>/summary.json       RunSummary (src/bot/scoreboard.ts)
 //   <out>/<id>/trajectory.jsonl.gz
-// Prints one line per game and a stats line at the end: a fast, observable,
-// replayable environment for a deterministic bot, with no LLM anywhere in it.
 import { spawn } from "node:child_process";
 import { appendFileSync, createReadStream, createWriteStream, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { availableParallelism } from "node:os";

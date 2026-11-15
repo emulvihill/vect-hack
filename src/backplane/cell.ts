@@ -56,8 +56,6 @@ export const terrainOf = (c: Cell): Category | null => {
 };
 
 export class CellGrid {
-  /** Row-major, dumb data. Public on purpose: the AGENTS.md dumpMap page
-   *  helper reads cells[y*cols+x] honestly instead of through a private. */
   readonly cells: Cell[];
   /** Bumped whenever terrain changed, so static geometry can rebuild lazily. */
   terrainRevision = 0;

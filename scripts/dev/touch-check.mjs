@@ -271,10 +271,6 @@ hs = await page.evaluate(STATE);
 check(hs.keydowns === 0, `the whole run sent zero keyboard events (${hs.keydowns})`);
 
 // --- observations, not checks -------------------------------------------
-// No pass mark was written down before this run for the numbers in THIS block,
-// so they are reported and not judged (AGENTS.md: a bar set afterwards is not
-// evidence). The view's width does now have one — see the framing section
-// below, which vect-hack-lxd pre-registered.
 const opening = await page.evaluate(COLS_ACROSS);
 const seen = await page.evaluate(() => {
   const r = window.__nhView.renderer;

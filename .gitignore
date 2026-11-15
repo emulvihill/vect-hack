@@ -44,3 +44,5 @@ vect-hack.code-workspace
 .codex/
 AGENTS.local.md
 CLAUDE.local.md
+AGENTS.md
+CLAUDE.md

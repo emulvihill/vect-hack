@@ -1,6 +1,3 @@
-// The touch scheme's pure decisions (vect-hack-21k). Every assertion here is
-// a CHOICE that could have gone the other way, so each one was watched failing
-// on the wrong choice before it was believed (AGENTS.md).
 import { describe, expect, it } from "vitest";
 import {
   PAD_GRID, PAD_LABEL, PAD_TITLE, barIsWellFormed, barMode, routeCommand,
