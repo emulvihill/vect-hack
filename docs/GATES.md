@@ -1,12 +1,10 @@
 # Render gates and offline previews
 
-Demoted from `AGENTS.md` (vect-hack-2dr): the reasoning behind
-`npm run preview`, `check:browser`, `check:controls`, `check:angband-borg`,
-`check:touch`, `check:payload` and `check:gates`. AGENTS.md keeps the command
-names and the invariants; this file keeps what each gate asserts, what it
-deliberately does NOT assert, and why.
+The reasoning behind `npm run preview`, `check:browser`, `check:controls`,
+`check:angband-borg`, `check:touch`, `check:payload` and `check:gates`: what
+each gate asserts, what it deliberately does NOT assert, and why.
 
-The one-line invariants AGENTS.md still states:
+The one-line invariants:
 
 - `check:gates` starts and stops its own dev server on 5199; the individual
   gates need one already running.

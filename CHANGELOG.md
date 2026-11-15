@@ -30,7 +30,7 @@ release's notes are its GitHub Release
 
 ### Removed
 
-- The Larn bot's LLM learning apparatus: the knowledge base, the reflect
+- The Larn bot's learning apparatus: the knowledge base, the reflect
   loop and the KB A/B tooling. The bot's knobs are code constants
   (`DEFAULT_TUNING`); its behaviour is unchanged (#5).
 
@@ -41,7 +41,7 @@ release's notes are its GitHub Release
 
 ### Changed
 
-- Trimmed `AGENTS.md` and `LICENSING.md` (#3); the licenses link is pinned
+- Trimmed the contributor docs and `LICENSING.md` (#3); the licenses link is pinned
   through `main.ts` for every game (#7).
 
 ## [0.1.0] - 2026-11-02

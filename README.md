@@ -231,8 +231,8 @@ every directory.
 
 ## Working on the repo
 
-`AGENTS.md` is the source of truth for contributors and coding agents;
-`docs/PROJECT-MAP.md` is the directory-by-directory map. Work happens on a
+`docs/PROJECT-MAP.md` is the directory-by-directory map, and each file under
+`docs/` covers one area. Work happens on a
 branch in its own git worktree, and a fresh worktree has none of the build
 state the tests need — run `scripts/dev/worktree-setup.sh` in it first, and
 `scripts/dev/worktree-teardown.sh` to remove it afterwards.

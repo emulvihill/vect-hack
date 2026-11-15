@@ -1,7 +1,6 @@
 # Dev URL flags, camera and keys, and the pointer HUDs
 
-Demoted from `AGENTS.md` (vect-hack-2dr). AGENTS.md keeps the flag list and
-the invariants; this file keeps what each flag builds and why.
+What each dev URL flag builds, and why.
 
 - **Function keys are view chrome — they never reach a native core.**
 - **`?game=<module>` is never implicit.** A URL without it redirects to

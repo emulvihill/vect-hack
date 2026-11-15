@@ -1,7 +1,6 @@
 # Saves, imports, resets, and checkpoints
 
-Demoted from `AGENTS.md` (vect-hack-2dr). AGENTS.md keeps the invariants below
-and points here; this file keeps why each one is what it is.
+The invariants below, and why each one is what it is.
 
 - One storage volume per Module (`src/backplane/volumes.ts`): `/vect-nethack`,
   `/vect-angband`, `/vect-larn`, `/vect-moria`. A blob is a whole volume —

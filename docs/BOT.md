@@ -1,15 +1,13 @@
 # The Larn bot, the gym, and the bench
 
-Demoted from `AGENTS.md`. AGENTS.md keeps the command names and the
-invariants; this file keeps the reasoning, most of which is a record of a
-measurement that came out the other way.
+The reasoning behind the bot's invariants.
 
-The invariants AGENTS.md still states:
+The invariants:
 
 - **No readiness bar can seal a level.** The breach steps that fire when
   nothing else is reachable ask `readyToDescend()` nothing.
 - **The bot learns nothing.** Its knobs are hand-tuned constants,
-  `DEFAULT_TUNING` in `src/modules/larn/bot/policy.ts`. The LLM learning
+  `DEFAULT_TUNING` in `src/modules/larn/bot/policy.ts`. The learning
   apparatus that once wrote facts for it is retired (History, below).
 - **Report `npm run bench:larn` beside `scripts/dev/bench-pair.mjs`, always.**
 - `scripts/dev/policy-sweep.mjs` refuses `--set held-out`.
@@ -76,11 +74,11 @@ traps and regeneration.
 
 ### History
 
-The ladder was the seed policy of a self-teaching bot: in Phases 1 and 2 an
-LLM reflected on finished games and wrote facts — threats, terrain to avoid,
+The ladder was the seed policy of a self-teaching bot: in Phases 1 and 2 a
+reflection step read finished games and wrote facts — threats, terrain to avoid,
 items worth walking to — that the ladder read. Both phases closed with zero
 facts shipped, because every earned fact set lost its held-out A/B, and the
-apparatus was retired on 2026-11-03 along with all AI learning in the project.
+apparatus was retired on 2026-11-03 along with all learning in the project.
 The shipped knowledge base was already empty, so the retirement changed no
 play: 40 gym games on master 4242 and the 500-game bench set gave
 byte-identical trajectories before and after, and earlier bench numbers stay

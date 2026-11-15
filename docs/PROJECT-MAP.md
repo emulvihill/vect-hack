@@ -1,8 +1,7 @@
 # Project map
 
-Demoted from `AGENTS.md` (vect-hack-2dr): one entry per directory, what lives
-there and the rules that hold it together. AGENTS.md keeps the one-line layer
-summary and points here.
+One entry per directory, what lives there and the rules that hold it
+together.
 
 The layering, which the import graph obeys today and
 `scripts/test/layering.test.ts` asserts on every `npm run test:render`:

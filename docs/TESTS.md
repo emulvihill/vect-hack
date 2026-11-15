@@ -1,8 +1,6 @@
 # What each engine test pins
 
-Demoted from `AGENTS.md` (vect-hack-2dr), and completed: seven groups that
-`package.json` runs were missing from the list there, which is what a count
-maintained by hand does. `AGENTS.md` keeps the aggregate commands.
+Every test group `package.json` runs, and what each one pins.
 
 `npm test` runs every Module's engine tests — **there is no fast subset worth
 preferring.** The per-Module groups name a failure; they are not permission to
@@ -143,10 +141,4 @@ unchecked. Revisit when typescript-eslint supports TS 7.
 Lint runs in CI, first in the no-build job (1.4s), and NOT in `npm test`: that
 suite needs four WASM artifacts, and its script string is `assert.equal`'d by
 `test-moria-build-contract.mjs`.
-
-The config ignores `.claude/**`. The primary checkout carries every live agent
-worktree under there, each a full copy of the repo, and `eslint .` otherwise
-lints them all — 242 files, 12034 errors, none about this tree. A worktree
-contains no other worktrees, so this is invisible from inside one, which is
-exactly where a config gets verified.
 
