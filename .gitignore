@@ -23,10 +23,6 @@ external/NetHack/src/*.o
 
 # Git worktrees for isolated workspaces
 .worktrees/
-.claude/worktrees/
-
-# Claude Code scheduled-task runtime lock
-.claude/scheduled_tasks.lock
 
 public/modules/
 .superpowers/
@@ -40,7 +36,7 @@ vect-hack.code-workspace
 .dolt/
 *.db
 .agents/skills/beads/
-.claude/settings.json
+.claude/*
 .codex/
 AGENTS.local.md
 CLAUDE.local.md

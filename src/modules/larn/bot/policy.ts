@@ -25,7 +25,7 @@ export interface LarnAction {
 }
 
 /** The ladder's knobs: constants it was born with and that measurement has
- *  tuned by hand against the bench (docs/BOT.md). Never learned.
+ *  tuned by hand against the bench. Never learned.
  *  scripts/dev/policy-sweep.mjs searches them through the gym's `--tuning`,
  *  which resolveTuning() merges over DEFAULT_TUNING. */
 export interface PolicyTuning {
