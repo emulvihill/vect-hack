@@ -7,3 +7,6 @@
 [submodule "external/umoria"]
 	path = external/umoria
 	url = https://github.com/dungeons-of-moria/umoria
+[submodule "external/larn"]
+	path = external/larn
+	url = https://github.com/emulvihill/netbsd-larn

@@ -117,7 +117,7 @@ To obtain the exact source for this build:
   git submodule update --init --recursive
 
 The engine cores are unmodified upstream sources under external/, tracked as
-submodules or vendored snapshots. A library an engine's build script fetches
+pinned git submodules. A library an engine's build script fetches
 at build time, rather than storing in the repository, is named in that game's
 notices; the Emscripten SDK is fetched by scripts/build/setup-toolchain.sh.
 

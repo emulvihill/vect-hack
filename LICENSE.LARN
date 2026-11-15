@@ -28,7 +28,7 @@ larn:" and is quoted above word for word (checked against the archive
 only the per-file "Larn is copyrighted 1986 by Noah Morgan" headers and no
 grant.
 
-`external/larn/COPYRIGHT` records Morgan's copyright over the vendored tree
+`external/larn/COPYRIGHT` records Morgan's copyright over the NetBSD tree
 ("This entire subtree is copyright by Noah Morgan"); it does not itself
 contain the grant. "Profit" is undefined in the grant, and the wording
 predates browser delivery — see LICENSING.md for the project's reliance

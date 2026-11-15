@@ -12,7 +12,7 @@ together. There is exactly one App; nothing of Eric's ships separately from it.
 an Engine Repo. The only artifact the App loads that is not compiled into it.
 
 **Engine Repo** — the upstream engine source an Engine Build compiles from,
-pinned under `external/` (a submodule, or a vendored snapshot) and never
+pinned as a submodule under `external/` and never
 patched, so anyone can reproduce the Engine Build from it. The front end that
 adapts it to a browser worker is not part of it; that belongs to the Module.
 

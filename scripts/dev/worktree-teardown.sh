@@ -9,7 +9,7 @@
 # whose submodules are initialized, and the obvious next move — `git submodule
 # deinit` inside it — unregisters them in `.git/config`, which every worktree
 # SHARES. The throwaway worktree goes away and the PRIMARY checkout is left
-# with three unregistered submodules. The files survive, only the registration
+# with its unregistered submodules. The files survive, only the registration
 # goes, and nothing says so: the next build fails somewhere unrelated.
 #
 # It is avoidable outright. `git worktree remove --force` removes a worktree

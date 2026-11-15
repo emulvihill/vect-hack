@@ -67,8 +67,9 @@ lua.org into the gitignored `external/NetHack/lib/`, and it is compiled into
 Upstream pins: NetHack tracks the `NetHack-5.0` branch tip and its build
 script refuses any release other than 5.0.0 (a version check, not a commit
 pin); Angband is pinned to commit 4.2.6-166 and Umoria to
-`3bf8abc4f76812810e59d738492c7b61fb8f1bb6`, both enforced exactly; Larn is a
-vendored NetBSD 12.0 snapshot.
+`3bf8abc4f76812810e59d738492c7b61fb8f1bb6` and Larn (NetBSD's BSD Larn 12.0,
+from `emulvihill/netbsd-larn`) to `908b4c9ae116da6e6b069967fa25d4fdced1942f`,
+all three enforced exactly.
 
 NetHack's own source files carry prominent copyright and license notices —
 every file in `src/` except the public-domain `isaac64.c`. Those notices

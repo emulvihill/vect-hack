@@ -103,6 +103,7 @@ const setupSubmodules = setupToolchain.split("\n")
 assert.deepEqual(setupSubmodules, [
   "external/NetHack",
   "external/angband",
+  "external/larn",
   "external/umoria",
 ], "setup-toolchain.sh does not initialize the exact supported engine submodule list");
 

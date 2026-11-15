@@ -22,7 +22,7 @@ anything  -> main.ts               (none)
 test's own allow-table is the enforced copy; this one is prose and nothing yet
 pins the two together (vect-hack-z80c).
 
-## The vendored engines
+## The engine sources
 
 - `external/NetHack` — official source, submodule pinned to the `NetHack-5.0` branch tip
   (release-tag wasm bugs were fixed on the branch). Never
@@ -41,14 +41,16 @@ pins the two together (vect-hack-z80c).
   12-file runtime seed itself (the allow-list `MORIA_RUNTIME_FILES` in
   `src/modules/moria/persist.ts` mirrors), and publishes the complete
   JS/WASM/data set atomically.
-- `external/larn` — vendored NetBSD BSD-Larn-12.0 source under its original
-  no-profit permission; see `LICENSING.md` before distribution changes.
-  Vendored rather than a submodule because the NetBSD tree is too heavy to
-  submodule; never patched. Its `README.vect-hack` records the origin and why
-  the HunterZ 12.3/12.4 trees were rejected (their static-after-extern
-  conflicts are hard clang errors no `-W` flag downgrades, so they need source
-  patches). That README is inside the `LARN_PIN` digest, so editing even one
-  word of it moves the pin, and a stale pin refuses every build.
+- `external/larn` — NetBSD's BSD Larn 12.0 (`src/games/larn`, David
+  Holland's 2008 modernization) under Morgan's no-profit permission; see
+  `LICENSING.md` before distribution changes. A submodule of
+  `emulvihill/netbsd-larn`, which is that one directory split out of
+  `github.com/NetBSD/src` with its history (its README says how), because the
+  whole NetBSD tree is too heavy to submodule. Pinned to `908b4c9`; never
+  patched; `build-larn-wasm.sh` pins the commit and refuses a different or
+  modified checkout. NetBSD's copy rather than HunterZ 12.3/12.4: theirs have
+  static-after-extern conflicts, hard clang errors no `-W` flag downgrades,
+  so they need source patches; NetBSD's compiles cflags-only.
 
 ### What each build script guards
 
@@ -61,8 +63,8 @@ commit pin, a makefile stamp that discards stale objects on a flag change, the
 — a link that stops printing that warning now fails the build), and greps for
 the asset carve-out and for `-DALLOW_BORG`, without which the borg objects
 compile empty, the build succeeds, and the merge gate has nothing to drive.
-build-larn-wasm.sh: a sha256 over the vendored source set (there is no
-commit to pin), the same makefile stamp, and the asset carve-out grep;
+build-larn-wasm.sh: the submodule commit pin and a clean checkout, the same
+makefile stamp, and the asset carve-out grep;
 `larn-wasm.mk` itself refuses to link unless `main-wasm.o` is the first
 object, because `--allow-multiple-definition` keeps the first definition of
 `lflush`/`init_term`/`sigsetup` and a reorder links cleanly and boots to a

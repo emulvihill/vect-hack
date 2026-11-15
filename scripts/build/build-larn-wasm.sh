@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the NetBSD Larn snapshot to WebAssembly:
+# Build the pinned NetBSD Larn source to WebAssembly:
 # public/modules/larn/larn.{js,wasm,data}.
 # Prereq: external/emsdk installed+activated (scripts/build/setup-toolchain.sh).
 set -euo pipefail
@@ -10,32 +10,23 @@ MK="$ROOT/scripts/build/larn-wasm.mk"
 
 source "$ROOT/external/emsdk/emsdk_env.sh" >/dev/null
 
-# The vendored NetBSD Larn snapshot this client is built and tested against.
-# external/larn is a vendored directory (not a submodule), so the
-# pin is a sha256 of the engine source set rather than a git commit. File
-# ordering is explicitly C-locale so this guard has one digest on every host.
-# A mismatch is loud rather than subtle: the shim replicates upstream main()'s
-# startup and replaces lflush/init_term/sigsetup, so a source bump can change
-# any of those. Re-check src/modules/larn/native/main-wasm.c against
-# external/larn/main.c, external/larn/io.c (lflush) and external/larn/signal.c
-# (sigsetup) before moving this pin. The set includes README.vect-hack, our own
-# distribution note: 94f9331 rewrote it for licensing and left this digest
-# behind, so the build refused every source it was still correct about. No .c,
-# .h or datfile has moved since the pin was written — that re-check is a no-op.
-# Moved again on 2026-10-22 for the same reason: README.vect-hack dropped a
-# pointer to a research doc removed before publication; nothing else changed.
-# Moved again on 2026-11-02: publication rewrote two doc paths in
-# README.vect-hack and left this digest behind, so a fresh clone of the public
-# tree could not build Larn. Only that README moved.
-# Moved again on 2026-11-15: README.vect-hack dropped its pointers to design
-# and decision documents that were removed; nothing else changed.
-LARN_PIN="2b2928d8191aa910ca89de341774e976bb30f53cb8a8fa02476d76ea47b5cbfc"
-pin="$(find "$LARN" -type f \( -name '*.c' -o -name '*.h' -o -name 'README' -o -name 'README.vect-hack' -o -name 'COPYRIGHT' -o -name 'Makefile' -o -path '*/datfiles/*' \) | LC_ALL=C sort | xargs cat | sha256sum | cut -d' ' -f1)"
-if [ "$pin" != "$LARN_PIN" ]; then
-  echo "build-larn-wasm: external/larn source set is at $pin" >&2
-  echo "  this client supports $LARN_PIN." >&2
-  echo "  Re-check src/modules/larn/native/main-wasm.c against external/larn/" >&2
-  echo "  main.c, io.c (lflush) and signal.c (sigsetup), then update LARN_PIN here." >&2
+# external/larn is a submodule of github.com/emulvihill/netbsd-larn (NetBSD
+# src/games/larn split out with its history). The submodule commit is the real
+# pin; this guard makes a mismatch loud instead of subtle. The shim replicates
+# upstream main()'s startup and replaces lflush/init_term/sigsetup, so a source
+# bump can change any of those: re-check src/modules/larn/native/main-wasm.c
+# against main.c, io.c (lflush) and signal.c (sigsetup) before moving it.
+SUPPORTED_LARN="908b4c9ae116da6e6b069967fa25d4fdced1942f"
+head="$(git -C "$LARN" rev-parse HEAD 2>/dev/null || true)"
+if [ "$head" != "$SUPPORTED_LARN" ]; then
+  echo "build-larn-wasm: submodule is at ${head:-not-a-git-checkout}; this client supports $SUPPORTED_LARN." >&2
+  echo "  Re-check src/modules/larn/native/main-wasm.c against main.c, io.c (lflush)" >&2
+  echo "  and signal.c (sigsetup), then update SUPPORTED_LARN here." >&2
+  exit 1
+fi
+if [ -n "$(git -C "$LARN" status --short)" ]; then
+  echo "build-larn-wasm: submodule has local modifications: $LARN" >&2
+  git -C "$LARN" status --short >&2
   exit 1
 fi
 

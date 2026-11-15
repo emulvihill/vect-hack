@@ -4,7 +4,7 @@
 #
 # A worktree checks out the tracked files and nothing else, and almost
 # everything `npm test` needs here is untracked: node_modules, the emsdk
-# toolchain, four Modules' WASM artifacts, and the three engine submodules.
+# toolchain, four Modules' WASM artifacts, and the four engine submodules.
 # Each missing piece surfaces as a crash partway through a twenty-minute suite,
 # one at a time, so discovering them by running the tests costs an hour.
 #

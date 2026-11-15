@@ -10,6 +10,7 @@ fi
 
 git -C "$ROOT" submodule update --init external/NetHack
 git -C "$ROOT" submodule update --init external/angband
+git -C "$ROOT" submodule update --init external/larn
 git -C "$ROOT" submodule update --init external/umoria
 
 # The compiler is part of the artifact, so it is pinned like any other

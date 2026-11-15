@@ -66,7 +66,7 @@ jobs:
           # pdcursesmod). A WASM build job would need `recursive`.
           #
           # The default fetch-depth of 1 makes this a shallow submodule fetch of
-          # an exact pinned SHA; all three pins were confirmed fetchable that way
+          # an exact pinned SHA; all four pins were confirmed fetchable that way
           # from github.com (`git fetch --depth=1 <url> <sha>`, exit 0).
           submodules: true
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
