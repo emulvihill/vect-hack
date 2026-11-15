@@ -52,9 +52,21 @@ height cap, leaving the action bar exposed.
 In-game, **F2** toggles the first-person camera (function
 keys are view chrome — they never reach a native core). Direction keys are
 screen-relative in the vector views (in first person, left/right arrows turn instead of move), keypad 5 (Clear) resets the bearing to
-north-up, and the NumLock-on keypad types NetHack count prefixes. Moria's
+north-up, and the NumLock-on keypad types NetHack count prefixes. The view
+binds no letter: every letter is a live engine command (`w a s d` are NetHack's
+wield, apply, search and drop), so the gaze keys are the arrows and the
+NumLock-off pad, and the vi-keys stay absolute rather than rotating. Moria's
 original mode sends keypad digits; a shifted camera movement is the source's
 two-read run command (`.` then a literal direction).
+
+A direction key becomes screen-relative movement only when it answers the
+engine's outer command read; a nested prompt (direction, menu, store, count)
+always gets the literal key. Each Module learns which read it is from its own
+engine: Angband's front end sends `cmd = character_generated && inkey_flag &&
+screen_save_depth == 0` with every key request and only a parked request with
+`cmd` set is remapped; Moria's marks its reads `outer-command`; Larn's seam is
+the `__wrap_yylex` flag. NetHack's windowport cannot see the difference, so
+`TextHud` infers it from its `prompting` counter.
 
 ## The hit flash
 
@@ -78,6 +90,23 @@ trip (`src/backplane/describe.ts`) from a read-only native query per Module —
 NetHack's own `do_screen_description`, and a `describe` function in each of
 the Angband/Larn/Moria exporters. Tap or click does the same on touch. It
 sends the engine nothing, so each engine's own look command is untouched.
+
+A query, not a silent look keystroke, because the keystroke cannot be made
+safe: NetHack's farlook, travel and targeting cursors and its direction prompt
+all read through `nh_poskey`, and only `program_state.input_state`, which JS
+cannot see, tells them apart — a hover during "Where do you want to hit?"
+would pick that square.
+
+**The label never says what the map refuses to draw.** Every describer answers
+the hero's own cell first, above every gate (a player knows where they are
+standing), then returns null while the hero cannot honestly see — Angband under
+`TMD_IMAGE`, Moria hallucinating or blind, Larn blind, whose map replays a
+shadow then — and names a concealed thing by its disguise rather than null:
+Larn's hidden traps answer `floor`, Moria's secret door `a granite wall`, and
+Angband names a monster only when `monster_is_obvious`, so a mimic reads as the
+object it is drawn as. Null means "cannot see this at all"; a null among
+neighbours that read `Floor` is a trap detector. NetHack's pager handles
+hallucination and blindness itself, so its describer has no gate of its own.
 
 The orbital camera zooms on the wheel and on a **two-finger pinch**
 (`src/render/OrbitCam.ts`, vect-hack-lxd). Two fingers are a pinch and the orbit
@@ -137,9 +166,10 @@ another monster as well (the command-monster mechanic), and nothing typed tells
 the two apart. A `MON_HIT` that does not name the player is
 known-not-the-hero, not ambiguous, and draws nothing — the same answer as
 always, reached from the one place the two messages differ (`act:hits {target}`
-expands to the literal "you" for the player). It is a deliberate, single-type
-crossing of the typed-vs-text line the 2026-08-06 spec drew, and the reasoning
-lives in `hitInference.ts`'s header (vect-hack-xqg).
+expands to the literal "you" for the player). Angband otherwise infers from the
+typed `messageType` and NetHack from text alone; this is a deliberate,
+single-type crossing of that line, and the reasoning lives in
+`hitInference.ts`'s header (vect-hack-xqg).
 
 An effect Cell has a **minimum on-screen lifetime of its own**
 (`EFFECT_LIFETIME_S`, `src/render/effects/mapFx.ts`). Nothing in a record stream
@@ -155,3 +185,13 @@ showing terrain or nothing, so it fills the hole the erase left and never covers
 the blast's own target. The grid stays engine truth and `Cell.terrain` shows
 through once the envelope closes. Only Angband signals it today; the other
 Modules' engines do not collapse their animations (vect-hack-auo).
+
+The WebGPU phosphor trail's tail length is set by the linear
+`persistence_drain_per_s` (0.10/s), not by the 0.30 s half-life
+(`src/skins/tokens/quadrascan.json`, `persistence.ts` `drain`). The camera
+follows the hero, so a long tail ghosts the whole scene on every move; on a
+phone the exponential alone smeared the `?bot` demo for seconds after each
+step. Measured there against a 0.10 s half-life, the drain won: it ends the
+tail at about 1.4–2.3 s and leaves the first tenths of a second, the part that
+reads as phosphor, nearly unchanged. Frame time was not the cause — the phone
+ran at 60 fps.

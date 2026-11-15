@@ -5,8 +5,7 @@
 // Texts alone are not enough: object code also needs source-acquisition
 // information (NGPL ¶3, GPLv2 §3, GPLv3 §6). A bare link to a moving `main`
 // does not identify what was built, so SOURCE.txt records the exact commit,
-// beside the release version from package.json (CHANGELOG.md says what each
-// version changed).
+// beside the release version, read from the release tag (builtVersion below).
 //
 // Each game's Saves menu links its own page, <game>.html (vect-hack-a4c): VectHack's
 // terms and that game's, never another game's. index.html, for a URL with no
@@ -75,7 +74,7 @@ export function versionFromDescribe(text) {
 }
 
 /** The release version: the release tag is the version, and nothing in the
- *  tree is edited to cut one (docs/decisions/2026-11-11-version-is-the-tag.md).
+ *  tree is edited to cut one.
  *  A checkout asks git; a GitHub source zip has no .git, so VERSION carries the
  *  same description, written by `git archive` through export-subst
  *  (.gitattributes); a checkout that cannot see a tag (CI's shallow clone)

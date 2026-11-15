@@ -23,7 +23,7 @@
  * saying so out loud.
  *
  * A gate that failed on it would be asserting something false, which this repo
- * holds to be worse than asserting nothing (docs/DECISIONS.md, vect-hack-azf).
+ * holds to be worse than asserting nothing (vect-hack-azf).
  *
  * Only the DECLINED answer is expected. "no storage manager" and "the
  * persistence request failed" are the two ways that code reports something

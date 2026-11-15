@@ -1,5 +1,4 @@
-// One finished Larn game reduced to its RunDigest (src/bot/digest.ts; spec:
-// 2026-08-19-bot-phase1b-larn-reflect-design.md, "The digest").
+// One finished Larn game reduced to its RunDigest (src/bot/digest.ts).
 //
 // The whole trajectory is replayed through a fresh LarnBotModel, so every
 // observation here comes from the same public projection the bot itself played
@@ -18,8 +17,8 @@
 //     reports the new depth. That is what makes the town's volcanic shaft
 //     (`V`) distinguishable from an ordinary staircase (`%`) after the fact —
 //     the single most consequential exit in the 1a baseline.
-//   - Everything is sampled per FRAME, not per command boundary. The spec says
-//     "over the final few frames" and means it: a death happens after the last
+//   - Everything is sampled per FRAME, not per command boundary, over the
+//     final few frames: a death happens after the last
 //     command, so a boundary-sampled digest is blank in the runs it most needs
 //     to describe.
 //

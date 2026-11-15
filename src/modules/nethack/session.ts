@@ -3,8 +3,7 @@
 // WorkerToMain/MainToWorker) stays Module-owned; the shared mechanism owns
 // worker lifecycle, fatal->notice routing (vect-hack-1g5) and the dispatch
 // guard (vect-hack-c1w). NethackHandler remains the Module's view
-// interface — there is no shared GameView in phase 2 (backplane design,
-// "What the NetHack Module keeps private").
+// interface — there is no shared GameView.
 import { EngineSession, TRACE, type SessionDelegate } from "../../backplane/session";
 import type { ExportedSave } from "../../backplane/saveExport";
 import type { MainToWorker, ShimEvent, WorkerToMain } from "./protocol";
@@ -27,7 +26,7 @@ const ESC = 27;
 
 /**
  * The cancel-shaped reply that unwedges the Asyncify-suspended engine when
- * the view throws mid-call (the backplane design's NetHack fallback table):
+ * the view throws mid-call (NetHack's fallback table):
  * ESC for the key waits, the caller's default for yn_function, null
  * (= cancel: "\x1b" for getlin worker-side, -1 picks for select_menu) for
  * the rest — display events owe a null reply and nothing more.

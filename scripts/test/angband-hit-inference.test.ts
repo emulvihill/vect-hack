@@ -1,4 +1,4 @@
-// Angband hit inference (spec 2026-08-06): typed message + last direction /
+// Angband hit inference: typed message + last direction /
 // last ranged-effect cell -> the victim's cell, or null. Pure; no engine.
 // MON_HIT additionally reads the message text (vect-hack-xqg): see the header
 // of hitInference.ts for why that one type crosses the typed-vs-text line.
@@ -57,7 +57,7 @@ describe("inferAngbandHit", () => {
     }
   });
   it("only MON_HIT reads the text; the aimed families stay typed", () => {
-    // The typed-vs-text line the design drew is crossed for exactly one type,
+    // The typed-vs-text line is crossed for exactly one type,
     // because nothing typed distinguishes its two emitters. A melee crit whose
     // text never says "you" still pulses where the player aimed.
     expect(inferAngbandHit(MSG.HIT, "The kobold is destroyed.", HERO, EAST, null))

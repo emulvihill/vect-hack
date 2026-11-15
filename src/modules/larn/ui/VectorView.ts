@@ -50,7 +50,7 @@ const SIDEBAR_HEIGHT = 17;
 export class VectorView implements LarnHandler {
   readonly renderer: DungeonRenderer;
   private readonly radar: Radar;
-  /** Point-and-look (spec 2026-08-18). main.ts connects its describer. */
+  /** Point-and-look. main.ts connects its describer. */
   readonly look: LookHud;
   private readonly classifier = new LarnClassifier();
   private readonly tty = new LarnGrid();

@@ -40,8 +40,7 @@ export interface PolicyTuning {
    *  rather than a hole. It drops the hero to internal 11 whatever their level
    *  (object.c:345), and at level 1 that was half of every batch dying in 19
    *  commands. A bar rather than a ban: the volcano holds the potion the win
-   *  condition requires, so "never" would delete the win from the game
-   *  (docs/specs/2026-08-28-larn-descent-readiness.md). */
+   *  condition requires, so "never" would delete the win from the game. */
   shaftMinXlevel: number;
   /** Fraction of hpmax at or above which the hero will take an ORDINARY
    *  downward exit. Ships at 0 — no bar — because raising it is a second
@@ -69,9 +68,7 @@ export interface PolicyTuning {
 }
 
 /** What the bot plays with unless a caller overrides a knob. The wield probe
- *  and the missile ship off until they earn their place against the bench
- *  (docs/specs/2026-08-28-larn-wield-by-measurement.md,
- *  docs/specs/2026-08-28-larn-cast-at-range.md). */
+ *  and the missile ship off until they earn their place against the bench. */
 export const DEFAULT_TUNING: Readonly<PolicyTuning> = Object.freeze({
   restLimit: 150,
   stuckLimit: 3,
@@ -114,14 +111,12 @@ const STAY: LarnKey = { code: ".".charCodeAt(0), mods: 0 };
  *  TERRAIN_STAIRS + KIND_DOWN. Taking it calls newcavelevel(MAXLEVEL) —
  *  internal 11 — from level 0 (object.c:345), so a 10-hp level-1 hero arrives
  *  eleven levels below anything it can survive. That was 50.6% of the
- *  2026-08-28 bench dying in a median of 19 commands
- *  (docs/specs/2026-08-28-larn-descent-readiness.md). */
+ *  2026-08-28 bench dying in a median of 19 commands. */
 const SHAFT = "V";
 /** Larn's wield command (main.c:729). It never refuses a swap — unlike wear(),
  *  which prints "You're already wearing some armor" and makes an upgrade a
  *  two-command dance with an unarmoured turn in the middle. That asymmetry is
- *  why the probe below does weapons and not armour
- *  (docs/specs/2026-08-28-larn-wield-by-measurement.md). */
+ *  why the probe below does weapons and not armour. */
 const WIELD: LarnKey = { code: "w".charCodeAt(0), mods: 0 };
 /** The two suffixes show3() appends (main.c:636-638), mirrored by
  *  status_item_name() in the tap. They are part of the name the player reads,

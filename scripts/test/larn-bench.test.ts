@@ -1,5 +1,4 @@
-// The Phase 2 bench metrics (bead vect-hack-h9x.1, spec
-// docs/specs/2026-08-28-larn-bench-design.md).
+// The Phase 2 bench metrics (vect-hack-h9x.1).
 //
 // The load-bearing test is `distinguishes a shaft ride from a staircase
 // descent`. AGENTS.md: a test that pins a CHOICE must be shown failing on the

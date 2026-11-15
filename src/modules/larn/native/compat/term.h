@@ -9,8 +9,8 @@
  * ships no terminfo library.
  *
  * This header declares exactly that surface so io.c compiles. The symbols
- * are NOT provided at link time: the shim (src/modules/larn/native/main-wasm.c,
- * Task 6) replaces io.c's lflush() decoder and these terminfo entry points
+ * are NOT provided at link time: the shim (src/modules/larn/native/main-wasm.c)
+ * replaces io.c's lflush() decoder and these terminfo entry points
  * with direct grid writes, so the semantic bytes in lpbuf (ST_START /
  * ST_END / BOLD / END_BOLD / CLEAR / CL_LINE / CL_DOWN / CURSOR, defined in
  * external/larn/header.h:409-416) become CellGrid updates without

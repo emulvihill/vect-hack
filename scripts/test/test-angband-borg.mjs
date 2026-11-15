@@ -96,7 +96,7 @@ if (grew < MIN_MAPS)
 if (heroSeen.size <= at.hero)
   fail(`the hero never moved during ${SAMPLE_MS}ms of borg play (${heroSeen.size} positions)`);
 
-// Look HUD (spec 2026-08-18): the describer answers from a message handler
+// Look HUD: the describer answers from a message handler
 // while the engine is suspended, which is the state this test leaves it in.
 //
 // Truthiness alone would pass on the name of the wrong square — the failure a
@@ -104,7 +104,7 @@ if (heroSeen.size <= at.hero)
 // thing the marshalling's own unit test can never see. describe() at the
 // hero's own current grid must answer exactly "you" (see
 // scripts/test/test-nethack-save-restore.mjs's sibling check), which also
-// pins the spec's "the hero's own cell answers `you`" bullet — otherwise
+// pins "the hero's own cell answers `you`" — otherwise
 // untested anywhere.
 if (!heroAt) fail("no hero grid was ever recorded to describe");
 const describe = (x, y) =>
@@ -119,7 +119,7 @@ if (describe(-1, -1)) fail("vect_angband_describe answered an out-of-range grid"
 // on. There is no `fatal` check here, because there could not be an honest
 // one: bootAngband is handed keys/onEvent/onPoll and no notice channel, so
 // view.onNotice never runs and the flag it writes can never be set — reading
-// it would be an assertion that cannot fail (docs/DECISIONS.md, vect-hack-azf).
+// it would be an assertion that cannot fail (vect-hack-azf).
 // An engine that died would stop playing, so the wait below is the assertion:
 // it proves the engine survived being asked, which is the whole risk.
 //

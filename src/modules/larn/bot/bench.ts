@@ -1,5 +1,5 @@
-// The Larn bench metrics: a batch of RunSummary in, the numbers
-// docs/specs/2026-08-28-larn-bench-design.md pre-registered out.
+// The Larn bench metrics: a batch of RunSummary in, the pre-registered
+// numbers out.
 // Pure and filesystem-free — scripts/dev/bench-larn.mjs does every read and
 // write, because this directory is also loaded by the browser bot.
 //

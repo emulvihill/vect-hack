@@ -1,7 +1,6 @@
 // The Backplane's session mechanism: one worker-backed engine, lifecycle
 // routing, and the dispatch guard. Every Module's session is a thin delegate
-// over this class; the message vocabularies stay Module-owned (design:
-// docs/specs/2026-08-02-backplane-design.md).
+// over this class; the message vocabularies stay Module-owned.
 //
 // Fixed here once, for every Module:
 // - vect-hack-1g5: an engine death becomes an on-screen notice, not a

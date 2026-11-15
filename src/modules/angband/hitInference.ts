@@ -1,4 +1,4 @@
-// Hit inference (spec 2026-08-06): Angband's EVENT_MESSAGE arrives with a
+// Hit inference: Angband's EVENT_MESSAGE arrives with a
 // typed messageType (list-message.h positions, pinned 4.2.6 submodule), but
 // no victim position — that is inferred from the last direction the view
 // sent (melee) or the last ranged effect cell (missiles/bolts). An
@@ -6,7 +6,7 @@
 // functions; the view owns the bookkeeping.
 //
 // MON_HIT is the one type that also reads the message TEXT (vect-hack-xqg),
-// which is a deliberate crossing of the typed-vs-text line the spec drew
+// which is a deliberate crossing of the typed-vs-text line drawn
 // between this file and the NetHack one. The line was a statement about what
 // each engine affords, not a prohibition, and here the typed signal is simply
 // not a discriminator: MON_HIT is a blow-METHOD type, so mon-blows.c emits it

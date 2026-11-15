@@ -1,4 +1,4 @@
-// The NetHack view's hit-flash wiring (spec 2026-08-06): TextHud's two new
+// The NetHack view's hit-flash wiring: TextHud's two new
 // seams — every code the engine reads, and "is this the message window" —
 // and VectorView spending them on inferNethackHit. The inference itself is
 // pinned in nethack-hit-inference.test.ts; what is at stake here is

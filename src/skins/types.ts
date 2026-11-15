@@ -1,5 +1,5 @@
 // Skin schema: the single source of truth for every colour and theme value in
-// the client (docs/specs/2026-07-31-skins-opaque-walls-design.md).
+// the client.
 // Skins are JSON: the default is complete, the others are deltas deep-merged
 // over it. The vendored src/skins/tokens/quadrascan.json token file stays the
 // physics/token base; a skin's `tokens` section overrides it.

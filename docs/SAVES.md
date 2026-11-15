@@ -61,8 +61,10 @@ the page reloads, and the mount empties the volume before the engine looks at
 it, asking no `validateImport` — a volume so broken its own Module's gate
 rejects it is exactly the one this must remove. A row and no key, deliberately.
 
-The panel's last row is not a save action: **Licenses & source** opens
-`licenses/index.html` in a new tab (vect-hack-a4c). It lives here because the
+The panel's last row is not a save action: **Licenses & source** opens the
+booted game's own page, `licenses/<game>.html`, in a new tab (vect-hack-a4c;
+`src/ui/licensesLink.ts`): VectHack's terms and that game's, nothing of
+another game's, since each game is licensed on its own. It lives here because the
 Saves panel is the one piece of chrome every Module shows, and the NGPL and
 GPL notices have to reach a player who arrived on a `?game=` link and never
 saw the landing page. The href is relative so it resolves under any deploy
@@ -81,6 +83,17 @@ pointing at it (`EngineSession.resetAdvice`); a death mid-game does not, since
 that advice would cost a running character.
 
 ## Checkpoints and recovery
+
+Nothing saves at unload, and nothing can: `pagehide` and `visibilitychange`
+give no async time, and the engine is Asyncify-suspended behind a worker
+round trip, so every checkpoint is taken during play, at an input wait.
+NetHack's (`src/modules/nethack/checkpoint.ts`) runs upstream's non-destructive
+`save_currentstate()` after 100 commands and at least 20 seconds. Commands, not
+turns: the turn counter reaches JS only through `BL_TIME`, which NetHack
+suppresses when the player's `time` option is off. Not more often either:
+writing a level runs `forget_temple_entry()` on every priest in it
+(`savemonchn`, `save.c`), zeroing the temple's visit timers — a cost upstream
+pays once per level change.
 
 Moria's stock Ctrl-X save and
 scores persist in `/vect-moria`. The elected writer also checkpoints only at a

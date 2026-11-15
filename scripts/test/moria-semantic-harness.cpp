@@ -416,7 +416,7 @@ void checkDiffsAndVisionPrivacy() {
     applyLatest();
 }
 
-// moria_describe (Look HUD, spec 2026-08-18) reuses this same fixture rather
+// moria_describe (Look HUD) reuses this same fixture rather
 // than building its own: the lit monster and secret door from
 // initializeFixture(), and (12, 0) — the cell the diff test just above
 // retracted to field_mark=false, still carrying its TV_POTION1 treasure_id —

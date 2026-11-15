@@ -1,14 +1,12 @@
-// The Backplane's persistence namespace: one storage volume per Module
-// (platform design). The registry IS the namespace — mountpoints must
+// The Backplane's persistence namespace: one storage volume per Module.
+// The registry IS the namespace — mountpoints must
 // differ because IDBFS keys its IndexedDB database by mountpoint within the
 // shared origin, and the Web Lock elects the single writing tab per volume.
 //
 // NetHack's legacy names (/persist, vect-hack/persist) are abandoned with no
-// migration (settled decision #1, 2026-08-02): saves under the old database
-// are knowingly orphaned once — unreleased software. Volume *lifecycle*
-// (mount, syncfs, lock election) deliberately stays Module code
-// (src/modules/nethack/persist.ts) until Angband's saves make it a
-// two-consumer mechanism in phase 3.
+// migration: saves under the old database are knowingly orphaned once —
+// unreleased software. Volume *lifecycle* (mount, syncfs, lock election) is
+// shared too: mountVolume in ./persistFs.ts.
 export interface ModuleVolume {
   /** Which Module's volume this is. Carried on the volume rather than left as
    *  the registry key so anything holding one can name it: it goes in an

@@ -6,7 +6,7 @@ export const COLS = 80;
 export const ROWS = 24;
 
 // TtyCell is the Module's tty scratch surface, deliberately NOT the Backplane's
-// Cell (backplane design: two tty grids do not make a Backplane).
+// Cell: two tty grids do not make a Backplane.
 export interface TtyCell { ch: string; rgb: number }
 
 const blank = (): TtyCell => ({ ch: " ", rgb: 0xffffff });

@@ -1,6 +1,6 @@
 // Skin registry and boot-time resolution. The active skin is fixed at module
 // evaluation — before palette.ts derives its tables from it — so a skin change
-// is a page reload, by design (see the spec's "no live switching").
+// is a page reload, by design: there is no live switching.
 //
 // Colour rationale carried over from the code the values left (JSON can't
 // hold comments):

@@ -146,6 +146,6 @@ void vectMoriaDungeonDisplayMap();
 void moriaSemanticTestReset();
 #endif
 
-// Look HUD (spec 2026-08-18): a read-only query through the sanitized
+// Look HUD: a read-only query through the sanitized
 // semantic seam, callable from the worker while the engine is parked.
 extern "C" const char *moria_describe(int x, int y);

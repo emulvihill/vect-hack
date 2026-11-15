@@ -5,8 +5,7 @@
 // It runs on the BENCH seed set and never on held-out, and that is the whole
 // discipline of the thing: searching over a seed set is what burns it, so the
 // search happens on the set that exists to be burned and the winner is
-// validated ONCE against held-out by hand
-// (docs/specs/2026-08-28-larn-bench-design.md).
+// validated ONCE against held-out by hand.
 //
 // Each arm is a partial override of DEFAULT_TUNING
 // (src/modules/larn/bot/policy.ts), handed to the gym as --tuning, so every

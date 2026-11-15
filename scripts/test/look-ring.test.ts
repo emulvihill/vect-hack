@@ -1,4 +1,4 @@
-// The look ring (spec 2026-08-18): the mark that says which cell the pointer
+// The look ring: the mark that says which cell the pointer
 // is naming, before the engine's word for it arrives. Drawn by the entity
 // pass, so it lives and dies with the frame like everything else there.
 import { describe, expect, it } from "vitest";

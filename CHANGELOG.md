@@ -7,8 +7,7 @@ build names its version and commit in `/play/licenses/SOURCE.txt`.
 
 **Frozen at 0.2.1.** Since then the release tag is the version and each
 release's notes are its GitHub Release
-(https://github.com/emulvihill/vect-hack/releases;
-`docs/decisions/2026-11-11-version-is-the-tag.md`).
+(https://github.com/emulvihill/vect-hack/releases).
 
 ## [0.2.1] - 2026-11-06
 

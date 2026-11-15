@@ -207,7 +207,7 @@ describe("Angband VectorView", () => {
     expect(view.nextKey(false, false)).toBeNull();
     // Angband still has no pointer command menu (main.ts removes #cmdbtn); the
     // one click listener the canvas now carries is the Look HUD's tap-to-look
-    // (spec 2026-08-18, Look.ts), which never feeds the key queue — proven
+    // (Look.ts), which never feeds the key queue — proven
     // with a real pickCell() result so the click travels the whole handler,
     // not just its early "missed every cell" return. The structural half
     // still catches a second, unintended click listener.

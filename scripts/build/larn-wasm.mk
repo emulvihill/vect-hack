@@ -23,8 +23,7 @@ OUT := $(VECT_ROOT)/build/larn
 
 CC := emcc
 
-# --- LARN_CFLAGS (proven by the Task-1 spike; see docs/specs/
-# larn-spike.md §3) ---
+# --- LARN_CFLAGS (each one proven against the unpatched source) ---
 # -std=gnu89             the NetBSD snapshot is K&R-era C; gnu89 is the mode
 #                        that accepts its old-style definitions
 # -Wno-* family          silence the K&R-vs-modern clang diagnostics that are
@@ -39,7 +38,7 @@ CC := emcc
 #                        the POSIX termios tty path (vs SYSV termio); NONAP
 #                        makes napms() a no-op (Emscripten has no nap); we do
 #                        NOT define -DVT100, so the termcap/terminfo semantic-
-#                        byte path is active (the design's preferred surface)
+#                        byte path is active
 # Data root: the _PATH_* overrides are NOT done here. pathnames.h `#define`s
 # them unconditionally after any -D, so -D is silently overridden (the last
 # definition wins). The writable/read-only roots are pinned by redefining
@@ -65,7 +64,7 @@ LARN_CFLAGS := -std=gnu89 -Wno-implicit-int -Wno-implicit-function-declaration \
   -DBSD -DVER=12 -DSUBVER=0 -DNONAP -DUIDSCORE -DTERMIOS \
   -I $(LARN) -I $(COMPAT) -include $(COMPAT)/netbsd_compat.h
 
-# --- NO_ASYNCIFY (spike §8; empirically pinned in Task 6) ---
+# --- NO_ASYNCIFY (empirically pinned) ---
 # Functions removed from Asyncify instrumentation because they are provably
 # never on the stack across the read(0,&b,1) suspend (the only Asyncify
 # suspend point, reached via ttgetch io.c:177 and yylex tok.c:81/124):
@@ -74,17 +73,17 @@ LARN_CFLAGS := -std=gnu89 -Wno-implicit-int -Wno-implicit-function-declaration \
 # NOT removed (kept instrumented) because they DO call ttgetch -> read:
 #   quit()  calls ttgetch() in its yes/no loop (global.c:382)
 #   died()  runs the scoreboard with -more- prompts (scores.c:593); wrapped
-#           (--wrap=died, Task 8) but __wrap_died only flags -257 then tails
+#           (--wrap=died) but __wrap_died only flags -257 then tails
 #           to __real_died, so keeping the wrap instrumented is correct.
 # Dropped from the spike's static candidates: the libc printf/scanf family
 # (snprintf, sprintf, sscanf) — this toolchain inlines or aliases them, so
 # they do not resolve as symbols and the link warned "non-existing function
 # name" on each. Inert entries are harmless but noisy; instrumenting the
 # inlined call sites (the fallback) is harmless because none reach a read.
-# qsort is not used in this snapshot (spike §8), so it is not a candidate
-# (unlike Angband's list). Pinned in Task 6 below.
+# qsort is not used in this snapshot, so it is not a candidate
+# (unlike Angband's list). Pinned below.
 # savegame (diag.c:179) writes the save file and never reaches a read, so it
-# must remain outside Asyncify. Task 8 wraps the public symbol at link time:
+# must remain outside Asyncify. The public symbol is wrapped at link time:
 # Asyncify therefore sees the actual body as __wrap_savegame (not savegame or
 # __real_savegame; both names warn as absent in the removelist). The wrapper
 # tails through __real_savegame then calls synchronous wasm_save_landed(), so
@@ -128,7 +127,7 @@ endif
 .PHONY: all compile-cores
 all: $(OUT)/larn.js
 
-# Compile-only spike target (Task 1): every engine .c -> .o, cflags-only.
+# Compile-only spike target: every engine .c -> .o, cflags-only.
 compile-cores: $(LARN_OBJS)
 
 # Linked from $(OUT) with relative -o and --preload-file: Emscripten bakes the

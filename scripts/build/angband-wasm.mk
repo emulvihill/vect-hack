@@ -14,9 +14,9 @@
 #   EXPORT_ES6=1             — NetHack precedent (cross-pre2.500:330)
 #   ASYNCIFY_REMOVE          — Shelob's Safari-stack list adapted to 4.2.6:
 #                              Term_mbstowcs -> text_mbstowcs (renamed in
-#                              4.2); borg_* dropped (ALLOW_BORG is not
-#                              defined, the borg objects compile empty, the
-#                              symbols do not exist).
+#                              4.2); borg_* not carried over: -DALLOW_BORG
+#                              makes the borg live here, and its key reads sit
+#                              above a sleep (main-wasm.c's inkey_hack hook).
 # BASEOBJS = ANGFILES + ZFILES (Makefile.inc:9); upstream main.o is a
 # separate MAINFILES object and is NOT linked — this is the own-main()
 # flavour, exactly Shelob's OBJS = $(BASEOBJS) main-emscripten.o.

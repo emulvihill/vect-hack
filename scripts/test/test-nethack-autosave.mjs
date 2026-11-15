@@ -317,7 +317,7 @@ await new Promise((done) => setTimeout(done, 50)); // let any stray autoPersist 
 // reconcile from the losing tab deletes every entry its session-only
 // filesystem lacks, and the writer — whose MEMFS still holds the mirror —
 // sees nothing. Reading writer.FS here would be an assertion no behaviour
-// could ever falsify (docs/DECISIONS.md, vect-hack-azf). So both handles go
+// could ever falsify (vect-hack-azf). So both handles go
 // first and the mirror is read back off the persisted volume, the way
 // test-nethack-tabs.mjs opens a third tab to check what actually survived.
 loser.persist.release();

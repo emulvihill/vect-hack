@@ -23,7 +23,7 @@
 //
 // Usage:
 //   node scripts/dev/baseline-report.mjs --batch .gym/baseline-2026-08-18 \
-//     --out docs/reports --slug 2026-08-18-larn-baseline \
+//     --out .gym/reports --slug 2026-08-18-larn-baseline \
 //     --train-master 20260818 --holdout-master 20260819 --cohort 100 \
 //     --max-commands 3000 --timeout 300 --parallel 4 [--notes FILE]
 import { execFileSync } from "node:child_process";
@@ -37,7 +37,7 @@ import { childSeed, csvField } from "../../src/bot/scoreboard.ts";
 const { values: opts } = parseArgs({
   options: {
     batch: { type: "string" },
-    out: { type: "string", default: "docs/reports" },
+    out: { type: "string", default: ".gym/reports" },
     slug: { type: "string" },
     game: { type: "string", default: "larn" },
     wasm: { type: "string", default: "public/modules/larn/larn.wasm" },

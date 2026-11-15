@@ -6,7 +6,7 @@
 // scripts/test/larn-play.mjs, scripts/test/test-larn-boot.mjs,
 // scripts/test/test-larn-seed.mjs, scripts/test/test-larn-status-tap.mjs — and
 // before this file each carried its own literal copy of the contract. Adding
-// statusBatch in Phase 1a Task 7 therefore broke four gates at once, at
+// statusBatch therefore broke four gates at once, at
 // runtime, and the fix was a no-op stub pasted into each (vect-hack-dwb).
 // A host now DECORATES this bridge instead: it says what it does with the
 // event stream and with the four lifecycle callbacks, and the bridge owns

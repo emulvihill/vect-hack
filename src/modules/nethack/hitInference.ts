@@ -1,4 +1,4 @@
-// Hit inference (spec 2026-08-06): NetHack's shim hands the view message
+// Hit inference: NetHack's shim hands the view message
 // text and nothing else, so this Module has the documented limited
 // abilities — two regex shapes, null for everything else (ranged, pets,
 // off-screen fights). A wrong guess costs one cosmetic flash on a neighbor;
@@ -25,8 +25,7 @@ export function nethackKeyDir(code: number): Dir | null {
 }
 
 /** "You hit the newt!" — first person, a hit verb, a creature article.
- *  Amended 2026-08-06 (post Task-5 review, same ruling as Task 3: the
- *  no-guessed-pulse constraint governs): `kick` is out — dokick.c prints
+ *  The no-guessed-pulse constraint governs: `kick` is out — dokick.c prints
  *  "You kick %s." identically for monsters and floor objects, so it is
  *  ambiguous (kicked monsters are an accepted false negative); `your ` is
  *  out — pets/steeds arrive via mon_nam() as "the little dog", so "your"

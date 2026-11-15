@@ -14,7 +14,7 @@
 //   terrain rebuilds/sec  — static geometry rebuilt from scratch. Hero light is
 //                           baked into it, so this tracks hero moves, and it is
 //                           the cost that scales with level size rather than
-//                           with what actually changed (the design's Risks).
+//                           with what actually changed.
 //   max grid batch words  — the largest single record batch, in Int32 words:
 //                           what the worker->main transfer has to carry.
 //   hero moves            — liveness. A borg that stopped playing still renders.
@@ -31,8 +31,7 @@
 // Everything read off the page is public API: DungeonRenderer's diagnostics
 // accessors, the CellGrid on renderer.map, and the view's own handle/onNotice
 // (patched to observe, always forwarding). Nothing reaches a private field —
-// an assertion that cannot fail is worse than no assertion (docs/DECISIONS.md,
-// vect-hack-azf).
+// an assertion that cannot fail is worse than no assertion (vect-hack-azf).
 //
 // Needs a dev server (npm run dev -- --port 5199) and a GPU:
 //   npm run check:angband-borg
@@ -99,7 +98,7 @@ const END_TELLS = [/^You die\.$/, /^Score not registered for /, /^You have won t
  *
  * Without this floor the gate could not fail: every red run would be excused
  * by "the borg died", and an assertion that cannot fail is worse than no
- * assertion (docs/DECISIONS.md, vect-hack-azf).
+ * assertion (vect-hack-azf).
  */
 const MIN_PLAY_MS = 120000;
 const MIN_FPS = 30;

@@ -7,8 +7,7 @@
 // die there in tens of commands. Depth cannot see the difference (every one of
 // them reaches 11) and score barely can (they all score almost nothing), so the
 // A/B's volcano stratum ties 52 times in 54 and reports a bot that learned
-// nothing and a bot that learned something as the same
-// (docs/reports/2026-08-22-larn-r3.md). Survival after the drop
+// nothing and a bot that learned something as the same. Survival after the drop
 // separates them: it is the number that moves when the hero starts handling
 // what is down there — or when it stops going down at the wrong size.
 //

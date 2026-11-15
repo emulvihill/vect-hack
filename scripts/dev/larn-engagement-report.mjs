@@ -1,6 +1,5 @@
 // The engagement metric: what a batch of Larn games did when a monster reached
-// the hero (spec: docs/specs/2026-08-21-larn-engagement-design.md,
-// "A committed metric").
+// the hero.
 //
 // The Phase 1b A/B report's melee figures were derived by hand and no script
 // reproduced them. A gate whose metric cannot be re-run is not a gate, and this
@@ -153,8 +152,7 @@ async function readBatch(dir) {
 
 /** The five numbers the phase gates on, plus the two denominators that make
  *  them readable. `per100` is the normalised figure: a run that will not fight
- *  ends sooner, so the raw count alone confounds willingness with time alive
- *  (2026-08-21-larn-1b-ab.md). */
+ *  ends sooner, so the raw count alone confounds willingness with time alive. */
 function summarize(runs) {
   const per100 = runs.map((r) => (r.commands > 0 ? r.melee * 100 / r.commands : 0));
   return {
@@ -176,7 +174,7 @@ function summarize(runs) {
 const report = [];
 for (const dir of opts.batch) {
   const runs = await readBatch(dir);
-  // The per-run rows ride along in --json: the spec asks for the distribution
+  // The per-run rows ride along in --json: the metric is the distribution
   // and the rows, and a gate that reports only an aggregate cannot be argued
   // with when it disagrees with a hand count.
   report.push({ batch: dir, ...summarize(runs), rows: runs });

@@ -1,8 +1,8 @@
 # Emscripten build for pinned Umoria 5.7.15. The guarded wrapper
 # (build-moria-wasm.sh) invokes this file from the VectHack root.
 #
-# Every upstream C++ translation unit is compiled out-of-tree except main.cpp
-# and ui_io.cpp. VectHack owns those two executable/platform seams so the
+# Every upstream C++ translation unit is compiled out-of-tree except main.cpp,
+# ui_io.cpp and game_save.cpp. VectHack owns those three seams so the
 # official external/umoria checkout remains pristine and curses never enters
 # the WebAssembly link.
 

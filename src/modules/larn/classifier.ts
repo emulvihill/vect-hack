@@ -1,6 +1,6 @@
 // Thin classifier: a packed Int32 record batch -> Backplane Cells.
 //
-// Larn's native tap (larn_map_info, Task 4) has already resolved visibility
+// Larn's native tap (larn_map_info) has already resolved visibility
 // (fog/blind/hidden-trap/see-invisible) and source-true chars (read from
 // objnamelist/monstnamelist in C) before writing a record. This layer applies
 // NO visibility logic and holds NO char/monster tables — it only translates

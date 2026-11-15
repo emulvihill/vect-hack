@@ -1,6 +1,6 @@
 // Real-engine proof for the project-owned Umoria terminal, input, polling and
 // controlled-exit boundary. The Worker bridge supplies the same Module option
-// shapes in Task 3; this test keeps the native half executable in isolation.
+// shapes; this test keeps the native half executable in isolation.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";

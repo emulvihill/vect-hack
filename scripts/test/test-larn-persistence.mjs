@@ -49,7 +49,7 @@ async function session() {
  * mount. A session's MEMFS lives in its own Emscripten heap and no other
  * module instance can reach it, so reading the writer's memory to find out
  * what a losing tab did is an assertion no behaviour could falsify
- * (docs/DECISIONS.md, vect-hack-azf). Mirrors editVolume() in
+ * (vect-hack-azf). Mirrors editVolume() in
  * test-nethack-autosave.mjs, minus the write-back: this one only populates,
  * so inspecting the volume can never repair it.
  */

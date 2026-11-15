@@ -1,11 +1,10 @@
 // Typed protocol between the Larn engine worker and the main thread —
-// the src/modules/angband/protocol.ts mold applied to the Larn Module
-// (phase 1 of the Larn Module plan; spike: docs/specs/larn-spike.md).
+// the src/modules/angband/protocol.ts mold applied to the Larn Module.
 //
 // Display events are one-way worker->main: Larn's term hooks draw and never
 // wait for the UI. The single blocking request/reply is the key wait
 // ("getKey"/"key"), mirroring the engine's one suspend point, the
-// read(0, &b, 1) the shim intercepts (spike §7). Phase 1 carries only the
+// read(0, &b, 1) the shim intercepts. Phase 1 carries only the
 // tty-text events the shim emits; map/level/overlay are phase 2; effect is
 // still deferred.
 import type { LifecycleToMain } from "../../backplane/session";
@@ -18,12 +17,12 @@ import type { DescribeReply, DescribeRequest } from "../../backplane/describe";
 // `sessionOnly` banner now, not a message-strip line (vect-hack-dem).
 
 /** ESCAPE keycode — ASCII ESC, the single byte Larn reads for cancel
- *  (spike §7: every Larn input is one byte; no termcap arrow sequences).
+ *  (every Larn input is one byte; no termcap arrow sequences).
  *  Also the cancel-shaped fallback reply for a failed getKey dispatch. */
 export const KC_ESCAPE = 27;
 
 /** The shift/run modifier bit in LarnKey.mods. Informational: the byte in
- *  `code` already carries the case (uppercase = run, spike §7); mods lets
+ *  `code` already carries the case (uppercase = run); mods lets
  *  the worker branch without decoding ASCII. */
 export const KC_MOD_SHIFT = 0x02;
 
@@ -68,7 +67,7 @@ export type LarnEvent =
   | { name: "death"; ch: string };
 
 /** A Larn key: a single ASCII byte plus a modifier mask. code is always
- *  one byte (spike §7); mods carries shift for run / uppercase, matching
+ *  one byte; mods carries shift for run / uppercase, matching
  *  the Angband split. code 0 = no key (only legal as a non-blocking
  *  getKey reply). */
 export interface LarnKey { code: number; mods: number }

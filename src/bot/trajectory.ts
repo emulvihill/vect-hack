@@ -1,5 +1,5 @@
-// The experience buffer's raw material (self-teaching bot spec, L4
-// "Experience buffer"): every event an engine showed the bot and every reply
+// The experience buffer's raw material: every event an engine showed the bot
+// and every reply
 // the bot gave, one JSON line each, in order. Game-free — a Module's bot
 // records its own event vocabulary through a thin decorator (Larn:
 // src/modules/larn/bot/recorder.ts). The gym streams the lines to disk.

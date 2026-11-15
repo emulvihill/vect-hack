@@ -26,7 +26,7 @@ pins the two together (vect-hack-z80c).
 ## The vendored engines
 
 - `external/NetHack` — official source, submodule pinned to the `NetHack-5.0` branch tip
-  (release-tag wasm bugs were fixed on the branch; see docs/DECISIONS.md). Never
+  (release-tag wasm bugs were fixed on the branch). Never
   patched: it stays a clean external dependency anyone can compile as instructed.
   `build-nethack-wasm.sh` pins `SUPPORTED_NETHACK` and refuses to build a different
   release, because `src/modules/nethack/recoverSave.ts` depends on NetHack's on-disk save
@@ -44,6 +44,13 @@ pins the two together (vect-hack-z80c).
   JS/WASM/data set atomically.
 - `external/larn` — vendored NetBSD BSD-Larn-12.0 source under its original
   no-profit permission; see `LICENSING.md` before distribution changes.
+  Vendored rather than a submodule because the NetBSD tree is too heavy to
+  submodule; never patched. Its `README.vect-hack` records the origin and why
+  the HunterZ 12.3/12.4 trees were rejected (their static-after-extern
+  conflicts are hard clang errors no `-W` flag downgrades, so they need source
+  patches). That README is inside the `LARN_PIN` digest, so editing even one
+  word of it moves the pin, and a stale pin refuses every build.
+
 ### What each build script guards
 
 Each build script guards what its artifact cannot be checked for afterwards.
@@ -55,6 +62,24 @@ commit pin, a makefile stamp that discards stale objects on a flag change, the
 — a link that stops printing that warning now fails the build), and greps for
 the asset carve-out and for `-DALLOW_BORG`, without which the borg objects
 compile empty, the build succeeds, and the merge gate has nothing to drive.
+build-larn-wasm.sh: a sha256 over the vendored source set (there is no
+commit to pin), the same makefile stamp, and the asset carve-out grep;
+`larn-wasm.mk` itself refuses to link unless `main-wasm.o` is the first
+object, because `--allow-multiple-definition` keeps the first definition of
+`lflush`/`init_term`/`sigsetup` and a reorder links cleanly and boots to a
+dark screen. build-moria-wasm.sh: the source pin and a clean checkout, both
+before and after the build; the emsdk commit and `em++` version, the only
+script that pins its compiler itself; the seed as an exact 12-file set whose
+two templates are filled from `version.h` and the CHANGELOG's release date,
+never today's, so the seed bytes reproduce; one fingerprint over every build
+input and the seed digest that discards objects when it moves; and a
+positive Asyncify canary, the opposite of Angband's: the link log must name
+every listed suspend path as instrumented. It publishes into a
+fingerprint-named directory under `public/modules/moria-versions/` and swaps
+the `moria` symlink with `rename(2)` (through node, not `mv -T`, which uutils
+dereferences). Angband, Larn and Moria each grep their glue for the Look
+HUD's describer export, because a describer that was never exported reads
+exactly like an engine with nothing to say.
 All four run `guard-host-paths.sh` on what they publish: no artifact may
 contain the checkout path, the Moria source directory or `$HOME`, and a
 file it cannot scan fails. Emscripten bakes the `-o` path into the
@@ -81,8 +106,15 @@ wasm.
   Module: `/vect-nethack`, `/vect-angband`, `/vect-larn`, `/vect-moria`), `saveBlob.ts` + `saveExport.ts`
   + `pendingImport.ts`
   (a whole volume packed as one portable `.vhsave` file, and the worker round
-  trip that fetches it — the volume lives in the worker's FS). Imports nothing
-  from modules, render, or ui.
+  trip that fetches it — the volume lives in the worker's FS), `persistFs.ts`
+  (`mountVolume`: the IDBFS mount, populate and flush with a 10 s timeout, the
+  5 s Web Lock election of the one writing tab, and where an imported save
+  lands), `describe.ts` (the Look HUD's page-to-worker naming round trip).
+  Imports nothing from modules, render, or ui. A mechanism moves in here only
+  once a second Module needs it in code, not in prospect. What the Modules do
+  not share stays theirs even where it looks generic: the `ready` payload,
+  each view interface (`NethackHandler`, `AngbandHandler`, `LarnHandler`,
+  `MoriaHandler` — one common method is not a contract), and the tty grids.
 - `src/modules/nethack/` — the NetHack Module: `protocol.ts` (typed
   messages), `worker.ts` (engine + all wasm-memory decoding), `session.ts`
   (delegate over `EngineSession`; `NethackHandler` stays its view
@@ -94,7 +126,18 @@ wasm.
   menu), `bot/` (the ?bot player).
 - `src/modules/angband/` — Angband Worker/session, tty and semantic views,
   classifier, key mapping, persistence/checkpoint policy, borg, and native
-  front end.
+  front end. The 3D view never reads the term: `native/main-wasm.c` taps the
+  public game-event API (`EVENT_MAP` marks grids dirty, the bolt, missile and
+  explosion events queue effects) and at each `TERM_XTRA_FRESH` resolves the
+  dirty grids through `map_info`/`grid_data_as_text` into one packed record
+  batch, colours already folded to the 16 slots by upstream's own VGA
+  translation column. The term cannot carry the semantics: `#` is granite,
+  permanent wall, secret door or lava; the map is a scrolled panel beside the
+  sidebar; a cell holds only its top glyph; menus and stores paint over the
+  map. So the grid is dungeon-sized (198×66), not term-sized, and an occupant
+  carries the terrain beneath it. `EVENT_ITEMLIST` forces a full sweep because
+  object detection updates what the player knows without firing `EVENT_MAP`,
+  so a dirty set fed by `EVENT_MAP` alone misses detected floor items.
 - `src/modules/larn/` — Larn Worker/session, terminal and semantic map adapter,
   vector/debug views, persistence/checkpoints, native porting shim, `shimBridge.ts`, and `bot/`
   (the ?bot survivor: model, prompts, policy with `DEFAULT_TUNING` — the
@@ -132,7 +175,15 @@ wasm.
 - `src/modules/moria/` — Umoria Worker/session, exact 80x24 terminal, source-
   owned input/overlay seams, sanitized semantic exporter/classifier, vector
   and debug views, hit inference, explicit persistence, typed turn-tail
-  checkpoints/recovery, and validated portable import.
+  checkpoints/recovery, and validated portable import. Upstream's `main.cpp`,
+  `ui_io.cpp` and `game_save.cpp` are replaced by the files in `native/`, so
+  curses never enters the link; every other upstream file compiles unchanged,
+  steered only by `-D` flags in `moria-wasm.mk` (`__linux__`, and per-file
+  renames of the calls the front end intercepts). The exporter
+  reads tile, monster and player state directly instead of calling
+  `caveGetTileSymbol()`, whose hallucination branch spends game RNG, and it
+  decides visibility natively: the TS classifier never derives game truth
+  from the tty, and nothing hidden crosses the protocol.
 - `src/render/` — the shared 3D layer, game-free: consumes a Backplane
   `CellGrid`. `TerrainBuilder` (static level geometry), `EntityLayer`
   (per-frame letterforms), `vectorFont` + `letterform`, `LineBatch`,
@@ -141,7 +192,12 @@ wasm.
   Module's view constructs — `renderer.map` keeps its name for the page
   helpers). The token file it draws from lives at
   `src/skins/tokens/quadrascan.json` and reaches render through
-  `activeSkin().tokens`.
+  `activeSkin().tokens`. Walls occlude through `WallFill`, a colourless depth
+  mask the additive strokes fail their depth test against; a skin with wall
+  opacity between 0 and 1 splits each stroke's alpha between a depth-tested
+  pass and an untested ghost pass. `npm run preview`'s software rasterizer
+  records strokes only and no fill, so occlusion is visible only on a GPU
+  (`check:browser`).
 - `src/skins/` — the single source of truth for every colour/theme value (see
   the directory's own headers), and a leaf: it imports nothing above itself.
   `tokens/quadrascan.json` is the base token file, kept under `tokens/` so its
@@ -263,5 +319,4 @@ deliberately. The two mitigations inside it are load-bearing and must survive
 any further refactor: the gym hooks are ABSENT rather than defaulted, because
 `main-wasm.c` asks `typeof v.gymSeed === "function"` and a default would seed
 every browser game; and the display callbacks FAIL LOUDLY, because a silent
-no-op default would hide exactly the bug this came from. `docs/PROJECT-MAP.md`
-has the rest.
+no-op default would hide exactly the bug this came from.

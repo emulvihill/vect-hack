@@ -1,6 +1,5 @@
 // The Larn run digest: the small public projection of one finished game
-// (src/bot/digest.ts; spec: 2026-08-19-bot-phase1b-larn-reflect-design.md,
-// "The digest").
+// (src/bot/digest.ts).
 //
 // The fixtures here are deliberately built the way the gym's trajectory file
 // holds them, not the way the worker posts them: TrajectoryLog's `plainArrays`

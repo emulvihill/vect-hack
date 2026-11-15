@@ -1,4 +1,4 @@
-// NetHack hit inference (spec 2026-08-06): the shim carries only message
+// NetHack hit inference: the shim carries only message
 // text, so this is the documented limited-abilities Module — regexes for the
 // two unambiguous shapes (you-hit-melee, monster-hits-you), null for
 // everything else. Pure; no engine.

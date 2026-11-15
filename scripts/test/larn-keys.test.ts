@@ -1,6 +1,6 @@
 // Browser KeyboardEvent -> LarnKey. Larn reads single ASCII bytes via
 // ttgetch() (io.c:170); movement is hjkl/yubn with uppercase = run
-// (parse() main.c:668, movement cases main.c:675-720; spike §7). ESC is 27
+// (parse() main.c:668, movement cases main.c:675-720). ESC is 27
 // (protocol.ts KC_ESCAPE). Enter is LF (0x0a): help.c:109 loops on '\n' and
 // help.c:57-59 gates the help index on '\n' or '\33'. Backspace (0x08) and
 // Tab (0x09) have no in-engine consumer — Larn edits no input strings —
@@ -19,7 +19,7 @@ describe("mapKey", () => {
   });
 
   it("maps uppercase letters to the uppercase byte with the shift/run mod", () => {
-    // Spike §7: uppercase = run. A real browser sets key="H" AND shiftKey
+    // Uppercase = run. A real browser sets key="H" AND shiftKey
     // together for Shift+h; the byte already carries the case, mods carries
     // shift so the worker can treat it as a run.
     expect(mapKey({ key: "H", shiftKey: true })).toEqual({ code: 0x48, mods: KC_MOD_SHIFT });

@@ -1,4 +1,4 @@
-// The Look HUD's wiring (spec 2026-08-18). The DOM stub records listeners and
+// The Look HUD's wiring. The DOM stub records listeners and
 // replays them, the same shape command-menu-ui.test.ts uses: every assertion
 // here is about what happens when a listener fires.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

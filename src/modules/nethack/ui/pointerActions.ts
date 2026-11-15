@@ -167,7 +167,7 @@ export function heroActions(under: Cell | null): HeroCommand[] {
  * NetHack revision): the detection mechanism for auto-opening the stand-on
  * menu. Deliberately narrow — feature announcements ("There is a staircase
  * up here.") do not auto-open, and the blind "You feel here" variant is out
- * of scope (spec). String-matching is safe to pin against because
+ * of scope. String-matching is safe to pin against because
  * build-nethack-wasm.sh refuses any other NetHack release; this function's tests are
  * the tripwire if the pin ever moves.
  */

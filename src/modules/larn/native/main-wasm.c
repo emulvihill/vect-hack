@@ -12,8 +12,7 @@
  * first-pass shape, mirroring Angband) leaves those symbols undefined; the
  * rename is the own-main() flavour that keeps the engine whole.
  *
- * Terminal interception: Route A from the spike (docs/specs/
- * larn-spike.md §6). Compiled without -DVT100, so the active output path is
+ * Terminal interception. Compiled without -DVT100, so the active output path is
  * the termcap/terminfo semantic-byte path — the engine writes semantic
  * bytes (ST_START/ST_END/BOLD/END_BOLD/CLEAR/CL_LINE/CL_DOWN/CURSOR, defined
  * in external/larn/header.h:409-416) into the global lpbuf (data.c:117), and
@@ -36,7 +35,7 @@
  * blocking read.
  *
  * The JS side of every EM_*JS block is globalThis.VectLarn, installed by
- * src/modules/larn/worker.ts (browser, Task 7) or a node smoke check before
+ * src/modules/larn/worker.ts (browser) or a node smoke check before
  * the module is instantiated.
  *
  * This work ports Larn, copyrighted by Noah Morgan as recorded in
@@ -201,7 +200,7 @@ __wrap_usleep(useconds_t usec)
 /* ---- Terminal attribute -> RGB ----
  * The semantic-byte path carries no per-character colour, only the three
  * Larn term attributes: normal, standout (inverse video) and bold. We map
- * each to one 0xRRGGBB so the tty-text view (Task 9) has something to render
+ * each to one 0xRRGGBB so the tty-text view has something to render
  * before the phase-2 classifier assigns monster/item colours. The values are
  * placeholders; the skin owns the real palette (src/skins/). */
 #define RGB_NORMAL   0xCCCCCC
@@ -638,7 +637,7 @@ larn_map_info(int x, int y, int include_hero, int32_t *out)
 	}
 }
 
-/* Look HUD (spec 2026-08-18). Larn has no look command, so this follows Larn's
+/* Look HUD. Larn has no look command, so this follows Larn's
  * own step-on wording (object.c's lookforobject) and the visibility rules the
  * map draw itself uses — the same monstnamelist/objnamelist space test
  * larn_map_info applies, so nothing is named that the map does not already
@@ -1652,7 +1651,7 @@ __wrap_exit(int status)
  * readnum) link; this main() is the entry emscripten calls.
  *
  * The writable paths (HOME=/lib/home, scores=/lib/scores) are seeded by
- * mountLarnStorage (src/modules/larn/persist.ts, Task 5) before main runs;
+ * mountLarnStorage (src/modules/larn/persist.ts) before main runs;
  * the read-only data (larn.help, larnmaze) is staged under /lib by
  * build-larn-wasm.sh's --preload-file lib@/lib. The _PATH_* overrides in
  * larn-wasm.mk point config.c's logfile/scorefile/playerids/larnlevels/

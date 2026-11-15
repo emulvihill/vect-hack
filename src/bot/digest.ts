@@ -1,8 +1,7 @@
 // The run digest: the small public projection of one finished game, read
 // instead of the raw trajectory by scripts/test/test-larn-killer.mjs and
 // scripts/dev/larn-shaft-survival.mjs. It was designed as the input of the
-// reflect loop retired on 2026-11-03 (spec: docs/specs/2026-08-19-bot-phase1b-
-// larn-reflect-design.md, "The digest"). Game-free — each Module builds its
+// reflect loop retired on 2026-11-03. Game-free — each Module builds its
 // own from its trajectory and summary (Larn: src/modules/larn/bot/digest.ts).
 //
 // This shape is the enforceable boundary of the black-box rule, so every field
@@ -93,7 +92,7 @@ export interface TerrainStep {
  *  This is the narrow reading, and it was contested: an adversarial review
  *  argued that any native join is out of bounds however it is fenced, because
  *  the screen never drew the sentence "this glyph is the one the epitaph
- *  names" (docs/DECISIONS.md, 2026-08-21). The alternative on the table was to
+ *  names". The alternative on the table was to
  *  drop per-being threat claims outright.
  *
  *  null is the honest majority case, and every reader must treat it as "this

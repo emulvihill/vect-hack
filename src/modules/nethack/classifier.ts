@@ -2,9 +2,9 @@
 // Category comes from the glyph number (unambiguous); within the terrain
 // group, the Category comes from the tty character, because NetHack only
 // exports the coarse GLYPH_*_OFF boundaries and not per-symbol cmap
-// offsets. Moved out of the render layer's MapModel by the Backplane extraction
-// (docs/specs/2026-08-02-backplane-design.md); the
-// classification itself is pinned unchanged by nethack-classifier.test.ts.
+// offsets. Moved out of the render layer's MapModel by the Backplane
+// extraction; the classification itself is pinned unchanged by
+// nethack-classifier.test.ts.
 import type { Category, Cell } from "../../backplane/cell";
 import { CLR } from "../../backplane/colors";
 import type { GlyphCell } from "./protocol";

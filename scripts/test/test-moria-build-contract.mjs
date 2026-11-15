@@ -112,7 +112,7 @@ const packageJson = JSON.parse(readFileSync(`${ROOT}/package.json`, "utf8"));
 assert.equal(packageJson.scripts["build:moria"], "scripts/build/build-moria-wasm.sh",
   "package.json build:moria does not invoke the guarded build");
 assert.equal(packageJson.scripts["test:moria-boot"], "timeout 120 node scripts/test/test-moria-boot.mjs",
-  "package.json test:moria-boot does not invoke Task 3's real smoke test");
+  "package.json test:moria-boot does not invoke the real smoke test");
 assert.equal(packageJson.scripts["test:moria-play"], "timeout 120 node scripts/test/test-moria-play.mjs",
   "package.json test:moria-play does not invoke the bounded live-engine gate");
 assert.equal(packageJson.scripts["test:moria-checkpoint-native"],

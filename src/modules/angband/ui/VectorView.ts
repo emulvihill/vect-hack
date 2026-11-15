@@ -22,7 +22,7 @@ const COL_MAP = 13;
 export class VectorView implements AngbandHandler {
   readonly renderer: DungeonRenderer;
   private readonly radar: Radar;
-  /** Point-and-look (spec 2026-08-18). main.ts connects its describer. */
+  /** Point-and-look. main.ts connects its describer. */
   readonly look: LookHud;
   private readonly classifier = new AngbandClassifier();
   private readonly tty = new AngbandGrid();
@@ -41,7 +41,7 @@ export class VectorView implements AngbandHandler {
   private overlayActive = false;
   private pending = false;
   private commandInput = false;
-  /** Hit-inference bookkeeping (spec 2026-08-06): the last direction sent to
+  /** Hit-inference bookkeeping: the last direction sent to
    *  the engine and the last ranged-effect cell, both fed to inferAngbandHit. */
   private lastDir: Dir | null = null;
   private lastEffect: Point | null = null;

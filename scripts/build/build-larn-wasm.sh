@@ -10,8 +10,8 @@ MK="$ROOT/scripts/build/larn-wasm.mk"
 
 source "$ROOT/external/emsdk/emsdk_env.sh" >/dev/null
 
-# The vendored NetBSD Larn snapshot this client is built and tested against
-# (spike §2). external/larn is a vendored directory (not a submodule), so the
+# The vendored NetBSD Larn snapshot this client is built and tested against.
+# external/larn is a vendored directory (not a submodule), so the
 # pin is a sha256 of the engine source set rather than a git commit. File
 # ordering is explicitly C-locale so this guard has one digest on every host.
 # A mismatch is loud rather than subtle: the shim replicates upstream main()'s
@@ -24,10 +24,12 @@ source "$ROOT/external/emsdk/emsdk_env.sh" >/dev/null
 # .h or datfile has moved since the pin was written — that re-check is a no-op.
 # Moved again on 2026-10-22 for the same reason: README.vect-hack dropped a
 # pointer to a research doc removed before publication; nothing else changed.
-# Moved again on 2026-11-02: publication rewrote README.vect-hack's two
-# docs/superpowers/ paths to docs/specs/ and left this digest behind, so a
-# fresh clone of the public tree could not build Larn. Only that README moved.
-LARN_PIN="3201cabc9c79632ae02d2261fa0681d2876a5108e1dc82874029b3c5d707a58d"
+# Moved again on 2026-11-02: publication rewrote two doc paths in
+# README.vect-hack and left this digest behind, so a fresh clone of the public
+# tree could not build Larn. Only that README moved.
+# Moved again on 2026-11-15: README.vect-hack dropped its pointers to design
+# and decision documents that were removed; nothing else changed.
+LARN_PIN="2b2928d8191aa910ca89de341774e976bb30f53cb8a8fa02476d76ea47b5cbfc"
 pin="$(find "$LARN" -type f \( -name '*.c' -o -name '*.h' -o -name 'README' -o -name 'README.vect-hack' -o -name 'COPYRIGHT' -o -name 'Makefile' -o -path '*/datfiles/*' \) | LC_ALL=C sort | xargs cat | sha256sum | cut -d' ' -f1)"
 if [ "$pin" != "$LARN_PIN" ]; then
   echo "build-larn-wasm: external/larn source set is at $pin" >&2
@@ -48,7 +50,7 @@ if [ ! -f "$STAMP" ] || [ "$(cat "$STAMP")" != "$mk_sha" ]; then
   rm -f "$OUT"/*.o "$OUT"/larn.js "$OUT"/larn.wasm "$OUT"/larn.data
 fi
 
-# Stage the minimal lib/ VFS the engine opens at runtime (spike §10):
+# Stage the minimal lib/ VFS the engine opens at runtime:
 #   larn.help  on-line help text (? command, _PATH_HELP -> /lib/larn.help)
 #   larnmaze   pre-made dungeon level data (_PATH_LEVELS -> /lib/larnmaze)
 # Fortunes are inlined in fortune.c (no larn.ftn); the .larnopts sample is a

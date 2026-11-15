@@ -27,7 +27,7 @@ export class VectorView implements NethackHandler {
   private hud = new TextHud();
   readonly renderer: DungeonRenderer;
   private radar: Radar;
-  /** Point-and-look (spec 2026-08-18). main.ts connects its describer. */
+  /** Point-and-look. main.ts connects its describer. */
   readonly look: LookHud;
   private classifier = new NetHackClassifier();
   private started: Promise<void>;
@@ -36,7 +36,7 @@ export class VectorView implements NethackHandler {
   // (vect-hack-be3.5 declined one), so a fresh reload is the only time a
   // saved change would need to take effect anyway.
   private bindings = loadBindings();
-  /** Hit-inference bookkeeping (spec 2026-08-06): the direction of the
+  /** Hit-inference bookkeeping: the direction of the
    *  command in flight, the only thing that says which cell a "You hit the
    *  newt!" is about. Null whenever nothing aims it. */
   private lastDir: Dir | null = null;
@@ -99,7 +99,7 @@ export class VectorView implements NethackHandler {
     canvas.addEventListener("contextmenu", this.onContextMenu);
     // Stepping onto loot: the engine's own announcement is the source of
     // truth (a glyph stash goes stale exactly when items are dropped under
-    // the hero — spec 2026-07-30), and the menu it opens is passthrough so a
+    // the hero), and the menu it opens is passthrough so a
     // keyboard player never notices it.
     this.hud.onMessage = (text) => {
       if (itemHereMessage(text)) this.openHeroMenu(true);
@@ -208,7 +208,7 @@ export class VectorView implements NethackHandler {
         if (!this.renderer.map.hero) this.renderer.map.hero = { x: ev.x, y: ev.y };
         return;
       case "putstr":
-        // Hit flash (spec 2026-08-06): combat text is the only hit signal
+        // Hit flash: combat text is the only hit signal
         // NetHack's shim hands a view. Inferred before the hud consumes the
         // line — it still gets it, below.
         if (this.hud.isMessage(ev.win)) {
@@ -268,7 +268,7 @@ export class VectorView implements NethackHandler {
   }
 
   /** The hero's own cell has no single obvious verb, so both clicks open the
-   *  same stand-on menu (spec 2026-07-30). Auto-opened (passthrough) when the
+   *  same stand-on menu. Auto-opened (passthrough) when the
    *  engine announces loot underfoot; TextHud refuses a passthrough open
    *  while any menu, prompt or overlay is up, so this needs no guard here. */
   private openHeroMenu(passthrough: boolean): void {

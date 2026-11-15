@@ -1,8 +1,8 @@
 // Fixed Int32 word layout shared by Larn's native tap and classifier.
 //
-// The C mirror lives in src/modules/larn/native/main-wasm.c (Task 4), which
+// The C mirror lives in src/modules/larn/native/main-wasm.c, which
 // emits a packed Int32Array of GRID_STRIDE-word records into wasm memory for
-// the worker (Task 5) to hand the classifier (Task 2). The two must stay in
+// the worker to hand the classifier. The two must stay in
 // lockstep: every offset here is a `#define` mirror there, and the
 // TERRAIN_KIND index written into word 5 is an index into KIND_NAMES below.
 //
@@ -50,8 +50,8 @@ export const TOP = {
 } as const;
 
 // Stable index ordering for the TERRAIN_KIND word (GRID.TERRAIN_KIND). The C
-// shim's larn_map_info (Task 4) writes TERRAIN_KIND as an index INTO THIS
-// ARRAY; the classifier (Task 2) reads KIND_NAMES[idx] for the feature label.
+// shim's larn_map_info writes TERRAIN_KIND as an index INTO THIS
+// ARRAY; the classifier reads KIND_NAMES[idx] for the feature label.
 // Index 0 is the "none" slot — a floor or wall carries no feature kind.
 //
 // This is a vect-hack-chosen index ordering, NOT Larn's object-ID order:

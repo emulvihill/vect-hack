@@ -301,7 +301,7 @@ function showNotice(dom: RiskDocument, store: DismissalStore | null): void {
  *
  * This is why showSessionOnlySaves takes a store it must never write through:
  * "this path persists nothing" is a claim about a real store or it is not a
- * claim at all (docs/DECISIONS.md, vect-hack-azf).
+ * claim at all (vect-hack-azf).
  */
 function armDismiss(
   dom: RiskDocument,

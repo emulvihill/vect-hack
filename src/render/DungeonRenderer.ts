@@ -175,7 +175,7 @@ export class DungeonRenderer {
   /**
    * The cell the look ring is on, for scripts/dev/browser-check.mjs. A public
    * accessor rather than a reach into the private: an assertion that cannot
-   * fail is worse than no assertion (docs/DECISIONS.md, vect-hack-azf).
+   * fail is worse than no assertion (vect-hack-azf).
    */
   get highlightedCell(): { x: number; y: number } | null {
     return this.highlight;
@@ -208,7 +208,7 @@ export class DungeonRenderer {
     if (h) this.cam.follow(h.x, h.y);
   }
 
-  /** A Module inferred a hit at a map cell: pulse it red (spec 2026-08-06). */
+  /** A Module inferred a hit at a map cell: pulse it red. */
   hitFlash(x: number, y: number): void {
     this.fx.hit(x, y);
   }
@@ -224,7 +224,7 @@ export class DungeonRenderer {
     this.fx.effect(x, y, cell);
   }
 
-  /** Ring the cell the pointer is naming, or clear it (spec 2026-08-18). The
+  /** Ring the cell the pointer is naming, or clear it. The
    *  copy is deliberate: the caller's cell object is one it keeps mutating. */
   setHighlight(cell: { x: number; y: number } | null): void {
     this.highlight = cell && { x: cell.x, y: cell.y };

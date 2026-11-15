@@ -184,7 +184,7 @@ async function bootNethack(params: URLSearchParams): Promise<void> {
     ? new (await import("./modules/nethack/bot/BotPlayer")).BotPlayer(view, botDelayMs(bot))
     : view;
   const session = new NetHackSession(player);
-  // Point-and-look (spec 2026-08-18): the one line per Module that
+  // Point-and-look: the one line per Module that
   // connects the shared HUD to this Module's engine. Only the vector view
   // has a canvas and a look — the discriminant rather than a structural cast,
   // so renaming the field is a type error here instead of a HUD that
@@ -227,7 +227,7 @@ async function bootAngband(params: URLSearchParams): Promise<void> {
   // unthrottled. Sent even for 0: borg.txt persists, so the last run's
   // pace would otherwise carry over (src/modules/angband/borgConfig.ts).
   if (borg !== null) session.setBorgDelay(/^\d+$/.test(borg) ? Number(borg) : 0);
-  // Point-and-look (spec 2026-08-18): the one line per Module that
+  // Point-and-look: the one line per Module that
   // connects the shared HUD to this Module's engine. Only the vector view
   // has a canvas and a look — the discriminant rather than a structural cast,
   // so renaming the field is a type error here instead of a HUD that
@@ -261,7 +261,7 @@ async function bootLarn(params: URLSearchParams): Promise<void> {
     : view;
   const session = new LarnSession(player);
   window.__larnSession = session;
-  // Point-and-look (spec 2026-08-18): the one line per Module that
+  // Point-and-look: the one line per Module that
   // connects the shared HUD to this Module's engine. Only the vector view
   // has a canvas and a look — the discriminant rather than a structural cast,
   // so renaming the field is a type error here instead of a HUD that
@@ -286,7 +286,7 @@ async function bootMoria(_params: URLSearchParams): Promise<void> {
   window.__moriaView = view;
   const session = new MoriaSession(view);
   window.__moriaSession = session;
-  // Point-and-look (spec 2026-08-18): the one line per Module that
+  // Point-and-look: the one line per Module that
   // connects the shared HUD to this Module's engine. Only the vector view
   // has a canvas and a look — the discriminant rather than a structural cast,
   // so renaming the field is a type error here instead of a HUD that

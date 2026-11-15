@@ -669,10 +669,10 @@ async function drive(page, game, label, arm) {
     return (r.frames - f0) / ((performance.now() - t0) / 1000);
   }, [game.view, FPS_SAMPLE_MS]);
 
-  // Look HUD (spec 2026-08-18): hover the hero and require both halves — the
+  // Look HUD: hover the hero and require both halves — the
   // renderer's ring on that cell, and a label with the engine's word for it.
   // Read through the public accessor, never a private: an assertion that
-  // cannot fail is worse than no assertion (docs/DECISIONS.md, vect-hack-azf).
+  // cannot fail is worse than no assertion (vect-hack-azf).
   const box = await page.locator("#view").boundingBox();
   const heroPoint = await page.evaluate((view) => {
     const r = window[view].renderer;

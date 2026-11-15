@@ -1,6 +1,5 @@
 // Naming one map cell: the page asks, the Module's worker answers from a
-// read-only native query that uses the engine's own naming code (spec
-// docs/specs/2026-08-18-look-hud-design.md).
+// read-only native query that uses the engine's own naming code.
 //
 // Modelled on saveExport.ts — a page->worker round trip with a reply table —
 // with one difference that comes from the caller: a hover fires constantly, so

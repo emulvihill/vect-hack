@@ -113,7 +113,7 @@ fi
 mkdir -p "$ROOT/public/modules/angband"
 cp -f "$OUT/angband.js" "$OUT/angband.wasm" "$OUT/angband.data" "$ROOT/public/modules/angband/"
 
-# vect_angband_describe (Look HUD, spec 2026-08-18) is EMSCRIPTEN_KEEPALIVE
+# vect_angband_describe (Look HUD) is EMSCRIPTEN_KEEPALIVE
 # with no EXPORTED_FUNCTIONS list to add it to — the only proof it shipped is
 # grepping for it in the artifact.
 if ! grep -q "vect_angband_describe" "$ROOT/public/modules/angband/angband.js"; then

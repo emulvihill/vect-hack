@@ -86,8 +86,7 @@ let enginePresent = false;
  * The engine's own name for a map cell, or null when there is nothing honest
  * to say.
  *
- * Not read-only in the strict sense, and the spec says so (the amended
- * read-only bullet, docs/specs/2026-08-18-look-hud-design.md):
+ * Not read-only in the strict sense:
  * do_screen_description makes no windowport call on its normal path, but its
  * didlook: tail can construct a temporary object for a remembered glyph that
  * has gone — which costs rnd(2) on the *game* RNG and bumps svc.context.ident

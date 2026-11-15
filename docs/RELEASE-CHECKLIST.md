@@ -193,8 +193,15 @@ Every one of these should tell a non-technical visitor what happened:
 
 ## 5. Version and tag
 
-The tag is the version; nothing in the tree is edited to cut a release
-(`docs/decisions/2026-11-11-version-is-the-tag.md`). On GitHub: Releases →
+The tag is the version; nothing in the tree is edited to cut a release.
+`package.json` stays at `0.0.0` on purpose and `CHANGELOG.md` is frozen at
+0.2.1: a bump in the tree does not survive a squash-merge, because `npm
+version` commits and tags on the branch, the squash discards that commit, and
+the tag has to be made by hand afterwards anyway. The build takes the version
+from `git describe --tags --match 'v[0-9]*'`; a GitHub source zip has no
+`.git`, so `scripts/build/VERSION` carries the same description through
+`export-subst`, and a build that sees neither says `unversioned`
+(`builtVersion` in `scripts/build/stage-licenses.mjs`). On GitHub: Releases →
 Draft a new release → a new tag `vX.Y.Z` on `main` → Generate release notes →
 Publish. The notes list every PR merged since the last tag, and one release
 may carry several. Pick the bump from them: a fix only is a patch, anything a

@@ -1,4 +1,4 @@
-// The hit flash (spec 2026-08-06): a victim's letterform pulses red on the
+// The hit flash: a victim's letterform pulses red on the
 // same envelope physics as the effect glow. Physics + color here; the
 // per-Module inference is pinned by its own tests.
 import { describe, expect, it } from "vitest";

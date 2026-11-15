@@ -162,7 +162,7 @@ async function readVolume() {
   // this volume's own export, so without this the volume and the blob's
   // payload are byte-identical and an applied foreign blob would leave exactly
   // the bytes a refusal leaves — a refusal no assertion could distinguish
-  // from an acceptance (docs/DECISIONS.md, vect-hack-azf).
+  // from an acceptance (vect-hack-azf).
   s.FS.writeFile("/record", SCORE + SENTINEL);
   await s.close();
 }

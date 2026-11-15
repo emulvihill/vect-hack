@@ -87,7 +87,7 @@ const DESCRIBE_BUFSZ = 256;
  * No windowport call on the normal path: the curs(), flush_screen() and
  * pline() live in its caller auto_describe(). That is what makes it callable
  * from a worker message handler while the engine sits Asyncify-suspended at
- * an input request (spec 2026-08-18, spike-verified). One defensive branch
+ * an input request. One defensive branch
  * escapes that — look_at_monster() can reach impossible(), which prints — so
  * the worker makes the call under the checkpointer's non-unwinding bridge
  * swap; see describeCell() in worker.ts.
@@ -99,8 +99,7 @@ const DESCRIBE_BUFSZ = 256;
  * saved state (mkobj.c:521) — and lookat() sets t->tseen on a trap it names.
  * That cost is accepted, not worked around: NetHack's own autodescribe cursor
  * (auto_describe(), getpos.c:640) calls this same function once per cell it
- * is walked across, which is the rate a hover asks at. See the amended
- * read-only bullet in docs/specs/2026-08-18-look-hud-design.md.
+ * is walked across, which is the rate a hover asks at.
  *
  * `coord` is two coordxy — int16_t (include/global.h) — so 4 bytes; clang's
  * wasm32 ABI passes that by-value struct as a pointer to a temp, which is why

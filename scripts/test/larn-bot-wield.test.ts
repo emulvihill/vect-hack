@@ -1,5 +1,4 @@
-// The wield probe (vect-hack-h9x.6, spec
-// docs/specs/2026-08-28-larn-wield-by-measurement.md).
+// The wield probe (vect-hack-h9x.6).
 //
 // The bot carries no weapon table. It wields a thing, reads the weapon class
 // Larn prints on the bottom line, and keeps whichever measured highest — so
@@ -16,8 +15,7 @@ import { LARN_COLS, LARN_ROWS } from "../../src/modules/larn/classifier";
 import { ITEM_CLASS, SLOT, SLOT_STRIDE, STATUS, STATUS_HEADER } from "../../src/modules/larn/statusRecords";
 
 /** The shipped tuning with the probe ENABLED. The shipped default is 0 — the
- *  probe failed its pre-registered bar and does not ship
- *  (docs/reports/2026-08-28-larn-wield-by-measurement.md) — so a
+ *  probe failed its pre-registered bar and does not ship — so a
  *  suite about the mechanism has to turn it on itself. Asserting against the
  *  shipped knob would be vect-hack-b5f.25's mistake: a suite that goes red the
  *  day somebody changes a policy decision it was never about. */

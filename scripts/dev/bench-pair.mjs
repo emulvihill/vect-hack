@@ -1,6 +1,5 @@
-// The paired per-seed diagnostic the bench spec requires beside every Phase 2
-// co-primary (docs/specs/2026-08-28-larn-bench-design.md, the
-// same-day amendment).
+// The paired per-seed diagnostic the bench requires beside every Phase 2
+// co-primary.
 //
 // WHY IT EXISTS. The bench's co-primary is a median of a small integer —
 // dungeon depth runs 0..6 — and over 500 games that is a coarse reading: a

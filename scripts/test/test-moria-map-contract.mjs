@@ -251,7 +251,7 @@ const module = await createMoriaModule({
       assert.ok(sourceMessages.some((message) => /dropped/i.test(message)),
         "live source drop command emitted no semantic source message");
 
-      // Look HUD (spec 2026-08-18): a read-only query through the sanitized
+      // Look HUD: a read-only query through the sanitized
       // native seam, made while the source is parked on this very input.
       const describe = (x, y) =>
         module.ccall("moria_describe", "string", ["number", "number"], [x, y]);

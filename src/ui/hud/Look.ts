@@ -1,5 +1,5 @@
 // Point-and-look: the engine's own name for whatever the pointer is over,
-// beside the pointer (spec docs/specs/2026-08-18-look-hud-design.md).
+// beside the pointer.
 //
 // Game-free, like the radar beside it: it picks a cell with the renderer's own
 // pickCell() — which already works in both cameras — rings it, and asks

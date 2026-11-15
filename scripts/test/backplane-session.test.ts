@@ -1,6 +1,6 @@
 // EngineSession: the shared worker-session mechanism, tested over a fake
 // worker and a toy message vocabulary. The two intended behavioral deltas of
-// the Backplane extraction live here and ONLY here (backplane design):
+// the Backplane extraction live here and ONLY here:
 //   vect-hack-1g5 — an engine fatal becomes an on-screen notice.
 //   vect-hack-c1w — a throwing dispatch posts the delegate's cancel-shaped
 //                   fallback instead of stranding the Asyncify-suspended
@@ -56,7 +56,7 @@ function harness(opts: { noticeThrows?: boolean } = {}) {
   // need this rather than `worker.posted`: the toy delegate answers an
   // unknown type with null, so a Backplane reply that leaked through to
   // dispatch() would post nothing either and an empty `posted` would prove
-  // nothing (docs/DECISIONS.md, vect-hack-azf).
+  // nothing (vect-hack-azf).
   const dispatched: ToyIn[] = [];
   const delegate: SessionDelegate<ToyIn, ToyOut> = {
     onNotice: (text) => {
@@ -366,7 +366,7 @@ describe("volume registry", () => {
   });
 });
 
-describe("NetHack fallback table (cancel-shaped, per the backplane design)", () => {
+describe("NetHack fallback table (cancel-shaped)", () => {
   it("ESC for the key waits", () => {
     expect(fallbackValue({ name: "nhgetch" })).toBe(27);
     expect(fallbackValue({ name: "nh_poskey" })).toBe(27);
@@ -494,7 +494,7 @@ describe("NetHack delegate", () => {
   });
 });
 
-describe("Angband fallback table (cancel-shaped, per the backplane design)", () => {
+describe("Angband fallback table (cancel-shaped)", () => {
   it("ESC for a stranded blocking key wait", () => {
     expect(angbandFallback({ type: "getKey", id: 7, wait: true, cmd: true }))
       .toEqual({ type: "key", id: 7, code: KC_ESCAPE, mods: 0 });
@@ -595,8 +595,7 @@ describe("Angband delegate", () => {
   });
 
   it("words an engine death around the engine's own diagnostic", () => {
-    // No checkpoint promise yet, unlike NetHack's wording: clean saves are
-    // durable now, but Task 8 owns safe mid-game checkpoints.
+    // No checkpoint promise, unlike NetHack's wording.
     const { delegate } = harness();
     expect(delegate.fatalNotice("Cannot create '/lib/save'"))
       .toBe("The Angband engine died — Cannot create '/lib/save'. Reload the page to restart.");

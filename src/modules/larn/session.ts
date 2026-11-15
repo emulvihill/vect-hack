@@ -28,7 +28,7 @@ export interface LarnHandler {
 
 /**
  * The reply that unwedges the Asyncify-suspended engine when the view throws
- * mid-call (the backplane design's fallback table). getKey is the only
+ * mid-call (Larn's fallback table). getKey is the only
  * message that owes one — the worker parks a resolver for each
  * (src/modules/larn/worker.ts) — and its shape follows `wait`:
  *

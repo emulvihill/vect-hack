@@ -27,10 +27,9 @@ dropped here, pristine.
 
 ## Why this and not HunterZ/larn
 
-The design spec (`docs/specs/2026-08-06-larn-module-design.md`
-§ Source pinning) listed three candidates. The spike (Task 1) evaluated all
-three on two axes — *compiles under Emscripten with cflags-only (no source
-patches)* and *cleanest terminal interception surface*:
+Three candidates were evaluated on two axes — *compiles under Emscripten
+with cflags-only (no source patches)* and *cleanest terminal interception
+surface*:
 
 - HunterZ/larn 12.3 (`00d60428284f`) — K&R-era C with ~30 `static declaration
   follows non-static` conflicts (forward decls missing `static`) and bare
@@ -47,17 +46,15 @@ patches)* and *cleanest terminal interception surface*:
   CURSOR / BOLD / END_BOLD) is the same semantic-grid surface the design
   preferred from 12.3 — no JS ANSI parser needed.
 
-Per the design's pick rule ("If every candidate needs source patches, vendor
-the NetBSD-modernized snapshot"), this is the chosen source. See
-`docs/specs/larn-spike.md` for the full surface contract and
-`docs/DECISIONS.md` (2026-08-06) for the decision record.
+The pick rule was "if every candidate needs source patches, vendor the
+NetBSD-modernized snapshot", so this is the chosen source.
 
 ## Pristine-source invariant
 
 This tree is **never patched** — same rule as `external/NetHack` and
 `external/angband`. All C compatibility lives in our tree
 (`src/modules/larn/native/compat/`, reached via `-I` and `-include` in
-`scripts/build/larn-wasm.mk`) and in `src/modules/larn/native/main-wasm.c`
-(Task 6), both of which are ours. Do not edit files in this directory; if a
+`scripts/build/larn-wasm.mk`) and in `src/modules/larn/native/main-wasm.c`,
+both of which are ours. Do not edit files in this directory; if a
 new NetBSD revision is vendored, re-fetch the whole directory from the
 mirror.

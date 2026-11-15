@@ -46,7 +46,7 @@ depending on scene size; the floor is 0.5. Both glow shots are frozen stills dra
 phosphor trail, so the pair differs by the bloom stack and nothing else — its ghost
 of every moving glyph reads as halo the beam stack never drew. It drives only
 `DungeonRenderer`'s diagnostics accessors, never a private: an assertion that
-cannot fail is worse than no assertion (docs/DECISIONS.md, vect-hack-azf).
+cannot fail is worse than no assertion (vect-hack-azf).
 
 ### The two degrade arms
 
@@ -303,15 +303,19 @@ included all four, and it passed its own acceptance test.
 The measured win was 5.7%, not the large fraction l11's description implied:
 all four Modules' JavaScript together is 84.5 kB against 839.6 kB of shared
 `three/webgpu` and render layer, so the 918 kB bundle was never mostly other
-games (`docs/reports/2026-08-26-per-game-payload.md`). The remaining 840 kB
+games. The remaining 840 kB
 is `WebGPURenderer` itself, both backends statically imported, and it does not
-trim without leaving `three/webgpu`; the line stack adds ~5 kB gzip on top. On
-the wire it is ~180 kB brotli. The "transferred" column is what `vite preview`
+trim without leaving `three/webgpu`; the line stack adds ~5 kB gzip on top, and
+`?gl` shares all of it, because the backend is chosen at run time. The one
+lever measured (three 0.185.1) was the classic `WebGLRenderer` with the addons
+line material: 68 kB gzip smaller, and declined, because it takes WebGPU out
+of the product. On the wire the chunk is ~180 kB brotli. The "transferred"
+column is what `vite preview`
 sent, which is gzip, and only the page's own fetches: a worker's requests sit
 on the worker's timeline, so the worker chunk and the engine glue go uncounted.
 The `gzip` and `brotli` columns beside it compress the built file behind every
 recorded request, page and worker alike, because CloudFront serves brotli
-(vect-hack-8gd7.1; `docs/reports/2026-11-02-three-webgpu-attribution-correction.md`).
+(vect-hack-8gd7.1).
 A request with no built file behind it — the engine glue wherever the engines
 were never built, CI included — adds nothing to either column and is listed as
 `not-built` instead.

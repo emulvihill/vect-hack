@@ -40,7 +40,7 @@ async function tab() {
  * mount — the only vantage point from which one tab can see another's damage.
  * A tab's MEMFS lives in its own Emscripten heap and no other module instance
  * can reach it, so reading tab A's memory to find out what tab B did is an
- * assertion no behaviour could falsify (docs/DECISIONS.md, vect-hack-azf).
+ * assertion no behaviour could falsify (vect-hack-azf).
  *
  * Mirrors editVolume() in test-nethack-autosave.mjs, minus the write-back:
  * this one only populates, so inspecting the volume can never repair it.

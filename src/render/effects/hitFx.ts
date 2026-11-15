@@ -1,7 +1,7 @@
-// Hit flash (spec 2026-08-06): a victim's letterform lerps toward the skin's
+// Hit flash: a victim's letterform lerps toward the skin's
 // red and pops brighter, on the same envelope physics as the effect glow
 // (signal.ts) — an adapter over EnergyField, not new physics. Constants live
-// here, not in the vendored token file (see the spec's constraints).
+// here, not in the vendored token file.
 import { Color } from "three/webgpu";
 import { CLR } from "../../backplane/colors";
 import { clr } from "../palette";

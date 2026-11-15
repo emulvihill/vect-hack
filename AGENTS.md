@@ -36,8 +36,7 @@ the file for an area before changing anything in it.**
 - `docs/BOT.md` — the Larn bot, the gym, and the frozen bench. **No readiness
   bar can seal a level.** The bot learns nothing: its knobs are hand-tuned
   constants (`DEFAULT_TUNING` in `src/modules/larn/bot/policy.ts`), and the
-  LLM learning apparatus is retired
-  (`docs/decisions/2026-11-03-retire-bot-learning.md`).
+  LLM learning apparatus is retired.
   **Report `npm run bench:larn` beside `scripts/dev/bench-pair.mjs`, always.**
   `policy-sweep.mjs` refuses `--set held-out`.
 - `docs/SAVES.md` — F3, F4, the reset row, session-only tabs, checkpoints and
@@ -51,11 +50,11 @@ the file for an area before changing anything in it.**
   game. A URL without `?touch` builds none of the touch scheme. The Look HUD
   sends the engine nothing, and an ambiguous hit draws nothing rather than a
   guessed pulse. Larn has no `hitInference.ts` and never flashes.
-- `docs/decisions/` (one file per decision; `docs/DECISIONS.md` is the frozen
-  log before 2026-10-22), `docs/RELEASE-CHECKLIST.md`,
-  `LICENSING.md`, `src/backplane/CONTEXT.md`. `docs/specs/` holds the dated
-  design documents and `docs/reports/` the measured runs that `docs/BOT.md`
-  and `docs/GATES.md` cite; both are **frozen history**: add, never rewrite.
+- `docs/RELEASE-CHECKLIST.md`, `LICENSING.md`, `CONTEXT.md` (the glossary).
+  **There is no decision log and no folder of decision, design or report
+  files**: a decision, a design or a measured result is written into the doc
+  for its area above, as a statement about the system with its reason, and
+  only what a future change needs.
 
 ## Build, test, and run
 

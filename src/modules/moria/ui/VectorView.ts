@@ -32,7 +32,7 @@ const SIDEBAR_ROWS = 22;
 export class VectorView implements MoriaHandler {
   readonly renderer: DungeonRenderer;
   private readonly radar: Radar;
-  /** Point-and-look (spec 2026-08-18). main.ts connects its describer. */
+  /** Point-and-look. main.ts connects its describer. */
   readonly look: LookHud;
   private readonly classifier = new MoriaClassifier();
   private readonly tty = new MoriaGrid();

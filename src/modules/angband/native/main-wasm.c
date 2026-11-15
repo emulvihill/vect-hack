@@ -481,7 +481,7 @@ static void pack_grid(int32_t *out, int x, int y)
 	out[GRID_TRAP_KIND] = trap_kind;
 }
 
-/* Look HUD (spec 2026-08-18, amended after review): the engine's own name for
+/* Look HUD: the engine's own name for
  * one grid, composed from exactly the calls the `l` command's
  * aux_monster/aux_trap/aux_object/aux_terrain use — and none of their side
  * effects. aux_monster also calls monster_race_track(), health_track() and

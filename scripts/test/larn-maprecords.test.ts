@@ -1,6 +1,6 @@
 // The Int32 record-word layout shared between the Larn native tap
-// (src/modules/larn/native/main-wasm.c, Task 4) and the TS classifier
-// (Task 2). Pins the stride, field offsets, the terrain + top category
+// (src/modules/larn/native/main-wasm.c) and the TS classifier.
+// Pins the stride, field offsets, the terrain + top category
 // enums, and the WHOLE positional KIND_NAMES table.
 //
 // KIND_NAMES is positional and hand-mirrored by `#define KIND_*` in

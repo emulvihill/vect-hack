@@ -1,6 +1,6 @@
 # Vect platform — ubiquitous language
 
-Glossary only. No implementation details. See `docs/DECISIONS.md` for decisions.
+Glossary only. No implementation details.
 
 ## Terms
 
@@ -11,9 +11,10 @@ together. There is exactly one App; nothing of Eric's ships separately from it.
 **Engine Build** — the built WASM bytecode of one game engine, produced from
 an Engine Repo. The only artifact the App loads that is not compiled into it.
 
-**Engine Repo** — a repository that is fully GPL-clean: upstream engine source
-plus at most a minimal stub, sufficient for anyone to reproduce its Engine
-Build exactly. Not Eric's code (beyond the stub).
+**Engine Repo** — the upstream engine source an Engine Build compiles from,
+pinned under `external/` (a submodule, or a vendored snapshot) and never
+patched, so anyone can reproduce the Engine Build from it. The front end that
+adapts it to a browser worker is not part of it; that belongs to the Module.
 
 **Module** — the per-game integration unit inside the App: the game's
 Classifier, input map, and glue, conforming to the Backplane. The
@@ -39,3 +40,8 @@ Kind acceptably from its Category plus hints.
 
 **Classifier** — the per-game code that maps engine output (glyphs/feature
 ids) onto Cells. Part of the App.
+
+**Volume** — one Module's persistent storage: a filesystem kept in IndexedDB,
+mounted at `/vect-<module>`, written by at most one tab at a time. The
+Backplane's persistence namespace is the set of Volumes, and an exported save
+is one whole Volume.

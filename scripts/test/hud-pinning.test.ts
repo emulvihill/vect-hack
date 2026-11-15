@@ -1,11 +1,10 @@
-// Pre-move pinning tests for the Backplane extraction (backplane design,
-// "Testing gaps"): the two major TextHud paths that had no coverage before
-// the code moves. Characterization, not TDD — these pass against today's
+// Pre-move pinning tests for the Backplane extraction: the two major TextHud
+// paths that had no coverage before the code moved. Characterization, not TDD — these pass against today's
 // behavior and must stay green through every wave.
 //
 // 1. getlin (vect-hack-1vf): submit and cancel through the #linein input.
-//    Task 8's fallback table redesigns this reply path (a cancelled getlin
-//    becomes the fallback's null), so the happy path is pinned first.
+//    The session's fallback table owns the cancel shape (a cancelled getlin
+//    is the fallback's null), so the happy path is pinned here.
 // 2. One representative status-line frame: STATUS_FMT assembly, decodeMixed's
 //    \GXXXXNNNN -> "$" fold, and the blank-field skip.
 import { describe, expect, it } from "vitest";

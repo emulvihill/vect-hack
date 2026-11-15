@@ -71,8 +71,7 @@ export class LarnBotModel {
    *  straight to internal 11 (create.c:396-410), bypassing the dungeon
    *  entirely, so a rider who dies on command 19 posts `maxDepth` 11 and a
    *  hero who fought down five staircases posts 5. Pooling them produced the
-   *  batch median of 5 that describes neither population
-   *  (docs/specs/2026-08-28-larn-bench-design.md). Internal 0-10
+   *  batch median of 5 that describes neither population. Internal 0-10
    *  is the dungeon chain, 11-13 is V1-V3. */
   maxDungeonDepth = 0;
   maxVolcanoDepth = 0;

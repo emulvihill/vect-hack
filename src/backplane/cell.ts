@@ -1,6 +1,5 @@
 // The Backplane's semantic grid: one Cell per tile, presented by a Module's
-// Classifier to the shared renderer/radar layer. Vocabulary per CONTEXT.md;
-// design: docs/specs/2026-08-02-backplane-design.md.
+// Classifier to the shared renderer/radar layer. Vocabulary per CONTEXT.md.
 //
 // Grid mechanics (bounds, hero stash, cursor, terrain revision) moved verbatim
 // out of the render layer's MapModel, since deleted — they were already

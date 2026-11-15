@@ -28,7 +28,7 @@ export interface AngbandHandler {
 
 /**
  * The reply that unwedges the Asyncify-suspended engine when the view throws
- * mid-call (the backplane design's Angband fallback table). getKey is the
+ * mid-call (Angband's fallback table). getKey is the
  * only message that owes one — the worker parks a resolver for each
  * (src/modules/angband/worker.ts) — and its shape follows `wait`:
  *

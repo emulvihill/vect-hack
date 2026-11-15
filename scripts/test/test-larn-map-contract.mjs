@@ -117,7 +117,7 @@ const session = await bootLarn({
       if (!hero) fail("redrawn Larn map has no semantic hero");
       const x = hero[GRID.X];
       const y = hero[GRID.Y];
-      // Look HUD (spec 2026-08-18): a read-only native query. The hero's own
+      // Look HUD: a read-only native query. The hero's own
       // cell answers, an out-of-range cell does not, and a cell the map has
       // actually drawn as empty floor is named "floor".
       const describe = (dx, dy) =>
@@ -188,7 +188,7 @@ const session = await bootLarn({
     }
 
     if (phase === "verify-move") {
-      // Look HUD (spec 2026-08-18): the map tap deliberately withholds live
+      // Look HUD: the map tap deliberately withholds live
       // item/mitem/know state while blind (see the dirty guard); the vacated
       // cell must go equally quiet, or the describer becomes a
       // blindness-defeating radar.

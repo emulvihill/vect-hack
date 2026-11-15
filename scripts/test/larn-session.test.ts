@@ -1,5 +1,5 @@
 // The Larn Module's half of the EngineSession contract: the fallback table
-// (cancel-shaped, per the backplane design) and the delegate. Reached through
+// (cancel-shaped) and the delegate. Reached through
 // makeDelegate()/larnFallback because LarnSession's constructor spawns a real
 // Worker, which node has no business doing here — the mechanism half lives in
 // scripts/test/backplane-session.test.ts.
@@ -8,7 +8,7 @@ import { LarnSession, larnFallback, makeDelegate } from "../../src/modules/larn/
 import type { LarnEvent, LarnMainToWorker, LarnWorkerToMain } from "../../src/modules/larn/protocol";
 import { KC_ESCAPE } from "../../src/modules/larn/protocol";
 
-describe("Larn fallback table (cancel-shaped, per the backplane design)", () => {
+describe("Larn fallback table (cancel-shaped)", () => {
   it("ESC for a stranded blocking key wait", () => {
     expect(larnFallback({ type: "getKey", id: 7, wait: true, cmd: false }))
       .toEqual({ type: "key", id: 7, code: KC_ESCAPE, mods: 0 });

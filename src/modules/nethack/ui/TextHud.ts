@@ -148,8 +148,8 @@ export class TextHud implements NethackHandler {
   onMessage: ((text: string) => void) | null = null;
 
   /**
-   * Observer of every key code the engine reads (spec 2026-08-06: the
-   * hit-flash inference tracks the last direction sent). Fires from readKey,
+   * Observer of every key code the engine reads (the hit-flash inference
+   * tracks the last direction sent). Fires from readKey,
    * the queue's sole consumer, so every key typed or clicked into it —
    * keyboard, yn chip, pointer/menu sendKeys alike — is seen exactly once,
    * and a code that never reached the engine can never aim a pulse.
@@ -462,7 +462,7 @@ export class TextHud implements NethackHandler {
     // wait=true never resolves null, but the waiter's type admits it and a
     // `!` would erase at compile time — a null reaching here would flow on as
     // the engine's reply value, and a null in a scalar C return slot kills it
-    // (fallbackValue's header, ../../core/session.ts). Throw instead: that
+    // (fallbackValue's header, ../session.ts). Throw instead: that
     // lands in EngineSession's catch, which answers ESC for a key wait.
     const k = await this.keys.next(true);
     // Since dispose(), null on a blocking read is expected rather than a

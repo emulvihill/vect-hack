@@ -1,6 +1,6 @@
 // Typed protocol between the Angband engine worker and the main thread —
 // the src/modules/nethack/protocol.ts mold applied to the Angband Module (spike phase of
-// vect-hack-3vk; design: docs/specs/2026-08-02-vect-platform-design.md).
+// vect-hack-3vk).
 //
 // Display events are one-way worker->main: Angband's term hooks draw and
 // never wait for the UI. The single blocking request/reply is the key wait

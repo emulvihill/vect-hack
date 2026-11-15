@@ -3,7 +3,8 @@
 // while every file on the chain uses relative imports with a .ts extension
 // and erasable-only TypeScript (no parameter properties, no enum). This
 // test is the guard: an extensionless import anywhere in the chain fails
-// here, not in the gym at 2am. Task 6 points it at LarnBotPlayer.ts.
+// here, not in the gym at 2am. It is pointed at LarnBotPlayer.ts, the top of
+// the gym's chain.
 import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";

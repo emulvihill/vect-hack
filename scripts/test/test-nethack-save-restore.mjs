@@ -82,7 +82,7 @@ function play(label, { keys = [], command = "save" } = {}) {
         }
         case "shim_nhgetch": case "shim_nh_poskey": {
           if (name === "shim_nh_poskey") mod.setValue(a[2], 0, "i32");
-          // Look HUD (spec 2026-08-18): name the cell the engine just parked
+          // Look HUD: name the cell the engine just parked
           // its cursor on — the hero, at the command prompt. This proves the
           // marshalling against a real heap, which the unit test cannot: it
           // pins the two-int16 layout against a fake one.
@@ -165,7 +165,7 @@ if (!first.FS.analyzePath(SAVEFILE).exists) fail("#save left no save file", firs
 const created = hello.match(/You are an? .*?(\S+ \S+)\.\s*$/)?.[1];
 if (!created) fail(`could not read the character from: ${hello}`);
 
-// Look HUD (spec 2026-08-18). Truthiness alone would pass on the name of the
+// Look HUD. Truthiness alone would pass on the name of the
 // wrong square — which is the failure a coordinate bug actually produces, and
 // the one thing the marshalling's own unit test can never see. self_lookat()
 // and welcome() both write gu.urace.adj (pager.c:115, allmain.c:947), so the

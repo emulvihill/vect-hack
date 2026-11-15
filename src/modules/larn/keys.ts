@@ -1,6 +1,6 @@
 // Browser KeyboardEvent -> LarnKey. Larn reads single ASCII bytes via
 // ttgetch() (io.c:170); every input is one byte — no termcap arrow
-// sequences (spike §7). Movement is hjkl/yubn with uppercase = run
+// sequences. Movement is hjkl/yubn with uppercase = run
 // (parse() at main.c:668, movement cases main.c:675-720). ESC is 27
 // (KC_ESCAPE in ./protocol.ts).
 //
@@ -62,8 +62,8 @@ export function mapKey(
     if (code >= 0x40 && code < 0x80) code &= 0x1f; // KTRL fold
     else return null; // ctrl+digit etc. — browser shortcut space, don't guess
   }
-  // Printable: uppercase letters already carry the run bit in the byte
-  // (spike §7); mods carries shift so the worker can branch on it.
+  // Printable: uppercase letters already carry the run bit in the byte;
+  // mods carries shift so the worker can branch on it.
   return { code, mods: e.shiftKey ? KC_MOD_SHIFT : 0 };
 }
 

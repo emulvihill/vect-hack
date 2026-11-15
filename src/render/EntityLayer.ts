@@ -46,7 +46,7 @@ const BOB_RATE = 1.15;
 /** Floor rings marking the hero and pets; spin is in rad/s, sign sets direction. */
 const HERO_RING = { radius: 0.42, color: INK.heroRing, gain: 0.9, spin: 0.6 } as const;
 const PET_RING = { radius: 0.36, color: INK.pet, gain: 0.7, spin: -0.4 } as const;
-/** The look ring (spec 2026-08-18): the cell the pointer is naming. Wider than
+/** The look ring: the cell the pointer is naming. Wider than
  *  the hero and pet rings and turning the other way, so it reads as a mark on
  *  the cell rather than on whatever is standing in it. INK.cursor is the one
  *  track colour nothing else uses (see src/skins/index.ts) — the same ink the
@@ -167,7 +167,7 @@ export function buildEntities(
       // The hero carries the light and effects are self-luminous; everything
       // else is only as bright as the hero's lamp reaches.
       const light = fx && !hero && !effect ? fx.lightAt(x, y) : 1;
-      // Hit flash (spec 2026-08-06): a just-hit victim lerps toward the
+      // Hit flash: a just-hit victim lerps toward the
       // skin's red and pops brighter, on hitFx's decaying envelope.
       const hitE = fx && !effect ? fx.hitAt(x, y) : 0;
       let color = hero ? INK.hero

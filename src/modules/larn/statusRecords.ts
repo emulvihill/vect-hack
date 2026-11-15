@@ -5,8 +5,7 @@
 // plus scripts/test/test-larn-status-tap.mjs are the guards.
 //
 // The projection is defined by WHAT THE SCREEN PRINTS, not by what the C
-// state holds (spec: docs/specs/2026-08-18-bot-phase1a-larn-
-// baseline-design.md). Three consequences are baked into this layout:
+// state holds. Three consequences are baked into this layout:
 //   - Conditions are a presence bitmask, never their countdowns: botside()
 //     (external/larn/display.c:202-222) prints the label "Haste Self", never
 //     the turns left in c[HASTESELF].

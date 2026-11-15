@@ -399,7 +399,7 @@ void flushMap() {
 }
 } // namespace
 
-// Look HUD (spec 2026-08-18). Mirrors upstream's static lookSee()
+// Look HUD. Mirrors upstream's static lookSee()
 // (external/umoria/src/dungeon_los.cpp) without any of its output, prompts or
 // recall: a lit, visible monster; then a known treasure, which in Umoria also
 // covers doors, stairs, rubble and store entrances; then the wall or floor the

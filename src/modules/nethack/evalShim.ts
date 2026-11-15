@@ -9,7 +9,7 @@
 // Both scripts are compile-time string constants, so answer them natively and
 // refuse anything else loudly: a future upstream eval must fail a test, not
 // hang the tab. Widening the CSP instead would trade two constant strings for
-// an 'unsafe-eval' hole across the whole site (docs/DECISIONS.md, vect-hack-efb).
+// an 'unsafe-eval' hole across the whole site (vect-hack-efb).
 //
 // Split out of worker.ts so it is unit-testable without a worker or a wasm
 // module (same reason as engineBoot.ts and wasmAbi.ts).

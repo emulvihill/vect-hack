@@ -1,8 +1,7 @@
 // The NetHack Classifier: the glyph-number/char/color classification that
 // lived inside MapModel, now emitting Backplane Cells. Same glyph fixtures
 // as the old dungeon-model.test.ts assertions — this suite pins that the
-// split changed NO classification (backplane design: the one forbidden
-// behavioral delta).
+// split changed NO classification (the one forbidden behavioral delta).
 import { describe, expect, it } from "vitest";
 import type { GlyphCell } from "../../src/modules/nethack/protocol";
 import {

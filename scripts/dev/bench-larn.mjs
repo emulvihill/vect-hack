@@ -1,17 +1,17 @@
 // npm run bench:larn — the one command Phase 2 is read against
-// (bead vect-hack-h9x.1, spec docs/specs/2026-08-28-larn-bench-design.md).
+// (vect-hack-h9x.1).
 //
 // It plays a FROZEN seed set through the gym and reduces the batch to the
 // pre-registered metrics. Frozen is the whole point: the master and the cohort
 // are constants below, so a run today and a run next week are comparable. Move
-// one and every earlier number stops meaning anything, so moving one is a spec
-// amendment, not a flag.
+// one and every earlier number stops meaning anything, so moving one is a
+// recorded amendment of the bench, not a flag.
 //
 // Two sets, and the wall between them is this file's comment and the runbook,
 // not the code:
 //   --set bench     master 20260828 — for iterating. Run it as often as you like.
 //   --set held-out  master 20260829 — for deciding. Once per shipped change.
-// A change tuned against held-out has burned held-out. Amend the spec.
+// A change tuned against held-out has burned held-out: it needs a new master.
 //
 // The arithmetic is in src/modules/larn/bot/bench.ts, which may not touch a
 // filesystem; this script is the half that plays the batch and writes the
@@ -24,7 +24,7 @@ import { parseArgs } from "node:util";
 import { benchMetrics, formatBench } from "../../src/modules/larn/bot/bench.ts";
 import { resolveTuning } from "../../src/modules/larn/bot/policy.ts";
 
-/** Frozen. See the header — changing either is a spec amendment. */
+/** Frozen. See the header — changing either is an amendment of the bench. */
 const SETS = {
   bench: { master: 20260828, games: 500 },
   "held-out": { master: 20260829, games: 500 },
@@ -32,7 +32,7 @@ const SETS = {
 /** The bench measures the BOT, so it must not also be measuring a truncation:
  *  3000 is the gym default and the budget every Phase 1 batch was played at. */
 const MAX_COMMANDS = 3000;
-/** The spec's budget. A bench that takes longer is a finding, not a wait. */
+/** The bench's budget. A bench that takes longer is a finding, not a wait. */
 const BUDGET_MS = 15 * 60 * 1000;
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -79,7 +79,7 @@ if (!opts["read-only"]) {
   const elapsed = Date.now() - started;
   console.log(`played in ${(elapsed / 1000).toFixed(1)}s`);
   if (elapsed > BUDGET_MS) {
-    console.error(`WARNING: over the spec's ${BUDGET_MS / 60000}-minute budget — re-time it and amend the spec`);
+    console.error(`WARNING: over the ${BUDGET_MS / 60000}-minute budget — re-time it and amend the budget`);
   }
 }
 
