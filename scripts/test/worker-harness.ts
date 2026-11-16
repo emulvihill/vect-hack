@@ -44,6 +44,10 @@ export function standInCore(game: string, global: string): { dir: () => string }
   return { dir: () => dir };
 }
 
+/** A BASE_URL with no modules/ under it, beside the stand-in core: a worker
+ *  pointed here fails its engine import the way a missing build does. */
+export const missingCoreDir = (coreDir: string) => join(coreDir, "missing");
+
 export type Posted<M> = { m: M; transfer: Transferable[] };
 
 /**

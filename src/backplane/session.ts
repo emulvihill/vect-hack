@@ -27,11 +27,15 @@
 import { SaveExports, type ExportedSave, type SaveExportReply } from "./saveExport.ts";
 import { Describes, type DescribeReply } from "./describe.ts";
 import type { SessionOnlyCode } from "./persistFs.ts";
+import type { EngineLoadFailed } from "./engineLoad.ts";
 
 /** Lifecycle messages every Module's worker->main union must include. */
 export type LifecycleToMain =
   | { type: "notice"; text: string }   // out-of-band player message
   | { type: "fatal"; message: string }
+  /** The engine artifact never arrived (vect-hack-o3rc): a fatal, but one the
+   *  save cannot have caused, so it is worded apart from fatalNotice. */
+  | EngineLoadFailed
   /** This tab's volume never mounted, so nothing it plays will be kept
    *  (vect-hack-dem). The code and not the sentence: persistFs.ts runs in the
    *  worker and has no business owning player-facing English, and the page
@@ -112,13 +116,26 @@ export class EngineSession<In extends { type: string }, Out> {
    *  way in, which is the death the save volume can be the cause of. */
   private started = false;
 
-  private reportDeath(message: string): void {
+  /** `notice` replaces the Module's fatalNotice and the reset advice, for a
+   *  death that has wording of its own. */
+  private reportDeath(message: string, notice?: string): void {
     console.error("engine died:", message);
     if (this.reported) return;
     this.reported = true;
     // Unguarded, unlike the catch in dispatch(): a death owes the engine no
     // reply, so a throwing onNotice costs only the notice here.
-    this.delegate.onNotice(this.delegate.fatalNotice(message) + this.resetAdvice());
+    this.delegate.onNotice(notice ?? this.delegate.fatalNotice(message) + this.resetAdvice());
+  }
+
+  /**
+   * The engine artifact could not be imported (vect-hack-o3rc). No reset
+   * advice: the engine never ran, so the volume never reached it, and the
+   * player who followed the advice would delete a save that is fine. The URL
+   * says which file, for a missing build as much as for a dropped connection.
+   */
+  private engineLoadNotice(url: string): string {
+    return `The game engine could not be loaded from ${url}.`
+      + " Check the connection and reload the page; this is not a problem with your save.";
   }
 
   /**
@@ -173,6 +190,11 @@ export class EngineSession<In extends { type: string }, Out> {
     }
     if (msg.type === "fatal") {
       this.reportDeath((msg as { message: string }).message);
+      return;
+    }
+    if (msg.type === "engineLoadFailed") {
+      const { url } = msg as EngineLoadFailed;
+      this.reportDeath(`could not load ${url}`, this.engineLoadNotice(url));
       return;
     }
     // The first message that is the engine's own rather than the Backplane's

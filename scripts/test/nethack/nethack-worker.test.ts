@@ -19,7 +19,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { MainToWorker, WorkerToMain } from "../../../src/modules/nethack/protocol";
 import type { CheckpointDeps } from "../../../src/modules/nethack/checkpoint";
-import { deferred, standInCore, stubWorkerScope, turn } from "../worker-harness";
+import { deferred, missingCoreDir, standInCore, stubWorkerScope, turn } from "../worker-harness";
 import { FakeHeap } from "./fake-heap";
 
 const seam = vi.hoisted(() => ({
@@ -64,9 +64,10 @@ class Heap extends FakeHeap {
 type Bridge = (name: string, ...args: unknown[]) => Promise<unknown>;
 
 /** Load worker.ts as a fresh worker and run the fake runtime through boot. */
-async function boot(opts: { durable?: boolean; factoryError?: Error } = {}) {
+async function boot(opts: { durable?: boolean; factoryError?: Error; missingCore?: boolean } = {}) {
   vi.resetModules();
-  const { messages: posted, listeners } = stubWorkerScope<WorkerToMain>(core.dir());
+  const { messages: posted, listeners } = stubWorkerScope<WorkerToMain>(
+    opts.missingCore ? missingCoreDir(core.dir()) : core.dir());
   const heap = new Heap();
   const persist = {
     ready: Promise.resolve(opts.durable ?? true),
@@ -108,7 +109,8 @@ async function boot(opts: { durable?: boolean; factoryError?: Error } = {}) {
   vi.stubGlobal("nethackGlobal", { constants: {}, globals: { iflags: {}, svp: {} } });
 
   await import("../../../src/modules/nethack/worker");
-  await factory.promise;
+  if (opts.missingCore) await vi.waitFor(() => expect(posted).not.toEqual([]));
+  else await factory.promise;
   await turn(); // persist.ready.then -> createCheckpointer
 
   const g = globalThis as Record<string, any>;
@@ -153,6 +155,20 @@ describe("NetHack worker boot", () => {
     const w = await boot({ factoryError: new Error("wasm streaming compile failed") });
     await turn();
     expect(w.posted).toContainEqual({ type: "fatal", message: "Error: wasm streaming compile failed" });
+  });
+
+  it("reports a core that never arrived by its URL, not as a fatal (vect-hack-o3rc)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const w = await boot({ missingCore: true });
+    await turn();
+    // A fatal would earn the reset advice, which points at a save the engine
+    // never read. The browser's reason goes to the console, not the player.
+    expect(w.posted).toEqual([{
+      type: "engineLoadFailed",
+      url: `file://${missingCoreDir(core.dir())}/modules/nethack/nethack.js`,
+    }]);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("nethack.js"), expect.anything());
+    warn.mockRestore();
   });
 
   it("turns an unhandled rejection and a worker error into fatal messages", async () => {

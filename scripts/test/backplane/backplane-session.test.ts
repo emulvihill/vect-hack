@@ -205,6 +205,45 @@ describe("EngineSession", () => {
     expect(notices[0]).toMatch(/^engine died: wasm trap in restore/);
   });
 
+  // vect-hack-o3rc. An engine artifact that never arrived — a missing build,
+  // a dropped connection — died before the engine read anything, so the
+  // reset advice would send the player to delete a save that is fine.
+  it("words an engine that never loaded by its URL, with no reset advice", async () => {
+    const url = "https://example.test/play/modules/larn/larn.js";
+    const { worker, notices, dispatched } = harness();
+    worker.emit({ type: "engineLoadFailed", url });
+    await flush();
+
+    expect(notices).toEqual([
+      `The game engine could not be loaded from ${url}.`
+        + " Check the connection and reload the page; this is not a problem with your save.",
+    ]);
+    expect(notices[0]).not.toContain("Saves button");
+    expect(dispatched).toEqual([]); // lifecycle: the delegate never sees it
+  });
+
+  it("tells the player about an engine that never loaded once", async () => {
+    // The worker's own listeners can still report the same boot afterwards;
+    // the first report owns the notice, as with any other death.
+    const { worker, notices } = harness();
+    worker.emit({ type: "engineLoadFailed", url: "http://x/modules/moria/moria.js" });
+    worker.emit({ type: "fatal", message: "unhandled rejection: late" });
+    await flush();
+    worker.onerror?.(errorEvent("boom", "w.js", 1));
+
+    expect(notices).toHaveLength(1);
+    expect(notices[0]).toContain("http://x/modules/moria/moria.js");
+    expect(notices[0]).not.toContain(BOOT_ADVICE);
+  });
+
+  it("keeps the reset advice for an ordinary fatal on the way in", async () => {
+    // The other half of vect-hack-o3rc: only the load failure loses the hint.
+    const { worker, notices } = harness();
+    worker.emit({ type: "fatal", message: "Error: wasm streaming compile failed" });
+    await flush();
+    expect(notices).toEqual([`engine died: Error: wasm streaming compile failed${BOOT_ADVICE}`]);
+  });
+
   it("says nothing about the save when the engine had started", async () => {
     // A death mid-game is a bug in a running game. Pointing that player at the
     // button that deletes their character would be advice that costs them one.
@@ -530,7 +569,7 @@ describe("Angband fallback table (cancel-shaped)", () => {
     describeReply: null,
     // Lifecycle: EngineSession routes these itself, so dispatch — and hence
     // the fallback — never sees them.
-    notice: null, fatal: null, sessionOnly: null,
+    notice: null, fatal: null, engineLoadFailed: null, sessionOnly: null,
   };
   it("answers every message in the union", () => {
     for (const [type, want] of Object.entries(EXPECTED))

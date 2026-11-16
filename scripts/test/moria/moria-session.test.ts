@@ -15,7 +15,7 @@ describe("Moria session delegate", () => {
       // Same reasoning as saveBlob: a describe reply is one-way, and a hover
       // superseded or timed out settles itself (src/backplane/describe.ts).
       describeReply: null,
-      notice: null, fatal: null, sessionOnly: null,
+      notice: null, fatal: null, engineLoadFailed: null, sessionOnly: null,
     };
     for (const type of Object.keys(oneWay))
       expect(moriaFallback({ type } as MoriaWorkerToMain), type).toBeNull();

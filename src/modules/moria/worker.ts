@@ -14,6 +14,7 @@ import {
 } from "./persistenceLifecycle";
 import { answerExportRequest, type ExportedSave } from "../../backplane/saveExport";
 import { answerDescribeRequest } from "../../backplane/describe";
+import { bootFailure, importEngine } from "../../backplane/engineLoad";
 import {
   createMoriaSemanticReporter,
   type MoriaSemanticReporter,
@@ -104,7 +105,9 @@ export function createMoriaTerminalReporter(post: MoriaWorkerPost): MoriaTermina
     fatal(error: unknown) {
       if (done) return false;
       done = true;
-      post({ type: "fatal", message: typeof error === "string" ? error : String(error) });
+      // An engine that never arrived is its own message (vect-hack-o3rc);
+      // anything else, a string included, is the fatal it always was.
+      post(bootFailure(error));
       return true;
     },
   };
@@ -159,9 +162,7 @@ export async function runMoriaEngine(
 }
 
 async function loadMoriaFactory(coreDirectory: string): Promise<MoriaModuleFactory> {
-  const loaded = await import(/* @vite-ignore */ coreDirectory + "moria.js") as {
-    default: MoriaModuleFactory;
-  };
+  const loaded = await importEngine<{ default: MoriaModuleFactory }>(coreDirectory + "moria.js");
   return loaded.default;
 }
 

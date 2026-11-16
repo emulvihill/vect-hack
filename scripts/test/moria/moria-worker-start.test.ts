@@ -9,7 +9,7 @@
 // The volume is swapped at its factory; the lifecycle is the real one.
 import { describe, expect, it, vi } from "vitest";
 import type { MoriaMainToWorker, MoriaWorkerToMain } from "../../../src/modules/moria/protocol";
-import { deferred, standInCore, turn } from "../worker-harness";
+import { deferred, missingCoreDir, standInCore, turn } from "../worker-harness";
 
 const seam = vi.hoisted(() => ({ mount: (_m: unknown): unknown => undefined }));
 vi.mock("../../../src/modules/moria/persist", () => ({
@@ -20,7 +20,7 @@ const { startMoriaWorker } = await import("../../../src/modules/moria/worker");
 
 const core = standInCore("moria", "__vhFakeMoriaCore");
 
-async function start() {
+async function start(opts: { missingCore?: boolean } = {}) {
   const posted: MoriaWorkerToMain[] = [];
   const listeners = new Map<string, (e: unknown) => void>();
   const persist = {
@@ -43,7 +43,7 @@ async function start() {
     factory.resolve();
     return module;
   });
-  vi.stubEnv("BASE_URL", core.dir() + "/");
+  vi.stubEnv("BASE_URL", (opts.missingCore ? missingCoreDir(core.dir()) : core.dir()) + "/");
   const scope = {
     location: { origin: "file://" },
     postMessage: (m: MoriaWorkerToMain) => void posted.push(m),
@@ -106,6 +106,21 @@ describe("startMoriaWorker", () => {
     expect(w.posted.filter((m) => m.type === "fatal")).toEqual([
       { type: "fatal", message: "Error: unreachable" },
     ]);
+  });
+
+  it("reports a core that never arrived by its URL, not as a fatal (vect-hack-o3rc)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const w = await start({ missingCore: true });
+    await vi.waitFor(() => expect(w.posted).not.toEqual([]));
+    await turn();
+    // A fatal would earn the reset advice, which points at a save the engine
+    // never read. The browser's reason goes to the console, not the player.
+    expect(w.posted).toEqual([{
+      type: "engineLoadFailed",
+      url: `file://${missingCoreDir(core.dir())}/modules/moria/moria.js`,
+    }]);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("moria.js"), expect.anything());
+    warn.mockRestore();
   });
 
   it("reports a moria_start rejection as fatal", async () => {

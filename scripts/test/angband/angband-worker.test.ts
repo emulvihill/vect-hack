@@ -11,7 +11,7 @@
 // and this one covers how the worker wires them.
 import { describe, expect, it, vi } from "vitest";
 import type { AngbandMainToWorker, AngbandWorkerToMain } from "../../../src/modules/angband/protocol";
-import { deferred, standInCore, stubWorkerScope, turn } from "../worker-harness";
+import { deferred, missingCoreDir, standInCore, stubWorkerScope, turn } from "../worker-harness";
 
 const seam = vi.hoisted(() => ({
   mount: (_m: unknown): unknown => undefined,
@@ -36,9 +36,10 @@ const core = standInCore("angband", "__vhFakeAngbandCore");
 
 /** Load worker.ts fresh. `ready` gates persist.ready, so a test can act
  *  between the runtime coming up and the volume settling. */
-async function boot(opts: { persistent?: boolean } = {}) {
+async function boot(opts: { persistent?: boolean; missingCore?: boolean } = {}) {
   vi.resetModules();
-  const { posted, messages, listeners } = stubWorkerScope<AngbandWorkerToMain>(core.dir());
+  const { posted, messages, listeners } = stubWorkerScope<AngbandWorkerToMain>(
+    opts.missingCore ? missingCoreDir(core.dir()) : core.dir());
   const volume = deferred<boolean>();
   const persist = {
     ready: volume.promise,
@@ -68,7 +69,8 @@ async function boot(opts: { persistent?: boolean } = {}) {
   vi.stubGlobal("VectAngband", undefined);
 
   await import("../../../src/modules/angband/worker");
-  await factory.promise;
+  if (opts.missingCore) await vi.waitFor(() => expect(messages).not.toEqual([]));
+  else await factory.promise;
   await turn(); // `engine = options` lands after the factory resolves
 
   const g = globalThis as Record<string, any>;
@@ -83,6 +85,20 @@ async function boot(opts: { persistent?: boolean } = {}) {
 }
 
 describe("Angband worker boot", () => {
+  it("reports a core that never arrived by its URL, not as a fatal (vect-hack-o3rc)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const w = await boot({ missingCore: true });
+    await turn();
+    // A fatal would earn the reset advice, which points at a save the engine
+    // never read. The browser's reason goes to the console, not the player.
+    expect(w.messages()).toEqual([{
+      type: "engineLoadFailed",
+      url: `file://${missingCoreDir(core.dir())}/modules/angband/angband.js`,
+    }]);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("angband.js"), expect.anything());
+    warn.mockRestore();
+  });
+
   it("says ready only once the volume has settled, and resolves the data package beside the core", async () => {
     const w = await boot();
     expect(w.messages().filter((m) => m.type === "ready")).toEqual([]);

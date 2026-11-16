@@ -11,6 +11,7 @@ import {
 import { installEvalShim } from "./evalShim";
 import { answerExportRequest } from "../../backplane/saveExport";
 import { answerDescribeRequest } from "../../backplane/describe";
+import { bootFailure, importEngine } from "../../backplane/engineLoad";
 import { PERSIST_ROOT, type PersistFS, type PersistHandle } from "./persist";
 import { seedEngineFS } from "./engineBoot";
 import { decodeExtCmds, describeScreenCell, writeMenuPicks } from "./wasmAbi";
@@ -150,19 +151,6 @@ function decodeGlyph(mod: EmModule, ptr: number): GlyphCell | null {
 }
 
 async function boot() {
-  // Served from public/modules/nethack/ (copied by scripts/build/build-nethack-wasm.sh).
-  // Absolute runtime URL built off Vite's base (import.meta.env.BASE_URL):
-  // keeps vite's import-analysis hands off the module (it's a plain
-  // emscripten artifact served from public/modules/, not source) while still
-  // resolving correctly under a non-root --base, e.g. /play/ (vect-hack-8xn).
-  const coreUrl = new URL(
-    import.meta.env.BASE_URL + "modules/nethack/nethack.js",
-    self.location.origin,
-  ).href;
-  const { default: createModule } = (await import(/* @vite-ignore */ coreUrl)) as {
-    default: (opts: Record<string, unknown>) => Promise<unknown>;
-  };
-
   let mod: EmModule;
   let blCondition = -1; // STATUS_FIELD.BL_CONDITION, learned after runtime init
   let extCmds: ExtCmd[] | undefined;
@@ -414,10 +402,24 @@ async function boot() {
     },
   };
 
+  // Served from public/modules/nethack/ (copied by scripts/build/build-nethack-wasm.sh).
+  // Absolute runtime URL built off Vite's base (import.meta.env.BASE_URL):
+  // keeps vite's import-analysis hands off the module (it's a plain
+  // emscripten artifact served from public/modules/, not source) while still
+  // resolving correctly under a non-root --base, e.g. /play/ (vect-hack-8xn).
+  const coreUrl = new URL(
+    import.meta.env.BASE_URL + "modules/nethack/nethack.js",
+    self.location.origin,
+  ).href;
   try {
+    // Inside the try, so a core that never arrived is reported as that
+    // (vect-hack-o3rc) rather than as an unhandled rejection.
+    const { default: createModule } = await importEngine<{
+      default: (opts: Record<string, unknown>) => Promise<unknown>;
+    }>(coreUrl);
     await createModule(opts);
   } catch (e) {
-    post({ type: "fatal", message: String(e) });
+    post(bootFailure(e));
   }
 }
 

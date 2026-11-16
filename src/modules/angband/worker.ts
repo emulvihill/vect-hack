@@ -13,6 +13,7 @@ import { mountAngbandStorage } from "./persist";
 import type { PersistHandle, SeedModule } from "../../backplane/persistFs";
 import { answerExportRequest } from "../../backplane/saveExport";
 import { answerDescribeRequest } from "../../backplane/describe";
+import { bootFailure, importEngine } from "../../backplane/engineLoad";
 import { applyBorgDelay, type BorgConfigFS } from "./borgConfig";
 
 const post = (m: AngbandWorkerToMain, transfer?: Transferable[]) => postMessage(m, transfer ?? []);
@@ -189,10 +190,12 @@ async function boot() {
   // analysis off the emscripten artifact while resolving under a non-root
   // --base.
   const coreDir = new URL(import.meta.env.BASE_URL + "modules/angband/", self.location.origin).href;
-  const { default: createAngbandModule } = (await import(/* @vite-ignore */ coreDir + "angband.js")) as {
-    default: (opts: Record<string, unknown>) => Promise<unknown>;
-  };
   try {
+    // Inside the try, so a core that never arrived is reported as that
+    // (vect-hack-o3rc) rather than as an unhandled rejection.
+    const { default: createAngbandModule } = await importEngine<{
+      default: (opts: Record<string, unknown>) => Promise<unknown>;
+    }>(coreDir + "angband.js");
     const options: Record<string, unknown> = {
       // Not optional, and the failure without it is silent: the preload
       // package resolves as the bare name "angband.data" (the generated
@@ -226,7 +229,7 @@ async function boot() {
     await createAngbandModule(options);
     engine = options as unknown as typeof engine;
   } catch (e) {
-    post({ type: "fatal", message: String(e) });
+    post(bootFailure(e));
   }
 }
 

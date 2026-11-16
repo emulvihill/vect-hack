@@ -11,7 +11,7 @@
 // mount is swapped at its factory; the lifecycle is the real one.
 import { describe, expect, it, vi } from "vitest";
 import type { LarnMainToWorker, LarnWorkerToMain } from "../../../src/modules/larn/protocol";
-import { deferred, standInCore, stubWorkerScope, turn } from "../worker-harness";
+import { deferred, missingCoreDir, standInCore, stubWorkerScope, turn } from "../worker-harness";
 
 const seam = vi.hoisted(() => ({ mount: (_m: unknown): unknown => undefined }));
 vi.mock("../../../src/modules/larn/persist", () => ({
@@ -20,9 +20,10 @@ vi.mock("../../../src/modules/larn/persist", () => ({
 
 const core = standInCore("larn", "__vhFakeLarnCore");
 
-async function boot(opts: { factoryError?: Error } = {}) {
+async function boot(opts: { factoryError?: Error; missingCore?: boolean } = {}) {
   vi.resetModules();
-  const { posted, messages, listeners } = stubWorkerScope<LarnWorkerToMain>(core.dir());
+  const { posted, messages, listeners } = stubWorkerScope<LarnWorkerToMain>(
+    opts.missingCore ? missingCoreDir(core.dir()) : core.dir());
   const volume = deferred<boolean>();
   const persist = {
     ready: volume.promise,
@@ -48,7 +49,8 @@ async function boot(opts: { factoryError?: Error } = {}) {
   vi.stubGlobal("VectLarn", undefined);
 
   await import("../../../src/modules/larn/worker");
-  await factory.promise;
+  if (opts.missingCore) await vi.waitFor(() => expect(messages).not.toEqual([]));
+  else await factory.promise;
   await turn();
 
   const g = globalThis as Record<string, any>;
@@ -69,6 +71,20 @@ describe("Larn worker boot", () => {
     await w.settle();
     expect(w.messages().filter((m) => m.type === "ready")).toEqual([{ type: "ready" }]);
     expect(w.options.locateFile("larn.data")).toBe(`file://${core.dir()}/modules/larn/larn.data`);
+  });
+
+  it("reports a core that never arrived by its URL, not as a fatal (vect-hack-o3rc)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const w = await boot({ missingCore: true });
+    await turn();
+    // A fatal would earn the reset advice, which points at a save the engine
+    // never read. The browser's reason goes to the console, not the player.
+    expect(w.messages()).toEqual([{
+      type: "engineLoadFailed",
+      url: `file://${missingCoreDir(core.dir())}/modules/larn/larn.js`,
+    }]);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("larn.js"), expect.anything());
+    warn.mockRestore();
   });
 
   it("reports a core that would not start as fatal", async () => {

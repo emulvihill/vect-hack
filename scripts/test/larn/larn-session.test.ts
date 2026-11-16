@@ -35,7 +35,7 @@ describe("Larn fallback table (cancel-shaped)", () => {
     describeReply: null,
     // Lifecycle: EngineSession routes these itself, so dispatch — and hence
     // the fallback — never sees them.
-    notice: null, fatal: null, sessionOnly: null,
+    notice: null, fatal: null, engineLoadFailed: null, sessionOnly: null,
   };
   it("answers every message in the union", () => {
     for (const [type, want] of Object.entries(EXPECTED))

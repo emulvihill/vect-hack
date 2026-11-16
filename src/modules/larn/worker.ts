@@ -8,6 +8,7 @@ import { mountLarnStorage } from "./persist";
 import type { PersistHandle, SeedModule } from "../../backplane/persistFs";
 import { answerExportRequest } from "../../backplane/saveExport";
 import { answerDescribeRequest } from "../../backplane/describe";
+import { bootFailure, importEngine } from "../../backplane/engineLoad";
 import { LarnPersistenceLifecycle } from "./persistenceLifecycle";
 import { installLarnShim } from "./shimBridge.ts";
 
@@ -116,10 +117,12 @@ async function boot() {
   // analysis off the emscripten artifact while resolving under a non-root
   // --base.
   const coreDir = new URL(import.meta.env.BASE_URL + "modules/larn/", self.location.origin).href;
-  const { default: createLarnModule } = (await import(/* @vite-ignore */ coreDir + "larn.js")) as {
-    default: (opts: Record<string, unknown>) => Promise<unknown>;
-  };
   try {
+    // Inside the try, so a core that never arrived is reported as that
+    // (vect-hack-o3rc) rather than as an unhandled rejection.
+    const { default: createLarnModule } = await importEngine<{
+      default: (opts: Record<string, unknown>) => Promise<unknown>;
+    }>(coreDir + "larn.js");
     const options = {
       // Not optional (the Angband worker's hard-won comment applies verbatim):
       // without locateFile the preload package fetches "larn.data" relative to
@@ -148,7 +151,7 @@ async function boot() {
     await createLarnModule(options);
     engine = options as unknown as typeof engine;
   } catch (e) {
-    if (!quitting) post({ type: "fatal", message: String(e) });
+    if (!quitting) post(bootFailure(e));
   }
 }
 
