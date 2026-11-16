@@ -3,9 +3,10 @@ import {
   MORIA_CHECKPOINT_PENDING,
   MORIA_RECOVERY_MAX_GENERATION,
   createMoriaRecovery,
+  fnv1a32Hex,
   type MoriaRecoveryFS,
 } from "../../../src/modules/moria/recovery";
-import { CHECKPOINT_DEFECTS, checkpoint, commitJson, terminalJson } from "./moria-checkpoint-fixtures";
+import { CHECKPOINT_DEFECTS, checkpoint, commitJson, terminalJson, validGame } from "./moria-checkpoint-fixtures";
 
 const DIR = 0o040000, FILE = 0o100000;
 const ROOT = "/vect-moria";
@@ -294,7 +295,9 @@ describe("Moria terminal tombstones and a missing candidate", () => {
     fs.operations.length = 0;
 
     expect(() => recovery.publishPending()).toThrow("Moria checkpoint candidate is missing or invalid");
-    const corrupt = checkpoint(2); corrupt[10] = corrupt[10]! ^ 1;
+    // Byte 10 of the checksummed payload, past the stock game.sav in front of it.
+    const corrupt = checkpoint(2), at = validGame().byteLength + 10;
+    corrupt[at] = corrupt[at]! ^ 1;
     pending(fs, corrupt);
     fs.operations.length = 0;
     expect(() => recovery.publishPending()).toThrow("Moria checkpoint candidate is missing or invalid");
