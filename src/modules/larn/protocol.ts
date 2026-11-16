@@ -56,14 +56,13 @@ export type LarnEvent =
   /** The engine entered died() (main-wasm.c's __wrap_died): `ch` is the map
    *  glyph of the being the epitaph names, or "" when the epitaph names none
    *  — a trap, poison, a win, a quit, or a being the player never saw. No
-   *  view reads this; it exists so the recorded trajectory carries the join
-   *  between the death message and the map, which the run digest cannot
-   *  make for itself (vect-hack-b5f.4).
+   *  view reads this; it reaches only the gym's recorded trajectory, as the
+   *  join between the death message and the map.
    *
    *  It is not a game-over signal. died() returns when life protection spends
    *  a charge, and it withdraws the glyph with a second event carrying "" —
    *  so a reader must take the last one, and must decide for itself whether
-   *  the run ended (src/modules/larn/bot/digest.ts does both). */
+   *  the run ended. */
   | { name: "death"; ch: string };
 
 /** A Larn key: a single ASCII byte plus a modifier mask. code is always

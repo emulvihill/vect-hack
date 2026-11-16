@@ -137,8 +137,7 @@ export class LarnBotModel {
       }
       case "flush": return;
       // The killer's glyph is about the run, not about the world the bot is
-      // still playing in: nothing here can act on it. The run digest
-      // reads the event off the trajectory itself (bot/digest.ts).
+      // still playing in: nothing here can act on it.
       case "death": return;
       case "map":
         for (const { x, y, cell } of this.classifier.classify(ev.records)) this.map.set(x, y, cell);

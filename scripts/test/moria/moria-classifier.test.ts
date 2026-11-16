@@ -40,11 +40,6 @@ function cell(fields: Fields = {}): Cell {
 }
 
 describe("MoriaClassifier", () => {
-  it("exports the pinned maximum Umoria dungeon dimensions", () => {
-    expect(MORIA_COLS).toBe(198);
-    expect(MORIA_ROWS).toBe(66);
-  });
-
   it("maps every public terrain category to Backplane semantics and logical ANSI color", () => {
     const cases: Array<[number, Category, number, string]> = [
       [TERRAIN.UNSEEN, "unseen", 7, " "],

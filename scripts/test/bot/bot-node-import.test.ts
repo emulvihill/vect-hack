@@ -45,13 +45,6 @@ describe("the Larn bot chain loads under plain node", () => {
     expect(importsUnderNode("../../../src/modules/larn/shimBridge.ts", "installLarnShim")).toBe("function");
   });
 
-  // A second head of the same chain: the digest builder is loaded from source
-  // by scripts/test/larn/test-larn-killer.mjs and scripts/dev/larn-shaft-survival.mjs,
-  // so an extensionless import there would fail only inside those, at run time.
-  it("imports the Larn digest builder — the head of the killer test's chain", () => {
-    expect(importsUnderNode("../../../src/modules/larn/bot/digest.ts", "buildLarnDigest")).toBe("function");
-  });
-
   // The browser bot shares every file in src/bot, so "no filesystem" binds the
   // whole directory, and a new file that reached for node would otherwise land
   // uncovered.

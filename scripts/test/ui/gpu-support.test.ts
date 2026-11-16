@@ -24,11 +24,7 @@ describe("gpuAvailable", () => {
   });
 
   it("rejects a browser offering neither", async () => {
-    expect(await gpuAvailable(probe(no, () => false))).toBe(false);
-  });
-
-  it("does not take navigator.gpu's word for it: no adapter, no WebGPU", async () => {
-    // VS Code's Simple Browser exactly: the API is there, the adapter is not.
+    // VS Code's Simple Browser exactly: navigator.gpu is there, the adapter is not.
     expect(await gpuAvailable(probe(no, () => false))).toBe(false);
   });
 

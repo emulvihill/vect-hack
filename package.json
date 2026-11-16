@@ -46,7 +46,6 @@
     "test:larn-status": "timeout 180 node scripts/test/larn/test-larn-status-tap.mjs",
     "test:larn-savefile": "timeout 180 node scripts/test/larn/test-larn-savefile-confinement.mjs",
     "test:larn-gym": "timeout 300 node scripts/test/larn/test-larn-gym.mjs",
-    "test:larn-killer": "timeout 300 node --experimental-strip-types scripts/test/larn/test-larn-killer.mjs",
     "test:larn": "vitest run --project engine-larn",
     "test:moria-boot": "timeout 120 node scripts/test/moria/test-moria-boot.mjs",
     "test:moria-play": "timeout 120 node scripts/test/moria/test-moria-play.mjs",
@@ -71,7 +70,7 @@
     "check:gates": "node scripts/dev/gate-run.mjs",
     "preview:mobile": "node scripts/dev/mobile-preview.mjs",
     "test": "npm run typecheck && vitest run",
-    "preview": "vitest run scripts/dev/scene-preview.test.ts scripts/dev/radar-preview.test.ts && (magick .preview/nethack-scene.ppm .preview/nethack-scene.png 2>/dev/null && echo .preview/nethack-scene.png || echo .preview/nethack-scene.ppm) && (magick .preview/nethack-scene-fp.ppm .preview/nethack-scene-fp.png 2>/dev/null && echo .preview/nethack-scene-fp.png || echo .preview/nethack-scene-fp.ppm) && (magick .preview/angband-scene.ppm .preview/angband-scene.png 2>/dev/null && echo .preview/angband-scene.png || echo .preview/angband-scene.ppm) && (magick .preview/angband-scene-fp.ppm .preview/angband-scene-fp.png 2>/dev/null && echo .preview/angband-scene-fp.png || echo .preview/angband-scene-fp.ppm) && (magick .preview/radar.svg .preview/radar.png 2>/dev/null && echo .preview/radar.png || echo .preview/radar.svg)"
+    "preview": "vitest run scripts/dev/scene-preview.test.ts && vitest run --config vitest.preview.config.ts && (magick .preview/nethack-scene.ppm .preview/nethack-scene.png 2>/dev/null && echo .preview/nethack-scene.png || echo .preview/nethack-scene.ppm) && (magick .preview/nethack-scene-fp.ppm .preview/nethack-scene-fp.png 2>/dev/null && echo .preview/nethack-scene-fp.png || echo .preview/nethack-scene-fp.ppm) && (magick .preview/angband-scene.ppm .preview/angband-scene.png 2>/dev/null && echo .preview/angband-scene.png || echo .preview/angband-scene.ppm) && (magick .preview/angband-scene-fp.ppm .preview/angband-scene-fp.png 2>/dev/null && echo .preview/angband-scene-fp.png || echo .preview/angband-scene-fp.ppm) && (magick .preview/radar.svg .preview/radar.png 2>/dev/null && echo .preview/radar.png || echo .preview/radar.svg)"
   },
   "dependencies": {
     "three": "^0.185.1"

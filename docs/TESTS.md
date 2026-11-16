@@ -90,7 +90,6 @@ cross-Module teardowns, `main.ts` with no GPU, skins) stays at the top level.
 | `test:larn-status` | the status tap vs the engine's own screen: scalars, clock, items, no leaked ids |
 | `test:larn-savefile` | a `savefile:` line in `.larnopts` cannot move the explicit save off the volume, is refused out loud, and the save it did not redirect really restores |
 | `test:larn-gym` | one real game through the headless bot gym: bot, prompts, artifacts; an unknown `--tuning` knob is refused before the game |
-| `test:larn-killer` | three frozen seeds: the killer glyph vs Larn's own tables, a trap death and an unseen killer |
 
 ## Moria — `npm run test:moria`
 

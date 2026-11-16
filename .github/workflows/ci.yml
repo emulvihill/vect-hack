@@ -76,8 +76,8 @@ jobs:
           # anyone who installs without either. Node 24 is the current LTS line
           # (Krypton; v24.20.0 on 2026-08-26, re-verified against
           # https://nodejs.org/dist/index.json). It is load-bearing, not
-          # incidental: `test:larn-killer` passes `--experimental-strip-types`
-          # and `scripts/test/bot/bot-node-import.test.ts` loads `.ts` from source.
+          # incidental: `scripts/test/bot/bot-node-import.test.ts` loads `.ts`
+          # from source.
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci

@@ -1,8 +1,10 @@
 // Offline radar preview: runs the real drawRadar() against a 2D context that
 // emits SVG instead of pixels, so the widget's layout can be checked from a
 // terminal. Companion to scene-preview.test.ts, which does the same job for the
-// dungeon. Stroke opacity stands in for additive compositing, so the glow reads
-// dimmer here than it does on the GPU; the geometry is exact.
+// dungeon. It asserts nothing (scripts/test/ui/radar.test.ts pins the
+// geometry), so it runs under its own config and never under `npm test`.
+// Stroke opacity stands in for additive compositing, so the glow reads dimmer
+// here than it does on the GPU; the geometry is exact.
 //
 //   npm run preview            # writes .preview/radar.svg (+ .png if available)
 import { it } from "vitest";

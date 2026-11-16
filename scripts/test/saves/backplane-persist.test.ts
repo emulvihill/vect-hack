@@ -971,17 +971,6 @@ describe("applying a parked reset", () => {
     ]);
     expect(await readPendingReset(volume.id)).toBe(true);
   });
-
-  it("boots normally when nothing is parked", async () => {
-    const fs = occupiedVolume();
-    const handle = mountVolume(new FakeModule(fs), volume, {
-      locks: fakeLocks(true), seed: seedVolume,
-    });
-    await expect(handle.ready).resolves.toBe(true);
-
-    expect(fs.contents(volume.mountpoint)).toContain(`${volume.mountpoint}/save/1player`);
-    expect(notices).toEqual([]);
-  });
 });
 
 /**

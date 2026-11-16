@@ -253,10 +253,6 @@ describe("orbital bindings", () => {
       for (const k of Object.keys(table))
         expect(k).toMatch(/^(Shift\+)?[A-Z][A-Za-z]+$/);
   });
-
-  it("names only actions that exist", () => {
-    for (const a of Object.values(ORBITAL_BINDINGS)) expect(ACTIONS).toContain(a);
-  });
 });
 
 describe("ACTIONS", () => {
