@@ -11,7 +11,7 @@ By Eric Mulvihill.
 
 ## Dedication
 
-Dedicated to my old friend Ethan Sicotte, RIP. His devotion to winning these games inspired me to delve deeper, both then and now. We miss ya, dude.
+Dedicated to my dear friend Ethan Sicotte, RIP. His devotion to winning these games inspired me to delve deeper, both then and now. We miss ya, dude.
 
 ## Quick start
 

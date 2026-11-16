@@ -6,7 +6,7 @@ Glossary only. No implementation details.
 
 **App** — the single versioned application: renderer, HUD, skins, input, save
 management, catalog, and every game's integration code, compiled and shipped
-together. There is exactly one App; nothing of Eric's ships separately from it.
+together.
 
 **Engine Build** — the built WASM bytecode of one game engine, produced from
 an Engine Repo. The only artifact the App loads that is not compiled into it.
@@ -24,8 +24,7 @@ Build itself is never called a module.
 
 **Backplane** — the internal interface between the App's shared layer and
 each Module: the Cell grid, input events, and persistence namespace.
-Versioned with the App itself, not independently. (Renamed from "Game Seam",
-2026-08-02.)
+Versioned with the App itself, not independently.
 
 **Cell** — one tile of the semantic grid a Module presents to the shared
 layer. Carries a Category, a Kind, and rendering hints.

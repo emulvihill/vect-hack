@@ -141,7 +141,7 @@ describe("the release tag is the version", () => {
 
   it("never stamps a build with package.json's version, which is not maintained", () => {
     const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-    expect(pkg.version).toBe("0.0.0");
+    expect(pkg.version).toBeUndefined();
     expect(builtVersion(root)).not.toBe("0.0.0");
   });
 });
