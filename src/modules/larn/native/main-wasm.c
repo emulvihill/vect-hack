@@ -170,7 +170,7 @@ EM_JS(int, wasm_gym_fast, (), {
  * model is built from, which can change its decisions — silently corrupting
  * the baseline the speed-up exists to produce. Wrapping the sleeps themselves
  * keeps every observation and removes only the waiting.
- * scripts/test/test-larn-trace.mjs proves the equivalence: the fixture was
+ * scripts/test/larn/test-larn-trace.mjs proves the equivalence: the fixture was
  * recorded with the sleeps active and must still match with them suppressed.
  */
 unsigned int __real_sleep(unsigned int seconds);

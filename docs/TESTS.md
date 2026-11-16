@@ -10,6 +10,25 @@ code is what matters: never pipe it.
 The authority for what exists is `package.json`. If a name here disagrees with
 it, `package.json` is right and this file is stale.
 
+## Layout of `scripts/test/`
+
+A test lives in the folder of the code it exercises. `vitest` finds every
+`*.test.ts` below `scripts/test/` and `scripts/dev/`; the `test-<game>-*.mjs`
+engine drivers are run by name from `package.json`.
+
+| Folder | What lives there |
+| --- | --- |
+| `nethack/` `angband/` `larn/` `moria/` | one Module each: its unit tests, its engine drivers, their shared helpers (`*-play.mjs`, `bot-fixtures.ts`), native harnesses (`*.cpp`) and fixtures |
+| `backplane/` | `src/backplane` outside the save path: cells, sessions, describe, the key queue |
+| `saves/` | the save system across `src/backplane` and `src/ui` (`docs/SAVES.md`) |
+| `render/` | `src/render`: terrain, entities, effects, cameras, picking |
+| `ui/` | `src/ui`: HUD, gaze, touch, GPU detection, page links |
+| `bot/` | the shared `src/bot` layer and its node-importability |
+| `tooling/` | the gate drivers in `scripts/dev` and build guards in `scripts/build` |
+
+A test that spans every Module or guards the whole tree (layering, the
+cross-Module teardowns, `main.ts` with no GPU, skins) stays at the top level.
+
 ## NetHack — `npm run test:nethack`
 
 | Group | What it pins |

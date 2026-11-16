@@ -57,9 +57,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Two vitest files read engine SOURCE — not artifacts — straight out
-          # of the submodules: `scripts/test/recover-save.test.ts` parses
+          # of the submodules: `scripts/test/nethack/recover-save.test.ts` parses
           # `external/NetHack/include/global.h`, and
-          # `scripts/test/moria-checkpoint-strategy.test.ts` reads
+          # `scripts/test/moria/moria-checkpoint-strategy.test.ts` reads
           # `external/umoria/src/game_save.cpp`. Without this the suite fails
           # with two ENOENTs. Non-recursive on purpose: nothing vitest loads
           # touches NetHack's own nested submodules (lua, pdcurses,
@@ -77,7 +77,7 @@ jobs:
           # (Krypton; v24.20.0 on 2026-08-26, re-verified against
           # https://nodejs.org/dist/index.json). It is load-bearing, not
           # incidental: `test:larn-killer` passes `--experimental-strip-types`
-          # and `scripts/test/bot-node-import.test.ts` loads `.ts` from source.
+          # and `scripts/test/bot/bot-node-import.test.ts` loads `.ts` from source.
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci

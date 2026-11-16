@@ -46,7 +46,7 @@ export function angbandFallback(msg: AngbandWorkerToMain): AngbandMainToWorker |
 
 /** The Module's half of the session contract, built apart from the class so
  *  it is reachable without spawning a real Worker (its tests live beside
- *  EngineSession's, in scripts/test/backplane-session.test.ts). */
+ *  EngineSession's, in scripts/test/backplane/backplane-session.test.ts). */
 export function makeDelegate(
   handler: AngbandHandler,
   onReleased: () => void = () => {},

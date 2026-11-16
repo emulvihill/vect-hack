@@ -24,7 +24,7 @@
 //
 // All three were wrong in the first cut of this file and were caught only by
 // running it against real recorded runs (vect-hack-b5f.2.2, fixtures under
-// scripts/test/fixtures/larn-digest/batch/). None of the three timings is a
+// scripts/test/larn/fixtures/larn-digest/batch/). None of the three timings is a
 // detail:
 //
 //   - Detecting the change at the next command boundary loses the descent

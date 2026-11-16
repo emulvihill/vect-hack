@@ -49,7 +49,7 @@
  * Layout of the framing header at the front of level.0, as savestateinlock()
  * (src/save.c) writes it and util/recover.c:242-271 reads it. Sizes are for
  * the wasm32 target and are asserted against the NetHack headers by
- * scripts/test/recover-save.test.ts, so a submodule bump that moves them
+ * scripts/test/nethack/recover-save.test.ts, so a submodule bump that moves them
  * fails a test rather than corrupting a save.
  */
 const INT_BYTES = 4;

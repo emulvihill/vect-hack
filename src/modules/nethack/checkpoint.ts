@@ -24,7 +24,7 @@
 //    restoreRecoverySet() and the parsing checks in recoverSave.ts, which are
 //    load-bearing rather than defensive.
 
-// ".ts" for the same reason as persist.ts's import: scripts/test/*.mjs load
+// ".ts" for the same reason as persist.ts's import: scripts/test/nethack/*.mjs load
 // this file straight from source and node's ESM resolver does not guess one.
 import { entries } from "../../backplane/saveBlob.ts";
 import { buildSaveFile } from "./recoverSave.ts";

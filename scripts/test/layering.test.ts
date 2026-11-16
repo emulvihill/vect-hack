@@ -8,7 +8,7 @@
 // own assertion and every message names the offending file, its line, and the
 // specifier — "the layering is violated" is not something anyone can act on.
 //
-// Precedent: scripts/test/bot-node-import.test.ts, which guards one directory's
+// Precedent: scripts/test/bot/bot-node-import.test.ts, which guards one directory's
 // import STYLE the same way this guards the whole tree's import DIRECTION.
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";

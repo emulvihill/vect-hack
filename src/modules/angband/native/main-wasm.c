@@ -14,7 +14,7 @@
  * append the date of their change here.
  *
  * The JS side of every EM_*JS block is globalThis.VectAngband, installed by
- * src/modules/angband/worker.ts (browser) or scripts/test/test-angband-boot.mjs
+ * src/modules/angband/worker.ts (browser) or scripts/test/angband/test-angband-boot.mjs
  * (node) before the module is instantiated.
  *
  * This work is free software; you can redistribute it and/or modify it

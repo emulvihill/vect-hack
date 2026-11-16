@@ -332,7 +332,7 @@ async function settleMoria(page, _game, label, needHero = false) {
   }
 }
 
-/** The same source-pinned handshake as scripts/test/larn-play.mjs, but driven
+/** The same source-pinned handshake as scripts/test/larn/larn-play.mjs, but driven
  * through the real browser view. Each send waits for KeyQueue's live waiter,
  * so no speculative i keys pile up while C is painting a direct object prompt.
  * The final no-input waiter is parse()->yylex(), not a hero-shaped guess. */

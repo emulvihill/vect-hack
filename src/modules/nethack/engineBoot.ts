@@ -4,7 +4,7 @@
 // change to what the engine needs seeded cannot silently leave the tests
 // booting a different filesystem than the app.
 //
-// ".ts" import extension: scripts/test/*.mjs load this file straight from
+// ".ts" import extension: scripts/test/nethack/*.mjs load this file straight from
 // source, and node's ESM resolver does not guess one (same as persist.ts).
 import { mountPersistentStorage, type PersistHandle, type PersistModule, type PersistOptions } from "./persist.ts";
 

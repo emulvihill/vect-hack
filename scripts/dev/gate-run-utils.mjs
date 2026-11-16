@@ -3,7 +3,7 @@
  * summary, the freshness-stamp rewriter, the artifact prune list and the
  * render-node check. Split out for the same reason moria-gate-utils.mjs is:
  * a gate script does its work at import time, so nothing inside one can be
- * unit tested. scripts/test/gate-run.test.ts is what tests this file.
+ * unit tested. scripts/test/tooling/gate-run.test.ts is what tests this file.
  */
 import { parseArgs } from "node:util";
 

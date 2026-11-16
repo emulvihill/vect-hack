@@ -1,8 +1,8 @@
 // Fixed Int32 word layout shared by Larn's native status tap and its decoder.
 //
 // The C mirror lives in src/modules/larn/native/main-wasm.c (flush_status);
-// the two must stay in lockstep, and scripts/test/larn-statusrecords.test.ts
-// plus scripts/test/test-larn-status-tap.mjs are the guards.
+// the two must stay in lockstep, and scripts/test/larn/larn-statusrecords.test.ts
+// plus scripts/test/larn/test-larn-status-tap.mjs are the guards.
 //
 // The projection is defined by WHAT THE SCREEN PRINTS, not by what the C
 // state holds. Three consequences are baked into this layout:

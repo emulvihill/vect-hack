@@ -2,7 +2,7 @@
 // priority ladder — first matching need wins — over src/bot/pathing.ts.
 // Survival common sense and how to operate the game, nothing learned: its
 // knobs are the hand-tuned constants in DEFAULT_TUNING, and
-// scripts/test/test-larn-trace.mjs pins the keystrokes they produce.
+// scripts/test/larn/test-larn-trace.mjs pins the keystrokes they produce.
 //
 // ".ts" import extensions: the headless gym loads this straight from source.
 import type { LarnKey } from "../protocol.ts";

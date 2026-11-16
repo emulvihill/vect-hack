@@ -45,7 +45,7 @@ export function larnFallback(msg: LarnWorkerToMain): LarnMainToWorker | null {
 
 /** The Module's half of the session contract, built apart from the class so
  *  it is reachable without spawning a real Worker (its tests live in
- *  scripts/test/larn-session.test.ts). */
+ *  scripts/test/larn/larn-session.test.ts). */
 export function makeDelegate(
   handler: LarnHandler,
   onReleased: () => void = () => {},

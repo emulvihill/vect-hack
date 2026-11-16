@@ -3,7 +3,7 @@
 // one place. See worker.ts's decodeGlyph for the glyph_info layout, which only
 // the worker touches and so stays there.
 //
-// ".ts" import extension: scripts/test/*.mjs load this file straight from
+// ".ts" import extension: scripts/test/nethack/*.mjs load this file straight from
 // source, and node's ESM resolver does not guess one (same as persist.ts).
 import type { ExtCmd } from "./protocol.ts";
 

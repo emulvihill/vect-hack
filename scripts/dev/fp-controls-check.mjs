@@ -18,7 +18,7 @@
 // records both consumed bytes and their native contexts before asserting the
 // same two camera schemes.
 //
-// The unit tests (scripts/test/move-keys.test.ts, remap.test.ts) pin the same
+// The unit tests (scripts/test/nethack/move-keys.test.ts, remap.test.ts) pin the same
 // rules in isolation. What they cannot reach is the composition: the sign of
 // the yaw convention surviving all the way from FirstPersonCam's rotation order
 // to the cell NetHack actually moved the hero into. That is one place a sign

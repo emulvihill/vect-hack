@@ -6,7 +6,7 @@
 // then exit. One process per game on purpose: a fresh dungeon, a fresh wasm
 // heap, and a wedged engine is the orchestrator's SIGKILL, not a leak.
 //
-// Same boot as scripts/test/test-larn-boot.mjs; the VectLarn object is the
+// Same boot as scripts/test/larn/test-larn-boot.mjs; the VectLarn object is the
 // shared bridge (src/modules/larn/shimBridge.ts) every host installs, with the
 // bot behind it instead of postMessage. Larn ends through exit(): __wrap_exit
 // calls quit() first, and everything owed to disk is written synchronously

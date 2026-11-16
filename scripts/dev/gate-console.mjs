@@ -30,7 +30,7 @@
  * genuinely wrong, and they must stay fatal in every gate — which is what the
  * whole-message anchors below are for. Anything merely worded like this stays
  * fatal too. Which answer each branch gives is pinned by
- * scripts/test/backplane-persistent-storage.test.ts, under npm test.
+ * scripts/test/saves/backplane-persistent-storage.test.ts, under npm test.
  */
 export const STORAGE_DECLINED_WARNING =
   /^\[vect-hack\] saves may be evicted: the browser declined persistence$/;

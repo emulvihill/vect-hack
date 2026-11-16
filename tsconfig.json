@@ -15,7 +15,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noEmit": true,
-    // scripts/test/*.mjs run src/modules/nethack straight from source, and
+    // scripts/test/nethack/*.mjs run src/modules/nethack straight from source, and
     // node's ESM resolver needs the real filename.
     "allowImportingTsExtensions": true,
     "skipLibCheck": true,

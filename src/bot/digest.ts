@@ -1,5 +1,5 @@
 // The run digest: the small public projection of one finished game, read
-// instead of the raw trajectory by scripts/test/test-larn-killer.mjs and
+// instead of the raw trajectory by scripts/test/larn/test-larn-killer.mjs and
 // scripts/dev/larn-shaft-survival.mjs. It was designed as the input of the
 // reflect loop retired on 2026-11-03. Game-free — each Module builds its
 // own from its trajectory and summary (Larn: src/modules/larn/bot/digest.ts).

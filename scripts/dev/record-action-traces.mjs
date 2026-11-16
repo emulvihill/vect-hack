@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 
-const FIXTURE = "scripts/test/fixtures/larn-action-traces.json";
+const FIXTURE = "scripts/test/larn/fixtures/larn-action-traces.json";
 // The seeds are arbitrary; their one job is to produce runs long enough for a
 // changed decision to show up in. Larn's seed bot takes any descent it is
 // offered, including the town's volcanic shaft, which drops a level-1

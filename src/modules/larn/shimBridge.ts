@@ -3,8 +3,8 @@
 // src/modules/larn/native/main-wasm.c.
 //
 // Six hosts install it — src/modules/larn/worker.ts, scripts/dev/bot-gym-larn.mjs,
-// scripts/test/larn-play.mjs, scripts/test/test-larn-boot.mjs,
-// scripts/test/test-larn-seed.mjs, scripts/test/test-larn-status-tap.mjs — and
+// scripts/test/larn/larn-play.mjs, scripts/test/larn/test-larn-boot.mjs,
+// scripts/test/larn/test-larn-seed.mjs, scripts/test/larn/test-larn-status-tap.mjs — and
 // before this file each carried its own literal copy of the contract. Adding
 // statusBatch therefore broke four gates at once, at
 // runtime, and the fix was a no-op stub pasted into each (vect-hack-dwb).
@@ -14,7 +14,7 @@
 //
 // Erasable-only TypeScript with relative .ts import specifiers, because five
 // of the six hosts are .mjs files node loads straight from source with no
-// bundler (scripts/test/bot-node-import.test.ts is the guard).
+// bundler (scripts/test/bot/bot-node-import.test.ts is the guard).
 //
 // Three rules the refactor exists to preserve, all of them load-bearing:
 //
