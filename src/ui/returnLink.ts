@@ -5,7 +5,7 @@
 // that hosts it: a URL without `?return` shows no row at all, which is every
 // dev URL and every host that does not ask for one. Leaving is a plain
 // navigation, the same as closing the tab — the character resumes from its
-// last checkpoint (docs/SAVES.md), and nothing here saves first.
+// last checkpoint, and nothing here saves first.
 //
 // Same-origin only. The site serves `/` and the game `/play/` from one origin,
 // so that costs nothing, and it keeps the parameter from being an open

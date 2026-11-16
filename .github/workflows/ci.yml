@@ -28,7 +28,7 @@
 # It also cannot run the four render gates — `check:browser`, `check:controls`,
 # `check:touch`, `check:angband-borg`. Those need a GPU and a readable DRM
 # render node; a GitHub-hosted runner has neither, which is exactly the
-# "could not run" (exit 3) verdict `docs/GATES.md` describes. `check:payload` is
+# "could not run" (exit 3) verdict. `check:payload` is
 # the one gate that needs neither a GPU nor a dev server, so it is the one that
 # is here.
 name: checks (no engine build, no GPU)

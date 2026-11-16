@@ -142,7 +142,7 @@ no GPU: lint, typecheck, `test:render` and `check:payload`.
 None of these is part of `npm test`. Run alone, every gate but
 `check:payload` needs a dev server already listening on 5199. Each reports
 green, red, or could-not-run (no render node, no Chromium, no WebGPU/WebGL2).
-`docs/GATES.md` says what each asserts, and what it deliberately does not.
+Each script's header in `scripts/browser-check/` says what it asserts.
 
 ### Previews and the Larn bot
 
@@ -173,8 +173,7 @@ Every game is chosen with `?game=`; a URL without it redirects to
 | `&borg` / `&borg=<ms>` | Angband only: hand the game to Angband's built-in borg. |
 | `&touch` | NetHack only: on-screen thumb pad and action bar for phones. |
 | `&trace` | Log every windowport call (the engine's screen I/O) to the console. |
-
-`docs/UI.md` describes each in full.
+| `&return=<url>` | Add a "Quit to main page" row to the Saves panel that goes to `<url>`; the site links every game with `&return=/`. |
 
 ### Keys and saves
 
@@ -186,8 +185,6 @@ Every game is chosen with `?game=`; a URL without it redirects to
 - Games save in the browser automatically. The **Saves** button (bottom left)
   exports the selected game's whole save volume as one `.vhsave` file (**F3**),
   loads one back (**F4**), or deletes the stored save outright.
-  `docs/SAVES.md` has the details, including what a second tab of the same
-  game does.
 
 ## Troubleshooting
 
