@@ -213,6 +213,23 @@ describe("exporting from the menu", () => {
     await vi.waitFor(() => expect(notices).toEqual(
       ["Could not export your save — there is nothing to export — another tab is playing."]));
   });
+
+  it("keeps an unexpected failure's exception off the player's line and on the console", async () => {
+    // Every action catches the failures it expects; what reaches the menu's
+    // own catch is a bug, and its text was written for no player.
+    const downloads = new FakeDownloads();
+    const failure = new TypeError("Failed to execute 'createObjectURL' on 'URL'");
+    downloads.createObjectURL = () => { throw failure; };
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const { keys, notices } = menu({ downloads });
+      keys.press(EXPORT_KEY);
+      await vi.waitFor(() => expect(notices).toEqual(["The save menu failed."]));
+      expect(errors.mock.calls.flat()).toContain(failure);
+    } finally {
+      errors.mockRestore();
+    }
+  });
 });
 
 describe("loading a save file", () => {

@@ -71,10 +71,13 @@ export function makeDelegate(
           };
         }
         case "quit":
+          // The reason is the console's: on a failed flush it is String(error).
+          if (msg.persistent && !msg.saved && msg.reason)
+            console.warn("[vect-hack] Moria could not save on exit:", msg.reason);
           handler.onNotice(msg.persistent && msg.saved
             ? "Moria exited — your game is saved. Reload to continue."
             : msg.persistent && msg.reason
-              ? `Moria exited — reload to restart. Saving failed — ${msg.reason}.`
+              ? "Moria exited — your game could not be saved. Reload to restart."
               : "Moria exited — reload to restart.");
           return null;
         case "released":

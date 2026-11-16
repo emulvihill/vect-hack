@@ -511,6 +511,14 @@ function populated(volume: typeof VOLUMES.nethack, files: Record<string, string>
   return fs;
 }
 
+/** Populate succeeds and every write-back fails with `failure`: the store a
+ *  mount makes after it replaced or emptied the volume, and nothing before. */
+function failWriteBack(fs: FakeFS, failure: Error): void {
+  const syncfs = fs.syncfs.bind(fs);
+  fs.syncfs = (populate, callback) =>
+    syncfs(populate, (err) => callback(populate ? err : failure));
+}
+
 /** One volume, packed exactly as an export packs it. */
 function packed(volume: typeof VOLUMES.nethack, files: Record<string, string>): Uint8Array {
   const source = new FakeFS();
@@ -756,6 +764,31 @@ describe("importing a volume at mount time", () => {
     expect(notices[0]).toMatch(/this is not a volume this build made/);
   });
 
+  it("keeps a failed store's exception off the player's line and on the console", async () => {
+    const fs = occupied();
+    await stashPendingImport(volume.id, packed(volume, { "save/1imported": "x" }));
+    // The populate succeeds and the write-back after the import does not, so
+    // the exception reaches exactly the line under test.
+    const failure = new Error("QuotaExceededError: the quota has been exceeded");
+    failWriteBack(fs, failure);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const handle = mountVolume(new FakeModule(fs), volume, {
+        locks: fakeLocks(true), seed: seedVolume,
+      });
+      await expect(handle.ready).resolves.toBe(true);
+
+      expect(notices).toEqual([
+        "Loaded the save file into your nethack game.",
+        "The loaded save is not stored yet.",
+      ]);
+      expect(notices.join("\n")).not.toMatch(/Quota|Error/);
+      expect(warn.mock.calls.flat()).toContain(failure);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it("leaves the blob parked for the tab that owns the volume", async () => {
     const fs = occupied();
     const bytes = packed(volume, { "save/1imported": "x" });
@@ -858,6 +891,50 @@ describe("applying a parked reset", () => {
     await expect(handle.ready).resolves.toBe(true);
 
     expect(fs.files(volume.mountpoint)).not.toContain(`${volume.mountpoint}/save/1player`);
+  });
+
+  it("keeps a failed store's exception off the player's line and on the console", async () => {
+    const fs = occupiedVolume();
+    await stashPendingReset(volume.id);
+    const failure = new Error("QuotaExceededError: the quota has been exceeded");
+    failWriteBack(fs, failure);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const handle = mountVolume(new FakeModule(fs), volume, {
+        locks: fakeLocks(true), seed: seedVolume,
+      });
+      await expect(handle.ready).resolves.toBe(true);
+
+      expect(notices).toEqual([
+        "Deleted your nethack save. This is a new game.",
+        "Your nethack save is deleted here but not stored yet.",
+      ]);
+      expect(notices.join("\n")).not.toMatch(/Quota|Error/);
+      expect(warn.mock.calls.flat()).toContain(failure);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("keeps a failed delete's exception off the player's line and on the console", async () => {
+    const fs = occupiedVolume();
+    await stashPendingReset(volume.id);
+    // What emptyVolume can throw is Emscripten's own errno text: never a
+    // sentence anyone wrote for a player.
+    const failure = new Error("EPERM: operation not permitted");
+    fs.unlink = () => { throw failure; };
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const handle = mountVolume(new FakeModule(fs), volume, {
+        locks: fakeLocks(true), seed: seedVolume,
+      });
+      await expect(handle.ready).resolves.toBe(true);
+
+      expect(notices).toEqual(["Could not delete your nethack save."]);
+      expect(warn.mock.calls.flat()).toContain(failure);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("leaves the reset parked for the tab that owns the volume", async () => {

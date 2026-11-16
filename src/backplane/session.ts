@@ -211,7 +211,7 @@ export class EngineSession<In extends { type: string }, Out> {
       // cancel-shaped beats wedging it forever.
       console.error("view failed to answer the engine:", err);
       reply = this.delegate.fallback(msg);
-      notice = `A display error cancelled the current action (${String(err)}).`;
+      notice = "A display error cancelled the current action.";
     }
     if (reply !== null) this.worker.postMessage(reply);
     // Strictly after the reply, and guarded: onNotice reaches DOM mutation

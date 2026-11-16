@@ -378,13 +378,19 @@ describe("NetHack worker autosave wiring", () => {
 
   it("tells the player rather than going fatal when the final flush fails", async () => {
     const w = await boot();
-    w.persist.flush.mockRejectedValueOnce(new Error("IDBFS failed"));
-    const exit = w.bridge("shim_exit_nhwindows", "");
-    w.reply(null);
-    await expect(exit).resolves.toBeNull();
-    expect(w.posted.at(-1)).toEqual({
-      type: "notice", text: "Your game may not have been saved — Error: IDBFS failed.",
-    });
+    const failure = new Error("IDBFS failed");
+    w.persist.flush.mockRejectedValueOnce(failure);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const exit = w.bridge("shim_exit_nhwindows", "");
+      w.reply(null);
+      await expect(exit).resolves.toBeNull();
+      // The exception is the console's; the player is told what it cost.
+      expect(w.posted.at(-1)).toEqual({ type: "notice", text: "Your game may not have been saved." });
+      expect(warn.mock.calls.flat()).toContain(failure);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("gives the checkpointer the engine's save, the bridge swap, the volume flush and a notice", async () => {

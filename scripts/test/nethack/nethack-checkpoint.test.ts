@@ -273,10 +273,19 @@ describe("NetHack autosave giving up", () => {
   });
 
   it("gives up rather than throwing when the checkpoint itself throws, and still restores the bridge", async () => {
-    const h = harness(() => { throw new Error("memory access out of bounds"); });
-    await expect(h.cp.maybe()).resolves.toBe(false);
+    const failure = new Error("memory access out of bounds");
+    const h = harness(() => { throw failure; });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      await expect(h.cp.maybe()).resolves.toBe(false);
+      expect(warn.mock.calls.flat()).toContain(failure);
+    } finally {
+      warn.mockRestore();
+    }
     expect(h.restoredCount()).toBe(1);
-    expect(h.cp.dead).toBe("checkpointing failed: Error: memory access out of bounds");
+    // The reason becomes the player's "Autosave stopped — …" line, so the
+    // exception stays on the console line above.
+    expect(h.cp.dead).toBe("a checkpoint could not be written");
     expect(h.dead).toEqual([h.cp.dead]);
     expect(await h.cp.maybe()).toBe(false);
     expect(h.saveCurrentState).toHaveBeenCalledTimes(1);

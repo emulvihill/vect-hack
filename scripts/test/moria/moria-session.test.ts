@@ -59,13 +59,17 @@ describe("Moria session delegate", () => {
     const delegate = makeDelegate({
       onNotice: (text) => notices.push(text), handle: () => {}, nextKey: () => null,
     });
-    await delegate.dispatch({
-      type: "quit", saved: false, persistent: true,
-      reason: "could not persist the Moria volume: Error: transaction failed",
-    });
-    expect(notices).toEqual([
-      "Moria exited — reload to restart. Saving failed — could not persist the Moria volume: Error: transaction failed.",
-    ]);
+    const reason = "could not persist the Moria volume: Error: transaction failed";
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      await delegate.dispatch({ type: "quit", saved: false, persistent: true, reason });
+      // The reason is String(error) from the failed flush: the console's, never
+      // the player's.
+      expect(notices).toEqual(["Moria exited — your game could not be saved. Reload to restart."]);
+      expect(warn.mock.calls.flat()).toContain(reason);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("answers an empty poll as no-key and words fatal errors", async () => {

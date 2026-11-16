@@ -322,7 +322,8 @@ async function boot() {
           // left — the rejection would otherwise unwind out of this suspended
           // windowport call and reach the unhandledrejection handler above,
           // ending the run in a `fatal` at the moment they saved or died.
-          post({ type: "notice", text: `Your game may not have been saved — ${String(err)}.` });
+          console.warn("[vect-hack] could not persist the NetHack volume:", err);
+          post({ type: "notice", text: "Your game may not have been saved." });
         }
         return r;
       }

@@ -265,7 +265,9 @@ export function createCheckpointer(deps: CheckpointDeps): Checkpointer {
     } catch (err) {
       // The running game matters more than the mirror: give up quietly here
       // rather than throw back into an ASYNCIFY-suspended windowport call.
-      die(`checkpointing failed: ${String(err)}`);
+      // The reason reaches the player; the exception stays on the console.
+      console.warn("[vect-hack] checkpointing failed:", err);
+      die("a checkpoint could not be written");
       return false;
     }
   }

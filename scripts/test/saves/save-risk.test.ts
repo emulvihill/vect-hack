@@ -18,6 +18,7 @@ import { SAVE_BUTTON_ID } from "../../../src/ui/saveMenu";
 import {
   mountVolume, type LockManagerLike, type SessionOnlyReason,
 } from "../../../src/backplane/persistFs";
+import { EngineSession, onSessionOnly } from "../../../src/backplane/session";
 import { VOLUMES } from "../../../src/backplane/volumes";
 import {
   RISK_NOTICE_DISMISSED_KEY, RISK_NOTICE_DISMISS_ID, RISK_NOTICE_ID,
@@ -199,6 +200,25 @@ describe("a tab whose save volume never mounted", () => {
       "Something went wrong setting up saved games, so this character will not "
       + "be saved. Reload the page to try again. "
       + SESSION_ONLY_RESCUE);
+  });
+
+  it("reads a code this build does not know as a setup that went wrong", async () => {
+    // The code crosses a worker boundary as structured-cloned data that
+    // EngineSession casts and does not check, so the type says nothing about
+    // what arrives. Routed exactly as main.ts routes it.
+    const dom = chrome();
+    onSessionOnly((code) => showSessionOnlySaves({ code, dom }));
+    const worker = { onmessage: null as ((e: { data: unknown }) => void) | null };
+    new EngineSession(worker as unknown as Worker, {
+      onNotice: () => {}, fatalNotice: (m) => m, dispatch: async () => null, fallback: () => null,
+    });
+    try {
+      worker.onmessage?.({ data: { type: "sessionOnly", code: "a-code-from-another-build" } });
+      await new Promise((r) => setTimeout(r, 0));
+      expect(dom.el(RISK_NOTICE_TEXT_ID).textContent).toBe(sessionOnlyNotice("setup-failed"));
+    } finally {
+      onSessionOnly(() => {});
+    }
   });
 
   it("shows the sentence and marks the Saves button", () => {

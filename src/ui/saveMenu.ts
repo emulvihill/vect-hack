@@ -79,7 +79,10 @@ export function installSaveMenu(ui: SaveMenuUi): void {
     close();
     action().then(
       (text) => { if (text !== null) ui.notify(text); },
-      (err: unknown) => ui.notify(`The save menu failed: ${String(err)}`),
+      (err: unknown) => {
+        console.error("[vect-hack] the save menu failed:", err);
+        ui.notify("The save menu failed.");
+      },
     ).finally(() => { busy = false; });
   };
 

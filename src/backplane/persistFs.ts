@@ -366,9 +366,13 @@ function emptyVolume(FS: ImportFS, root: string): void {
  * Module's worker->main union carries the Backplane's `notice` and
  * EngineSession routes it, which is exactly what makes this the Backplane's to
  * post.
+ *
+ * `err` goes on the console line and nowhere else: a raw exception belongs in
+ * console.warn, never in a sentence a player reads.
  */
-function notifyPlayer(text: string): void {
-  console.warn("[vect-hack]", text);
+function notifyPlayer(text: string, err?: unknown): void {
+  if (err === undefined) console.warn("[vect-hack]", text);
+  else console.warn("[vect-hack]", text, err);
   postToPage({ type: "notice", text }, "could not report the import");
 }
 
@@ -447,7 +451,7 @@ async function consumePendingReset(
     emptied = true;
     notifyPlayer(`Deleted your ${volume.id} save. This is a new game.`);
   } catch (err) {
-    notifyPlayer(`Could not delete your ${volume.id} save — ${String(err)}`);
+    notifyPlayer(`Could not delete your ${volume.id} save.`, err);
   }
   await clearPendingReset(volume.id);
   return emptied;
@@ -532,8 +536,8 @@ async function setUp(
       if (state.released) return false;
       if (importErr) {
         notifyPlayer(emptied
-          ? `Your ${volume.id} save is deleted here but not stored yet: ${String(importErr)}`
-          : `The loaded save is not stored yet: ${String(importErr)}`);
+          ? `Your ${volume.id} save is deleted here but not stored yet.`
+          : "The loaded save is not stored yet.", importErr);
       }
     }
     const queuedErr = await waitForAutoPersist(mod.FS, volume.mountpoint);

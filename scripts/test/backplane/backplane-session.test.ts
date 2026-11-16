@@ -302,11 +302,17 @@ describe("EngineSession", () => {
 
   it("a throwing dispatch posts the fallback reply and notices (vect-hack-c1w)", async () => {
     const { worker, notices } = harness();
-    worker.emit({ type: "boom", id: 9 });
-    await flush();
-    expect(worker.posted).toEqual([{ type: "pong", id: -9 }]);
-    expect(notices).toHaveLength(1);
-    expect(notices[0]).toMatch(/view exploded/);
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      worker.emit({ type: "boom", id: 9 });
+      await flush();
+      expect(worker.posted).toEqual([{ type: "pong", id: -9 }]);
+      // The view's exception is the console's; the player is told what it cost.
+      expect(notices).toEqual(["A display error cancelled the current action."]);
+      expect(errors.mock.calls.flat().map(String)).toContain("Error: view exploded");
+    } finally {
+      errors.mockRestore();
+    }
   });
 
   it("still posts the fallback when onNotice also throws (vect-hack-c1w)", async () => {
