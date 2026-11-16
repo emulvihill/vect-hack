@@ -7,11 +7,9 @@
 // The scope is a parameter, so no worker globals need stubbing; only the core
 // import does, through BASE_URL, the same way nethack-worker.test.ts does it.
 // The volume is swapped at its factory; the lifecycle is the real one.
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { describe, expect, it, vi } from "vitest";
 import type { MoriaMainToWorker, MoriaWorkerToMain } from "../../../src/modules/moria/protocol";
+import { deferred, standInCore, turn } from "../worker-harness";
 
 const seam = vi.hoisted(() => ({ mount: (_m: unknown): unknown => undefined }));
 vi.mock("../../../src/modules/moria/persist", () => ({
@@ -20,26 +18,7 @@ vi.mock("../../../src/modules/moria/persist", () => ({
 
 const { startMoriaWorker } = await import("../../../src/modules/moria/worker");
 
-let coreDir = "";
-beforeAll(() => {
-  coreDir = mkdtempSync(join(tmpdir(), "vh-moria-core-"));
-  mkdirSync(join(coreDir, "modules/moria"), { recursive: true });
-  writeFileSync(join(coreDir, "modules/moria/moria.js"),
-    "export default (opts) => globalThis.__vhFakeMoriaCore(opts);\n");
-  return () => rmSync(coreDir, { recursive: true, force: true });
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-  vi.unstubAllEnvs();
-});
-
-function deferred<T = void>() {
-  let resolve!: (v: T) => void;
-  let reject!: (e: unknown) => void;
-  const promise = new Promise<T>((y, n) => { resolve = y; reject = n; });
-  return { promise, resolve, reject };
-}
+const core = standInCore("moria", "__vhFakeMoriaCore");
 
 async function start() {
   const posted: MoriaWorkerToMain[] = [];
@@ -64,7 +43,7 @@ async function start() {
     factory.resolve();
     return module;
   });
-  vi.stubEnv("BASE_URL", coreDir + "/");
+  vi.stubEnv("BASE_URL", core.dir() + "/");
   const scope = {
     location: { origin: "file://" },
     postMessage: (m: MoriaWorkerToMain) => void posted.push(m),
@@ -92,7 +71,7 @@ describe("startMoriaWorker", () => {
     w.send({ type: "describe", id: 2, x: 1, y: 2 });
     expect(ccall).toHaveBeenCalledWith("moria_describe", "string", ["number", "number"], [1, 2]);
     expect(w.posted.at(-1)).toEqual({ type: "describeReply", id: 2, text: "a Grip, Farmer Maggot's Dog" });
-    expect(w.options().locateFile("moria.wasm")).toBe(`file://${coreDir}/modules/moria/moria.wasm`);
+    expect(w.options().locateFile("moria.wasm")).toBe(`file://${core.dir()}/modules/moria/moria.wasm`);
   });
 
   it("reports the quit with the persistence state its beforeExit finalized", async () => {
@@ -123,7 +102,7 @@ describe("startMoriaWorker", () => {
     w.listeners.get("error")!({ error: new Error("unreachable"), message: "ignored" });
     w.listeners.get("unhandledrejection")!({ reason: "teardown noise" });
     w.run.reject(new Error("late"));
-    await new Promise((r) => setTimeout(r, 0));
+    await turn();
     expect(w.posted.filter((m) => m.type === "fatal")).toEqual([
       { type: "fatal", message: "Error: unreachable" },
     ]);

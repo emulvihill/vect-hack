@@ -9,44 +9,20 @@
 // worker globals stubbed, BASE_URL pointed at a temp directory whose
 // modules/larn/larn.js hands the emscripten options to the test. The volume
 // mount is swapped at its factory; the lifecycle is the real one.
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { describe, expect, it, vi } from "vitest";
 import type { LarnMainToWorker, LarnWorkerToMain } from "../../../src/modules/larn/protocol";
+import { deferred, standInCore, stubWorkerScope, turn } from "../worker-harness";
 
 const seam = vi.hoisted(() => ({ mount: (_m: unknown): unknown => undefined }));
 vi.mock("../../../src/modules/larn/persist", () => ({
   mountLarnStorage: (m: unknown) => seam.mount(m),
 }));
 
-let coreDir = "";
-beforeAll(() => {
-  coreDir = mkdtempSync(join(tmpdir(), "vh-larn-core-"));
-  mkdirSync(join(coreDir, "modules/larn"), { recursive: true });
-  writeFileSync(join(coreDir, "modules/larn/larn.js"),
-    "export default (opts) => globalThis.__vhFakeLarnCore(opts);\n");
-  return () => rmSync(coreDir, { recursive: true, force: true });
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-  vi.unstubAllEnvs();
-});
-
-function deferred<T = void>() {
-  let resolve!: (v: T) => void;
-  const promise = new Promise<T>((y) => { resolve = y; });
-  return { promise, resolve };
-}
-const turn = () => new Promise((r) => setTimeout(r, 0));
-
-type Posted = { m: LarnWorkerToMain; transfer: Transferable[] };
+const core = standInCore("larn", "__vhFakeLarnCore");
 
 async function boot(opts: { factoryError?: Error } = {}) {
   vi.resetModules();
-  const posted: Posted[] = [];
-  const listeners = new Map<string, (e: unknown) => void>();
+  const { posted, messages, listeners } = stubWorkerScope<LarnWorkerToMain>(core.dir());
   const volume = deferred<boolean>();
   const persist = {
     ready: volume.promise,
@@ -69,14 +45,7 @@ async function boot(opts: { factoryError?: Error } = {}) {
     o.onRuntimeInitialized();
     factory.resolve();
   });
-  vi.stubGlobal("postMessage", (m: LarnWorkerToMain, transfer: Transferable[]) => void posted.push({ m, transfer }));
-  vi.stubGlobal("self", {
-    addEventListener: (t: string, fn: (e: unknown) => void) => void listeners.set(t, fn),
-    location: { origin: "file://" },
-  });
-  vi.stubGlobal("onmessage", null);
   vi.stubGlobal("VectLarn", undefined);
-  vi.stubEnv("BASE_URL", coreDir + "/");
 
   await import("../../../src/modules/larn/worker");
   await factory.promise;
@@ -86,7 +55,7 @@ async function boot(opts: { factoryError?: Error } = {}) {
   return {
     posted, listeners, persist, ccall, options,
     v: g.VectLarn as Record<string, any>,
-    messages: () => posted.map((p) => p.m),
+    messages: () => messages,
     send: (data: LarnMainToWorker) => (g.onmessage as (e: { data: unknown }) => void)({ data }),
     settle: async () => { volume.resolve(true); await turn(); },
   };
@@ -99,7 +68,7 @@ describe("Larn worker boot", () => {
     expect(w.messages().filter((m) => m.type === "ready")).toEqual([]);
     await w.settle();
     expect(w.messages().filter((m) => m.type === "ready")).toEqual([{ type: "ready" }]);
-    expect(w.options.locateFile("larn.data")).toBe(`file://${coreDir}/modules/larn/larn.data`);
+    expect(w.options.locateFile("larn.data")).toBe(`file://${core.dir()}/modules/larn/larn.data`);
   });
 
   it("reports a core that would not start as fatal", async () => {

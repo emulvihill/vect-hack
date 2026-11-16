@@ -7,37 +7,14 @@
 // multi-item PICK_ANY confirm (pickup/drop menus).
 import { describe, expect, it } from "vitest";
 import { writeMenuPicks } from "../../../src/modules/nethack/wasmAbi";
+import { FakeHeap } from "./fake-heap";
 
-/**
- * A bump-allocated byte buffer standing in for wasm linear memory. `_malloc`
- * hands back DIRTY memory (0xAA per byte, the way real malloc hands back
- * whatever was there): a zero-filled ArrayBuffer would make every "this byte
- * is zeroed" assertion below true whether or not production writes it.
- */
+/** _malloc's fill: real malloc hands back whatever was there (fake-heap.ts). */
 const DIRTY = 0xaa;
 /** 0xAAAAAAAA read back as a little-endian i32 — what an unwritten word says. */
 const DIRTY_I32 = -1431655766;
 
-function fakeModule(bytes = 256) {
-  const mem = new DataView(new ArrayBuffer(bytes));
-  let next = 0;
-  return {
-    _malloc: (n: number) => {
-      const p = next; next += n;
-      for (let i = p; i < next; i++) mem.setUint8(i, DIRTY);
-      return p;
-    },
-    setValue: (ptr: number, value: number, type: string) => {
-      if (type !== "i32") throw new Error(`unexpected type ${type}`);
-      mem.setInt32(ptr, value, true);
-    },
-    getValue: (ptr: number, type: string) => {
-      if (type !== "i32") throw new Error(`unexpected type ${type}`);
-      return mem.getInt32(ptr, true);
-    },
-    UTF8ToString: () => "",
-  };
-}
+const fakeModule = () => new FakeHeap({ bytes: 256, dirty: DIRTY });
 
 describe("writeMenuPicks", () => {
   it("lays out each entry at the real 16-byte struct-mi stride", () => {

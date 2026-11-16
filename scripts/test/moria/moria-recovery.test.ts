@@ -3,7 +3,6 @@ import {
   MORIA_CHECKPOINT_PENDING,
   MORIA_RECOVERY_MAX_GENERATION,
   createMoriaRecovery,
-  fnv1a32Hex,
   type MoriaRecoveryFS,
 } from "../../../src/modules/moria/recovery";
 import { CHECKPOINT_DEFECTS, checkpoint, commitJson, terminalJson, validGame } from "./moria-checkpoint-fixtures";
@@ -214,31 +213,26 @@ import { validateMoriaRecoveryFiles } from "../../../src/modules/moria/recovery"
 
 describe("Moria terminal tombstones and a missing candidate", () => {
   const json = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
-  const tombstone = (generation: number, extra: object = {}) =>
-    json({ schema: 1, generation, terminal: true, ...extra });
   /** A volume's recovery files as an import carries them, checkpoint-only. */
   function volume(checkpoints: number[], terminals: [number, Uint8Array][]): Map<string, Uint8Array> {
     const files = new Map<string, Uint8Array>();
     for (const generation of checkpoints) {
       const bytes = checkpoint(generation);
       files.set(`recover/checkpoint-${generation}.sav`, bytes);
-      files.set(`recover/commit-${generation}.json`, json({
-        schema: 1, generation, file: `checkpoint-${generation}.sav`,
-        size: bytes.byteLength, checksum: fnv1a32Hex(bytes), ancestor: null,
-      }));
+      files.set(`recover/commit-${generation}.json`, commitJson(generation, bytes));
     }
     for (const [generation, bytes] of terminals) files.set(`recover/terminal-${generation}.json`, bytes);
     return files;
   }
 
   it("imports one canonical tombstone newer than every checkpoint", () => {
-    expect(() => validateMoriaRecoveryFiles(volume([1], [[2, tombstone(2)]]))).not.toThrow();
+    expect(() => validateMoriaRecoveryFiles(volume([1], [[2, terminalJson(2)]]))).not.toThrow();
   });
 
   it.each([
-    ["an extra key", tombstone(2, { file: "checkpoint-2.sav" })],
+    ["an extra key", json({ schema: 1, generation: 2, terminal: true, file: "checkpoint-2.sav" })],
     ["terminal false", json({ schema: 1, generation: 2, terminal: false })],
-    ["a generation its name does not carry", tombstone(3)],
+    ["a generation its name does not carry", terminalJson(3)],
     ["another schema", json({ schema: 2, generation: 2, terminal: true })],
     ["bytes that are not JSON", new TextEncoder().encode("{")],
   ])("refuses to import a tombstone with %s", (_label, bytes) => {
@@ -247,12 +241,12 @@ describe("Moria terminal tombstones and a missing candidate", () => {
   });
 
   it("refuses to import two tombstones", () => {
-    expect(() => validateMoriaRecoveryFiles(volume([1], [[2, tombstone(2)], [3, tombstone(3)]])))
+    expect(() => validateMoriaRecoveryFiles(volume([1], [[2, terminalJson(2)], [3, terminalJson(3)]])))
       .toThrow("Moria recovery contains multiple terminal tombstones");
   });
 
   it("refuses to import a tombstone no newer than a checkpoint", () => {
-    for (const files of [volume([1, 3], [[2, tombstone(2)]]), volume([1], [[1, tombstone(1)]])]) {
+    for (const files of [volume([1, 3], [[2, terminalJson(2)]]), volume([1], [[1, terminalJson(1)]])]) {
       expect(() => validateMoriaRecoveryFiles(files))
         .toThrow("the Moria terminal tombstone is not newer than every checkpoint");
     }
@@ -261,7 +255,7 @@ describe("Moria terminal tombstones and a missing candidate", () => {
   it("at boot, ignores and removes a tombstone that is not canonical", () => {
     const fs = new FakeFS();
     addCommitted(fs, 1, checkpoint(1));
-    fs.writeFile(`${ROOT}/recover/terminal-2.json`, tombstone(2, { extra: 1 }));
+    fs.writeFile(`${ROOT}/recover/terminal-2.json`, json({ schema: 1, generation: 2, terminal: true, extra: 1 }));
     expect(createMoriaRecovery(fs, ROOT).recoveryPath).toBe(`${ROOT}/recover/checkpoint-1.sav`);
     expect(fs.analyzePath(`${ROOT}/recover/terminal-2.json`).exists).toBe(false);
   });
@@ -269,8 +263,8 @@ describe("Moria terminal tombstones and a missing candidate", () => {
   it("at boot, obeys the newest of several tombstones and removes the rest", () => {
     const fs = new FakeFS();
     addCommitted(fs, 1, checkpoint(1));
-    fs.writeFile(`${ROOT}/recover/terminal-2.json`, tombstone(2));
-    fs.writeFile(`${ROOT}/recover/terminal-3.json`, tombstone(3));
+    fs.writeFile(`${ROOT}/recover/terminal-2.json`, terminalJson(2));
+    fs.writeFile(`${ROOT}/recover/terminal-3.json`, terminalJson(3));
     expect(createMoriaRecovery(fs, ROOT).recoveryPath).toBe("");
     expect(fs.analyzePath(`${ROOT}/recover/terminal-2.json`).exists).toBe(false);
     expect(fs.analyzePath(`${ROOT}/recover/terminal-3.json`).exists).toBe(true);
@@ -280,7 +274,7 @@ describe("Moria terminal tombstones and a missing candidate", () => {
     const fs = new FakeFS();
     addCommitted(fs, 1, checkpoint(1));
     addCommitted(fs, 3, checkpoint(3));
-    fs.writeFile(`${ROOT}/recover/terminal-2.json`, tombstone(2));
+    fs.writeFile(`${ROOT}/recover/terminal-2.json`, terminalJson(2));
     expect(createMoriaRecovery(fs, ROOT).recoveryPath).toBe(`${ROOT}/recover/checkpoint-3.sav`);
     expect(fs.analyzePath(`${ROOT}/recover/terminal-2.json`).exists).toBe(false);
   });

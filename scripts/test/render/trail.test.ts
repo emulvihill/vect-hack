@@ -6,7 +6,7 @@
 // What that GPU shows on the canvas is what the player would see.
 import { describe, expect, it } from "vitest";
 import {
-  AddEquation, CustomBlending, MaxEquation, NormalBlending, PerspectiveCamera,
+  CustomBlending, MaxEquation, NormalBlending, PerspectiveCamera,
   ReverseSubtractEquation, Scene,
   type Camera, type Material, type RenderTarget, type Texture, type Vector2, type WebGPURenderer,
 } from "three/webgpu";
@@ -19,6 +19,8 @@ const DRAIN = TOKENS.glow.persistence_drain_per_s;
 type QuadMaterial = Material & { map: Texture | null; color: { r: number } };
 
 class OnePixelGpu {
+  /** This GPU where Trail asks for a renderer. */
+  get renderer(): WebGPURenderer { return this as unknown as WebGPURenderer; }
   autoClear = true;
   /** What the scene draws into whichever target is bound. */
   stamp = 0;
@@ -62,7 +64,6 @@ class OnePixelGpu {
       if (m.blending === NormalBlending) dst = src;
       else if (m.blending !== CustomBlending) throw new Error(`blending ${m.blending}`);
       else if (m.blendEquation === MaxEquation) dst = Math.max(dst, src);
-      else if (m.blendEquation === AddEquation) dst += src;
       else if (m.blendEquation === ReverseSubtractEquation) dst -= src; // half float: no clamp
       else throw new Error(`equation ${m.blendEquation}`);
     }
@@ -80,7 +81,7 @@ const camera = new PerspectiveCamera();
 
 function frame(trail: Trail, gpu: OnePixelGpu, stamp: number, dt: number): number {
   gpu.stamp = stamp;
-  trail.render(gpu as unknown as WebGPURenderer, scene, camera, dt);
+  trail.render(gpu.renderer, scene, camera, dt);
   return gpu.canvas;
 }
 
@@ -155,20 +156,20 @@ describe("Trail", () => {
 
   it("fits its buffers to the drawing buffer and drops the residue on a resize", () => {
     const trail = new Trail(HL, 0), gpu = new OnePixelGpu();
-    trail.fit(gpu as unknown as WebGPURenderer);
+    trail.fit(gpu.renderer);
     frame(trail, gpu, 1, 1 / 60);
     // The same size is not a rebuild: the residue survives it.
-    trail.fit(gpu as unknown as WebGPURenderer);
+    trail.fit(gpu.renderer);
     expect(frame(trail, gpu, 0, HL)).toBeCloseTo(0.5, 6);
     expect(gpu.targets.map((t) => [t.width, t.height])).toEqual([[640, 360], [640, 360]]);
 
     let disposed = 0;
     for (const t of gpu.targets) t.addEventListener("dispose", () => disposed++);
-    trail.fit(gpu as unknown as WebGPURenderer);
+    trail.fit(gpu.renderer);
     expect(disposed).toBe(0);
 
     gpu.drawingBuffer = { x: 800, y: 600 };
-    trail.fit(gpu as unknown as WebGPURenderer);
+    trail.fit(gpu.renderer);
     expect(disposed).toBe(2);
     // A fresh pair holds nothing worth trailing: the frame after a resize is clean.
     expect(frame(trail, gpu, 0, 1 / 60)).toBe(0);

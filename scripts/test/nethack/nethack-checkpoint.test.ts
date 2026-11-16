@@ -72,8 +72,10 @@ class FakeFS implements CheckpointFS {
   analyzePath(path: string) { return { exists: this.nodes.has(path) }; }
 }
 
-/** A checkpointer on production thresholds, with the clock in the test's hand. */
-function harness() {
+/** A checkpointer on production thresholds, with the clock in the test's hand.
+ *  `save` replaces save_currentstate() outright; it is handed the level
+ *  rewrite to call when the checkpoint should count as having written. */
+function harness(save?: (writeLevels: () => void) => void) {
   const FS = new FakeFS();
   // The hero is on level 1, so the set is level.0 plus the level itself.
   const writeLevels = () => {
@@ -84,23 +86,28 @@ function harness() {
 
   let clock = 1_000;
   const flushed: number[] = [];
+  const dead: string[] = [];
+  let restored = 0;
   let flushError: Error | null = null;
+  // By default it stands in for save_currentstate() by rewriting the level
+  // files, which is how the real one proves to maybe() that it ran.
+  const saveCurrentState = vi.fn(save ? () => save(writeLevels) : writeLevels);
   const cp = createCheckpointer({
     FS,
     root: ROOT,
-    // Stands in for save_currentstate(): rewrites the level files, which is
-    // how the real one proves to maybe() that it ran.
-    saveCurrentState: writeLevels,
-    suspendBridge: () => () => {},
+    saveCurrentState,
+    suspendBridge: () => () => void restored++,
     flush: async () => {
       if (flushError) throw flushError; // what PersistHandle.flush() does on an IDBFS failure
       flushed.push(clock);
     },
+    onDead: (reason) => void dead.push(reason),
     now: () => clock,
   });
 
   return {
-    cp, FS, flushed,
+    cp, FS, flushed, dead, saveCurrentState,
+    restoredCount: () => restored,
     advance: (ms: number) => { clock += ms; },
     breakFlush: (err: Error) => { flushError = err; },
   };
@@ -234,33 +241,10 @@ describe("NetHack recovery manifest trust boundary", () => {
 });
 
 describe("NetHack autosave giving up", () => {
-  /** A checkpointer whose save_currentstate() the test controls outright. */
-  function giving(save: () => void) {
-    const FS = new FakeFS();
-    FS.writeFile(`/${LOCK}.0`, level0(1));
-    FS.writeFile(`/${LOCK}.1`, new Uint8Array(64));
-    const dead: string[] = [];
-    let restored = 0;
-    let clock = 1_000;
-    const saveCurrentState = vi.fn(save);
-    const cp = createCheckpointer({
-      FS, root: ROOT, saveCurrentState,
-      suspendBridge: () => () => void restored++,
-      flush: async () => {},
-      onDead: (reason) => void dead.push(reason),
-      now: () => clock,
-    });
-    const rewrite = () => FS.writeFile(`/${LOCK}.0`, level0(1));
-    return {
-      cp, dead, saveCurrentState, rewrite, restoredCount: () => restored,
-      advance: (ms: number) => { clock += ms; },
-    };
-  }
-
   it("stops after two checkpoints in a row that wrote nothing, and says so once", async () => {
     // do.c's in_checkpoint guard: once one create_levelfile fails, every
     // later save_currentstate() returns without writing.
-    const h = giving(() => {});
+    const h = harness(() => {});
     expect(await h.cp.maybe()).toBe(false);
     expect(h.cp.dead).toBeNull(); // one quiet checkpoint can be a coincidence
     expect(await h.cp.maybe()).toBe(false);
@@ -275,7 +259,7 @@ describe("NetHack autosave giving up", () => {
 
   it("forgives a miss once a checkpoint lands between them", async () => {
     let write = false;
-    const h = giving(() => { if (write) h.rewrite(); });
+    const h = harness((rewrite) => { if (write) rewrite(); });
     expect(await h.cp.maybe()).toBe(false); // miss 1
     write = true;
     expect(await h.cp.maybe()).toBe(true); // landed: the count starts over
@@ -289,7 +273,7 @@ describe("NetHack autosave giving up", () => {
   });
 
   it("gives up rather than throwing when the checkpoint itself throws, and still restores the bridge", async () => {
-    const h = giving(() => { throw new Error("memory access out of bounds"); });
+    const h = harness(() => { throw new Error("memory access out of bounds"); });
     await expect(h.cp.maybe()).resolves.toBe(false);
     expect(h.restoredCount()).toBe(1);
     expect(h.cp.dead).toBe("checkpointing failed: Error: memory access out of bounds");

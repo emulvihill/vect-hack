@@ -16,12 +16,11 @@
 // The volume mount and the checkpointer are swapped at their factories; the
 // worker's wiring of them is what is under test, and checkpoint.ts and
 // persist.ts are tested on their own.
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { describe, expect, it, vi } from "vitest";
 import type { MainToWorker, WorkerToMain } from "../../../src/modules/nethack/protocol";
 import type { CheckpointDeps } from "../../../src/modules/nethack/checkpoint";
+import { deferred, standInCore, stubWorkerScope, turn } from "../worker-harness";
+import { FakeHeap } from "./fake-heap";
 
 const seam = vi.hoisted(() => ({
   seedEngineFS: (_m: unknown): unknown => undefined,
@@ -45,57 +44,13 @@ const CONSTANTS = {
   GLYPH: { GLYPH_MON_OFF: 0 },
 };
 
-let coreDir = "";
-beforeAll(() => {
-  coreDir = mkdtempSync(join(tmpdir(), "vh-nethack-core-"));
-  mkdirSync(join(coreDir, "modules/nethack"), { recursive: true });
-  writeFileSync(join(coreDir, "modules/nethack/nethack.js"),
-    "export default (opts) => globalThis.__vhFakeNethackCore(opts);\n");
-  return () => rmSync(coreDir, { recursive: true, force: true });
-});
+const core = standInCore("nethack", "__vhFakeNethackCore");
 
-afterEach(() => {
-  vi.unstubAllGlobals();
-  vi.unstubAllEnvs();
-});
-
-/** Linear wasm memory, little-endian, with a bump allocator — the slice of
- *  the emscripten runtime the worker and wasmAbi.ts call. */
-class Heap {
-  readonly view = new DataView(new ArrayBuffer(1 << 16));
-  private top = 0x4000;
-  malloc = vi.fn((n: number) => { const p = this.top; this.top += (n + 7) & ~7; return p; });
-  free = vi.fn();
-  getValue = (p: number, t: string): number => {
-    if (t === "i8") return this.view.getInt8(p);
-    if (t === "i16") return this.view.getInt16(p, true);
-    return this.view.getInt32(p, true); // "i32" and "*" are both 32-bit on wasm32
-  };
-  setValue = vi.fn((p: number, v: number, t: string) => {
-    if (t === "i8") this.view.setInt8(p, v);
-    else if (t === "i16") this.view.setInt16(p, v, true);
-    else this.view.setInt32(p, v, true);
-  });
-  str(s: string): number {
-    const bytes = new TextEncoder().encode(s);
-    const p = this.malloc(bytes.length + 1);
-    bytes.forEach((b, i) => this.view.setUint8(p + i, b));
-    this.view.setUint8(p + bytes.length, 0);
-    return p;
-  }
-  UTF8ToString = (p: number): string => {
-    let end = p;
-    while (this.view.getUint8(end) !== 0) end++;
-    return new TextDecoder().decode(new Uint8Array(this.view.buffer, p, end - p));
-  };
-  stringToUTF8 = vi.fn((s: string, p: number, max: number) => {
-    const bytes = new TextEncoder().encode(s).slice(0, max - 1);
-    bytes.forEach((b, i) => this.view.setUint8(p + i, b));
-    this.view.setUint8(p + bytes.length, 0);
-  });
+/** The fake heap, plus the one struct the worker decodes itself. */
+class Heap extends FakeHeap {
   /** A glyph_info struct at the wasm32 offsets include/wintype.h gives. */
   glyph(g: { glyph: number; ttychar: number; glyphflags: number; color: number }): number {
-    const p = this.malloc(36);
+    const p = this._malloc(36);
     this.view.setInt32(p, g.glyph, true);
     this.view.setInt32(p + 4, g.ttychar, true);
     this.view.setUint32(p + 8, 0xdeadbeef, true); // framecolor: must not be read as anything
@@ -106,22 +61,12 @@ class Heap {
   }
 }
 
-function deferred<T = void>() {
-  let resolve!: (v: T) => void;
-  let reject!: (e: unknown) => void;
-  const promise = new Promise<T>((y, n) => { resolve = y; reject = n; });
-  return { promise, resolve, reject };
-}
-
-const turn = () => new Promise((r) => setTimeout(r, 0));
-
 type Bridge = (name: string, ...args: unknown[]) => Promise<unknown>;
 
 /** Load worker.ts as a fresh worker and run the fake runtime through boot. */
 async function boot(opts: { durable?: boolean; factoryError?: Error } = {}) {
   vi.resetModules();
-  const posted: WorkerToMain[] = [];
-  const listeners = new Map<string, (e: unknown) => void>();
+  const { messages: posted, listeners } = stubWorkerScope<WorkerToMain>(core.dir());
   const heap = new Heap();
   const persist = {
     ready: Promise.resolve(opts.durable ?? true),
@@ -149,8 +94,8 @@ async function boot(opts: { durable?: boolean; factoryError?: Error } = {}) {
       setValue: heap.setValue,
       stringToUTF8: heap.stringToUTF8,
       UTF8ToString: heap.UTF8ToString,
-      _malloc: heap.malloc,
-      _free: heap.free,
+      _malloc: heap._malloc,
+      _free: heap._free,
       _save_currentstate: vi.fn(),
       _do_screen_description: vi.fn(() => 0),
     });
@@ -159,15 +104,8 @@ async function boot(opts: { durable?: boolean; factoryError?: Error } = {}) {
     factory.resolve();
   });
   vi.stubGlobal("eval", globalThis.eval); // installEvalShim replaces it; restored after
-  vi.stubGlobal("postMessage", (m: WorkerToMain) => void posted.push(m));
-  vi.stubGlobal("self", {
-    addEventListener: (t: string, fn: (e: unknown) => void) => void listeners.set(t, fn),
-    location: { origin: "file://" },
-  });
-  vi.stubGlobal("onmessage", null);
   vi.stubGlobal(BRIDGE, undefined);
   vi.stubGlobal("nethackGlobal", { constants: {}, globals: { iflags: {}, svp: {} } });
-  vi.stubEnv("BASE_URL", coreDir + "/");
 
   await import("../../../src/modules/nethack/worker");
   await factory.promise;
@@ -276,7 +214,7 @@ describe("NetHack worker shim dispatch", () => {
 
   it("decodes the extended-command table once and hands the same list to every #", async () => {
     const w = await boot();
-    const table = w.heap.malloc(48); // two ext_func_tab rows, stride 24; the second ends the list
+    const table = w.heap._malloc(48); // two ext_func_tab rows, stride 24; the second ends the list
     w.heap.setValue(table + 4, w.heap.str("pray"), "*");
     w.heap.setValue(table + 8, w.heap.str("pray to your god"), "*");
     w.heap.setValue(table + 24 + 4, 0, "*");
@@ -290,7 +228,7 @@ describe("NetHack worker shim dispatch", () => {
 
   it("writes select_menu picks into a malloc'd menu_item array and returns the count", async () => {
     const w = await boot();
-    const out = w.heap.malloc(4);
+    const out = w.heap._malloc(4);
     const r = w.bridge("shim_select_menu", 4, 2, out);
     expect(w.lastEv()).toEqual({ name: "select_menu", win: 4, how: 2 });
     w.reply({ picks: [{ identifier: 42, count: -1, itemflags: 0 }, { identifier: 43, count: 3, itemflags: 1 }] });
@@ -303,7 +241,7 @@ describe("NetHack worker shim dispatch", () => {
 
   it("answers an empty pick 0 and a cancelled menu -1, with a NULL list either way", async () => {
     const w = await boot();
-    const out = w.heap.malloc(4);
+    const out = w.heap._malloc(4);
     w.heap.view.setInt32(out, 0x1234, true);
     const empty = w.bridge("shim_select_menu", 4, 1, out);
     w.reply({ picks: [] });
@@ -330,7 +268,7 @@ describe("NetHack worker shim dispatch", () => {
 
   it("writes a getlin answer into the engine's buffer, and ESC for a cancel", async () => {
     const w = await boot();
-    const buf = w.heap.malloc(256);
+    const buf = w.heap._malloc(256);
     const named = w.bridge("shim_getlin", "Call it:", buf);
     expect(w.lastEv()).toEqual({ name: "getlin", query: "Call it:" });
     w.reply("Sting");
@@ -346,7 +284,7 @@ describe("NetHack worker shim dispatch", () => {
   it("reads BL_CONDITION's pointer as a bitmask and every other field's as a string", async () => {
     const w = await boot();
     (globalThis as Record<string, any>).nethackGlobal.constants = CONSTANTS;
-    const mask = w.heap.malloc(4);
+    const mask = w.heap._malloc(4);
     w.heap.view.setInt32(mask, 0x41, true);
     void w.bridge("shim_status_update", BL_CONDITION, mask, 0, 0, 7);
     expect(w.lastEv()).toEqual({
@@ -395,7 +333,7 @@ describe("NetHack worker autosave wiring", () => {
     const w = await boot();
     const landed = deferred<boolean>();
     w.checkpoint.maybe.mockReturnValueOnce(landed.promise);
-    const mods = w.heap.malloc(4);
+    const mods = w.heap._malloc(4);
     w.heap.view.setInt32(mods, 0x55, true);
     const key = w.bridge("shim_nh_poskey", 0, 0, mods);
     expect(w.checkpoint.command).toHaveBeenCalledOnce();
@@ -456,7 +394,7 @@ describe("NetHack worker autosave wiring", () => {
     const w = await boot({ durable: false });
     expect(w.deps()).toBeUndefined();
     // and the main loop still runs without one
-    void w.bridge("shim_nh_poskey", 0, 0, w.heap.malloc(4));
+    void w.bridge("shim_nh_poskey", 0, 0, w.heap._malloc(4));
     await turn();
     expect(w.lastEv()).toEqual({ name: "nh_poskey" });
   });
@@ -467,15 +405,19 @@ describe("NetHack worker describe and export", () => {
     w.send({ type: "describe", id, x: 10, y: 5 });
     return w.posted.at(-1);
   };
-
-  it("names nothing before the windows are up and the map is drawn, or after they come down", async () => {
-    const w = await boot();
-    const name = w.heap.str("a newt");
+  /** do_screen_description() finding `text`: its name pointer written into `firstmatch`. */
+  const describesAs = (w: Awaited<ReturnType<typeof boot>>, text: string) => {
+    const name = w.heap.str(text);
     w.engine._do_screen_description.mockImplementation(
       (_cc: number, _l: number, _s: number, _out: number, first: number) => {
         w.heap.setValue(first, name, "*");
         return 1;
       });
+  };
+
+  it("names nothing before the windows are up and the map is drawn, or after they come down", async () => {
+    const w = await boot();
+    describesAs(w, "a newt");
     const glyph = w.heap.glyph({ glyph: 1, ttychar: ":".charCodeAt(0), glyphflags: 0, color: 2 });
 
     expect(describeAt(w, 1)).toEqual({ type: "describeReply", id: 1, text: null });
@@ -493,11 +435,7 @@ describe("NetHack worker describe and export", () => {
 
   it("names nothing while the windows are up but no glyph has been drawn", async () => {
     const w = await boot();
-    w.engine._do_screen_description.mockImplementation(
-      (_cc: number, _l: number, _s: number, _out: number, first: number) => {
-        w.heap.setValue(first, w.heap.str("dark part of a room"), "*");
-        return 1;
-      });
+    describesAs(w, "dark part of a room");
     void w.bridge("shim_init_nhwindows"); // character creation: windows, no map yet
     expect(describeAt(w, 1)).toEqual({ type: "describeReply", id: 1, text: null });
     expect(w.engine._do_screen_description).not.toHaveBeenCalled();

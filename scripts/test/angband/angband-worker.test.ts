@@ -9,11 +9,9 @@
 // then plays the runtime. The volume, the checkpoint cadence and the borg.txt
 // patch are swapped at their factories: their own tests cover what they do,
 // and this one covers how the worker wires them.
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { describe, expect, it, vi } from "vitest";
 import type { AngbandMainToWorker, AngbandWorkerToMain } from "../../../src/modules/angband/protocol";
+import { deferred, standInCore, stubWorkerScope, turn } from "../worker-harness";
 
 const seam = vi.hoisted(() => ({
   mount: (_m: unknown): unknown => undefined,
@@ -34,36 +32,13 @@ vi.mock("../../../src/modules/angband/borgConfig", () => ({
   applyBorgDelay: (fs: unknown, ms: number) => seam.applyBorgDelay(fs, ms),
 }));
 
-let coreDir = "";
-beforeAll(() => {
-  coreDir = mkdtempSync(join(tmpdir(), "vh-angband-core-"));
-  mkdirSync(join(coreDir, "modules/angband"), { recursive: true });
-  writeFileSync(join(coreDir, "modules/angband/angband.js"),
-    "export default (opts) => globalThis.__vhFakeAngbandCore(opts);\n");
-  return () => rmSync(coreDir, { recursive: true, force: true });
-});
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-  vi.unstubAllEnvs();
-});
-
-function deferred<T = void>() {
-  let resolve!: (v: T) => void;
-  let reject!: (e: unknown) => void;
-  const promise = new Promise<T>((y, n) => { resolve = y; reject = n; });
-  return { promise, resolve, reject };
-}
-const turn = () => new Promise((r) => setTimeout(r, 0));
-
-type Posted = { m: AngbandWorkerToMain; transfer: Transferable[] };
+const core = standInCore("angband", "__vhFakeAngbandCore");
 
 /** Load worker.ts fresh. `ready` gates persist.ready, so a test can act
  *  between the runtime coming up and the volume settling. */
 async function boot(opts: { persistent?: boolean } = {}) {
   vi.resetModules();
-  const posted: Posted[] = [];
-  const listeners = new Map<string, (e: unknown) => void>();
+  const { posted, messages, listeners } = stubWorkerScope<AngbandWorkerToMain>(core.dir());
   const volume = deferred<boolean>();
   const persist = {
     ready: volume.promise,
@@ -90,14 +65,7 @@ async function boot(opts: { persistent?: boolean } = {}) {
     o.onRuntimeInitialized();
     factory.resolve();
   });
-  vi.stubGlobal("postMessage", (m: AngbandWorkerToMain, transfer: Transferable[]) => void posted.push({ m, transfer }));
-  vi.stubGlobal("self", {
-    addEventListener: (t: string, fn: (e: unknown) => void) => void listeners.set(t, fn),
-    location: { origin: "file://" },
-  });
-  vi.stubGlobal("onmessage", null);
   vi.stubGlobal("VectAngband", undefined);
-  vi.stubEnv("BASE_URL", coreDir + "/");
 
   await import("../../../src/modules/angband/worker");
   await factory.promise;
@@ -107,7 +75,7 @@ async function boot(opts: { persistent?: boolean } = {}) {
   const v = g.VectAngband as Record<string, any>;
   return {
     posted, listeners, persist, checkpoint, applyBorgDelay, FS, ccall, options, v,
-    messages: () => posted.map((p) => p.m),
+    messages: () => messages,
     send: (data: AngbandMainToWorker) => (g.onmessage as (e: { data: unknown }) => void)({ data }),
     /** Let the volume settle, and with it `ready`. */
     settle: async () => { volume.resolve(persist.persistent); await turn(); },
@@ -120,7 +88,7 @@ describe("Angband worker boot", () => {
     expect(w.messages().filter((m) => m.type === "ready")).toEqual([]);
     await w.settle();
     expect(w.messages().filter((m) => m.type === "ready")).toEqual([{ type: "ready" }]);
-    expect(w.options.locateFile("angband.data")).toBe(`file://${coreDir}/modules/angband/angband.data`);
+    expect(w.options.locateFile("angband.data")).toBe(`file://${core.dir()}/modules/angband/angband.data`);
   });
 
   it("holds a ?borg pace that arrives before the volume, and applies it to the engine's FS at ready", async () => {
@@ -217,7 +185,6 @@ describe("Angband worker checkpoints and quit", () => {
     expect(w.v.checkpointDue()).toBe(0);
     w.checkpoint.due.mockReturnValue(true);
     expect(w.v.checkpointDue()).toBe(1);
-    vi.unstubAllGlobals();
 
     const lost = await boot({ persistent: false });
     lost.checkpoint.due.mockReturnValue(true);

@@ -1,14 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { PersistHandle } from "../../../src/backplane/persistFs";
 import { LarnPersistenceLifecycle } from "../../../src/modules/larn/persistenceLifecycle";
-
-function deferred() {
-  let resolve!: () => void;
-  let reject!: (reason: unknown) => void;
-  const promise = new Promise<void>((yes, no) => { resolve = yes; reject = no; });
-  return { promise, resolve, reject };
-}
-const turn = () => new Promise((resolve) => setTimeout(resolve, 0));
+import { deferred, turn } from "../worker-harness";
 
 function handle(flush: () => Promise<void>) {
   return {

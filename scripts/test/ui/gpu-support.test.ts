@@ -88,12 +88,12 @@ describe("browserGpuProbe", () => {
   });
 
   it("asks a throwaway canvas for WebGL 2, never the real one", () => {
-    const yes = browser(undefined, {});
+    const gl2 = browser(undefined, {});
     const probe = browserGpuProbe();
     expect(probe.webgl2()).toBe(true);
     expect(probe.webgl2()).toBe(true);
-    expect(yes.asked).toEqual(["webgl2", "webgl2"]);
-    expect(yes.canvases()).toBe(2);
+    expect(gl2.asked).toEqual(["webgl2", "webgl2"]);
+    expect(gl2.canvases()).toBe(2);
     browser(undefined, null);
     expect(browserGpuProbe().webgl2()).toBe(false);
   });

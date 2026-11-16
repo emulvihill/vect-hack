@@ -5,46 +5,23 @@
 // wrong reads garbage coordinates and describes the wrong square, silently.
 import { describe, expect, it } from "vitest";
 import { describeScreenCell } from "../../../src/modules/nethack/wasmAbi";
+import { FakeHeap } from "./fake-heap";
 
-/** A heap with just enough Emscripten surface for the marshalling. */
+/** A heap whose do_screen_description() answers `answer`. */
 function fakeModule(answer: { found: number; firstmatch: string | null }) {
-  const heap = new DataView(new ArrayBuffer(4096));
-  let next = 16;
-  const freed: number[] = [];
+  const heap = new FakeHeap({ bytes: 4096 });
   const calls: { cc: number; looked: number; sym: number; supplement: number }[] = [];
-  const mod = {
-    calls, freed,
-    coordAt(ptr: number) { return { x: heap.getInt16(ptr, true), y: heap.getInt16(ptr + 2, true) }; },
-    getValue(ptr: number, type: string) {
-      return type === "i16" ? heap.getInt16(ptr, true) : heap.getInt32(ptr, true);
-    },
-    setValue(ptr: number, value: number, type: string) {
-      if (type === "i16") heap.setInt16(ptr, value, true);
-      else if (type === "i8") heap.setInt8(ptr, value);
-      else heap.setInt32(ptr, value, true);
-    },
-    UTF8ToString(ptr: number) {
-      if (!ptr) return "";
-      const out: number[] = [];
-      for (let p = ptr; heap.getUint8(p); p++) out.push(heap.getUint8(p));
-      return String.fromCharCode(...out);
-    },
-    _malloc(bytes: number) { const p = next; next += bytes + 8; return p; },
-    _free(ptr: number) { freed.push(ptr); },
+  return Object.assign(heap, {
+    calls,
+    coordAt(ptr: number) { return { x: heap.view.getInt16(ptr, true), y: heap.view.getInt16(ptr + 2, true) }; },
     _do_screen_description(cc: number, looked: number, sym: number, out: number,
                            fm: number, supplement: number) {
       calls.push({ cc, looked, sym, supplement });
-      heap.setInt32(out, 0, true);
-      if (answer.firstmatch === null) { heap.setInt32(fm, 0, true); return answer.found; }
-      const at = next; next += answer.firstmatch.length + 1;
-      for (let i = 0; i < answer.firstmatch.length; i++)
-        heap.setUint8(at + i, answer.firstmatch.charCodeAt(i));
-      heap.setUint8(at + answer.firstmatch.length, 0);
-      heap.setInt32(fm, at, true);
+      heap.setValue(out, 0, "i32");
+      heap.setValue(fm, answer.firstmatch === null ? 0 : heap.str(answer.firstmatch), "*");
       return answer.found;
     },
-  };
-  return mod;
+  });
 }
 
 describe("describeScreenCell", () => {

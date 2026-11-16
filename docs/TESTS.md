@@ -42,7 +42,7 @@ engine drivers are run by name from `package.json`, through each Module's
 
 | Folder | What lives there |
 | --- | --- |
-| `nethack/` `angband/` `larn/` `moria/` | one Module each: its unit tests, its engine drivers, their shared helpers (`*-play.mjs`, `bot-fixtures.ts`, NetHack's DOM stub `stub-dom.ts`, `moria-checkpoint-fixtures.ts`), native harnesses (`*.cpp`) and fixtures |
+| `nethack/` `angband/` `larn/` `moria/` | one Module each: its unit tests, its engine drivers, their shared helpers (`*-play.mjs`, `bot-fixtures.ts`, NetHack's DOM stub `stub-dom.ts` and fake wasm heap `fake-heap.ts`, `moria-checkpoint-fixtures.ts`), native harnesses (`*.cpp`) and fixtures |
 | `backplane/` | `src/backplane` outside the save path: cells, sessions, describe, the key queue |
 | `saves/` | the save system across `src/backplane` and `src/ui` (`docs/SAVES.md`), and `fake-fs.ts`, the Emscripten FS stand-in every save-path test shares |
 | `render/` | `src/render`: terrain, entities, effects, cameras, picking |
@@ -51,7 +51,9 @@ engine drivers are run by name from `package.json`, through each Module's
 | `tooling/` | the gate drivers in `scripts/dev` and build guards in `scripts/build` |
 
 A test that spans every Module or guards the whole tree (layering, the
-cross-Module teardowns, `main.ts` with no GPU, skins) stays at the top level.
+cross-Module teardowns, `main.ts` with no GPU, skins) stays at the top level,
+as does `worker-harness.ts`: the stand-in core and worker globals every
+Module's worker-entry test boots against.
 
 ## NetHack — `npm run test:nethack`
 

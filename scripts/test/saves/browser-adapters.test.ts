@@ -121,15 +121,23 @@ function browser(answer: boolean) {
   return { confirm, reload, idb };
 }
 
-describe("browserUploads", () => {
+describe.each([["browserUploads", browserUploads], ["browserResets", browserResets]] as const)("%s", (_name, adapter) => {
   it("asks window.confirm and returns its answer", () => {
     for (const answer of [true, false]) {
       const { confirm } = browser(answer);
-      expect(browserUploads.confirm("Load it?")).toBe(answer);
-      expect(confirm).toHaveBeenCalledWith("Load it?");
+      expect(adapter.confirm("Go ahead?")).toBe(answer);
+      expect(confirm).toHaveBeenCalledWith("Go ahead?");
     }
   });
 
+  it("reloads the page", () => {
+    const { reload } = browser(true);
+    adapter.reload();
+    expect(reload).toHaveBeenCalledOnce();
+  });
+});
+
+describe("browserUploads.stash", () => {
   it("parks the bytes as an import for that volume, not a reset", async () => {
     const { idb } = browser(true);
     await browserUploads.stash("angband", new Uint8Array([4, 5]));
@@ -137,34 +145,14 @@ describe("browserUploads", () => {
     expect(await readPendingReset("angband", idb)).toBe(false);
     expect(await readPendingImport("nethack", idb)).toBeNull();
   });
-
-  it("reloads the page", () => {
-    const { reload } = browser(true);
-    browserUploads.reload();
-    expect(reload).toHaveBeenCalledOnce();
-  });
 });
 
-describe("browserResets", () => {
-  it("asks window.confirm and returns its answer", () => {
-    for (const answer of [true, false]) {
-      const { confirm } = browser(answer);
-      expect(browserResets.confirm("Delete it?")).toBe(answer);
-      expect(confirm).toHaveBeenCalledWith("Delete it?");
-    }
-  });
-
+describe("browserResets.stash", () => {
   it("parks a reset for that volume, not an import", async () => {
     const { idb } = browser(true);
     await browserResets.stash("moria");
     expect(await readPendingReset("moria", idb)).toBe(true);
     expect(await readPendingImport("moria", idb)).toBeNull();
     expect(await readPendingReset("larn", idb)).toBe(false);
-  });
-
-  it("reloads the page", () => {
-    const { reload } = browser(true);
-    browserResets.reload();
-    expect(reload).toHaveBeenCalledOnce();
   });
 });

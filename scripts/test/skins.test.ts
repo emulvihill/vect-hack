@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { deepMerge, resolveSkinName } from "../../src/skins/types";
 
 describe("deepMerge", () => {
@@ -126,7 +126,6 @@ describe("palette derives from the active skin", () => {
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { vi } from "vitest";
 import { applySkinCss } from "../../src/skins";
 
 /** Every custom property index.html's stylesheet reads. */
@@ -154,10 +153,13 @@ describe("applySkinCss", () => {
 
   it("gives the page every property it reads under every shipped skin", () => {
     // applySkinCss copies the active skin's css block whole, so a skin missing
-    // one leaves that property unset on the page.
+    // one leaves that property unset on the page. --vh-bg is not in that block:
+    // it comes from the skin's background, pinned above.
     for (const skin of Object.keys(SKINS)) {
-      const css = { "--vh-bg": "", ...resolveSkin(skin).css };
-      for (const name of PAGE_VARS) expect(Object.hasOwn(css, name), `${skin} ${name}`).toBe(true);
+      const css = resolveSkin(skin).css;
+      for (const name of PAGE_VARS.filter((n) => n !== "--vh-bg")) {
+        expect(Object.hasOwn(css, name), `${skin} ${name}`).toBe(true);
+      }
     }
   });
 
