@@ -10,9 +10,8 @@
 import { describe, expect, it } from "vitest";
 import { LarnBotModel } from "../../../src/modules/larn/bot/model";
 import { DEFAULT_TUNING, LarnBrain } from "../../../src/modules/larn/bot/policy";
-import { GRID, GRID_STRIDE, TERRAIN, TOP } from "../../../src/modules/larn/mapRecords";
-import { LARN_COLS, LARN_ROWS } from "../../../src/modules/larn/classifier";
 import { ITEM_CLASS, SLOT, SLOT_STRIDE, STATUS, STATUS_HEADER } from "../../../src/modules/larn/statusRecords";
+import { paint } from "./bot-fixtures";
 
 /** The shipped tuning with the probe ENABLED. The shipped default is 0 — the
  *  probe failed its pre-registered bar and does not ship — so a
@@ -20,25 +19,6 @@ import { ITEM_CLASS, SLOT, SLOT_STRIDE, STATUS, STATUS_HEADER } from "../../../s
  *  shipped knob would be vect-hack-b5f.25's mistake: a suite that goes red the
  *  day somebody changes a policy decision it was never about. */
 const probing = { wieldProbes: 40 };
-
-/** An empty walled room with the hero in it and nothing else — the wield step
- *  declines while anything is visible, so every case here is a quiet room. */
-function room(m: LarnBotModel, monsterAt?: [number, number]) {
-  const r = new Int32Array(LARN_COLS * LARN_ROWS * GRID_STRIDE);
-  let i = 0;
-  for (let y = 0; y < LARN_ROWS; y++) for (let x = 0; x < LARN_COLS; x++) {
-    r[i + GRID.X] = x; r[i + GRID.Y] = y;
-    const edge = x === 0 || y === 0 || x === LARN_COLS - 1 || y === LARN_ROWS - 1;
-    r[i + GRID.TERRAIN_CAT] = edge ? TERRAIN.WALL : TERRAIN.FLOOR;
-    r[i + GRID.TERRAIN_CHAR] = 46; r[i + GRID.TERRAIN_COLOR] = 7;
-    if (x === 5 && y === 5) r[i + GRID.TOP_CAT] = TOP.HERO;
-    if (monsterAt && x === monsterAt[0] && y === monsterAt[1]) {
-      r[i + GRID.TOP_CAT] = TOP.MONSTER; r[i + GRID.TOP_CHAR] = "B".charCodeAt(0); r[i + GRID.TOP_COLOR] = 2;
-    }
-    i += GRID_STRIDE;
-  }
-  m.observe({ name: "map", records: r });
-}
 
 interface Item { letter: string; name: string; itemClass?: number }
 
@@ -64,7 +44,7 @@ describe("the wield probe", () => {
   it("probes each carried weapon once and settles on the one Larn scored highest", () => {
     const m = new LarnBotModel();
     const brain = new LarnBrain(probing);
-    room(m);
+    paint(m, { hero: [5, 5] });
 
     // Start: the dagger in hand at wc 3, a second weapon in the pack.
     status(m, 3, [{ letter: "a", name: "a dagger" + HELD }, { letter: "b", name: "a spear" }]);
@@ -91,7 +71,7 @@ describe("the wield probe", () => {
   it("puts the best back when a probe measured worse", () => {
     const m = new LarnBotModel();
     const brain = new LarnBrain(probing);
-    room(m);
+    paint(m, { hero: [5, 5] });
     // Measure the spear at 6...
     status(m, 6, [{ letter: "a", name: "a dagger" }, { letter: "b", name: "a spear" + HELD }]);
     expect(brain.decide(m).intent).toBe("wield-probe");
@@ -124,7 +104,7 @@ describe("the wield probe", () => {
     // exists.
     const m = new LarnBotModel();
     const brain = new LarnBrain(probing);
-    room(m);
+    paint(m, { hero: [5, 5] });
     const pack = [{ letter: "a", name: "a dagger" + HELD }, { letter: "b", name: "a two handed sword" }];
     status(m, 3, pack);
     expect(brain.decide(m).intent).toBe("wield-probe"); // measures the dagger
@@ -151,7 +131,7 @@ describe("the wield probe", () => {
     // the hero picked up a scroll.
     const m = new LarnBotModel();
     const brain = new LarnBrain(probing);
-    room(m);
+    paint(m, { hero: [5, 5] });
     status(m, 3, [
       { letter: "a", name: "a dagger" + HELD },
       { letter: "b", name: "a magic potion", itemClass: ITEM_CLASS.POTION },
@@ -178,7 +158,7 @@ describe("the wield probe", () => {
     expect(DEFAULT_TUNING.wieldProbes).toBe(0);
     const m = new LarnBotModel();
     const brain = new LarnBrain();
-    room(m);
+    paint(m, { hero: [5, 5] });
     status(m, 3, [{ letter: "a", name: "a dagger" }, { letter: "b", name: "a spear" }]);
     expect(brain.decide(m).intent).not.toMatch(/^wield/);
     expect(brain.promptContext(m).wieldLetter).toBeNull();
@@ -189,7 +169,7 @@ describe("the wield probe", () => {
     // free round for the monster. The same condition the rest step uses.
     const m = new LarnBotModel();
     const brain = new LarnBrain(probing);
-    room(m, [12, 12]);
+    paint(m, { hero: [5, 5], monsters: [[12, 12]] });
     status(m, 3, [{ letter: "a", name: "a dagger" + HELD }, { letter: "b", name: "a spear" }]);
     expect(brain.decide(m).intent).not.toMatch(/^wield/);
   });

@@ -6,34 +6,10 @@
 // the shipped no-GPU fallback, so a long tty session accumulates thousands.
 // The view must never touch requestAnimationFrame at all.
 import { beforeEach, describe, expect, it } from "vitest";
+import { installStubDocument } from "./stub-dom";
 
-/** Enough of an element for the HUD chrome, the stage and the map pre. */
-class StubEl {
-  id = "";
-  textContent = "";
-  innerHTML = "";
-  hidden = true;
-  scrollTop = 0;
-  scrollHeight = 0;
-  children: StubEl[] = [];
-  classList = { add() {} };
-  get childElementCount() { return this.children.length; }
-  get firstChild() {
-    const c = this.children[0];
-    return c ? { remove: () => void this.children.shift() } : null;
-  }
-  appendChild(c: StubEl) { this.children.push(c); return c; }
-  addEventListener() {}
-  removeEventListener() {}
-}
-
-const els = new Map<string, StubEl>();
-(globalThis as Record<string, unknown>).document = {
-  getElementById: (id: string) => els.get(id) ?? els.set(id, new StubEl()).get(id)!,
-  createElement: () => new StubEl(),
-  addEventListener: () => {},
-  removeEventListener: () => {},
-} as unknown as Document;
+const dom = installStubDocument();
+const { els } = dom;
 
 let rafCalls = 0;
 (globalThis as Record<string, unknown>).requestAnimationFrame = () => {
@@ -49,7 +25,7 @@ const glyph = (view: InstanceType<typeof DebugView>, x: number, y: number, ch: s
 
 describe("DebugView redraw scheduling", () => {
   beforeEach(() => {
-    els.clear();
+    dom.reset();
     rafCalls = 0;
   });
 

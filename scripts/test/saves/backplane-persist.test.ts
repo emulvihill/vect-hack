@@ -5,73 +5,13 @@ import {
   mountVolume,
   type LockManagerLike,
   type PersistFS,
-  type PersistModule,
 } from "../../../src/backplane/persistFs";
 import {
   readPendingImport, readPendingReset, stashPendingImport, stashPendingReset,
 } from "../../../src/backplane/pendingImport";
-import { packSave, unpackSave, type SaveFS } from "../../../src/backplane/saveBlob";
+import { packSave, unpackSave } from "../../../src/backplane/saveBlob";
 import { VOLUMES } from "../../../src/backplane/volumes";
-
-class FakeFS implements PersistFS {
-  filesystems: Record<string, unknown> = { IDBFS: { id: "IDBFS" } };
-  paths = new Set(["/"]);
-  mounts: Array<{ type: unknown; opts: Record<string, unknown>; mountpoint: string }> = [];
-  links = new Map<string, string>();
-  syncs: boolean[] = [];
-  syncError: unknown = null;
-  syncHangs = false;
-  unmounts: string[] = [];
-  mountState: { idbPersistState: unknown } = { idbPersistState: 0 };
-
-  mkdir(path: string) {
-    if (this.paths.has(path)) throw new Error(`EEXIST: ${path}`);
-    this.paths.add(path);
-  }
-  mount(type: unknown, opts: Record<string, unknown>, mountpoint: string) {
-    this.mounts.push({ type, opts, mountpoint });
-  }
-  unmount(mountpoint: string) { this.unmounts.push(mountpoint); }
-  lookupPath() { return { node: { mount: this.mountState } }; }
-  symlink(oldpath: string, newpath: string) {
-    this.links.set(newpath, oldpath);
-  }
-  syncfs(populate: boolean, callback: (err?: unknown) => void) {
-    this.syncs.push(populate);
-    if (!this.syncHangs) queueMicrotask(() => callback(this.syncError));
-  }
-}
-
-class FakeModule implements PersistModule {
-  FS: FakeFS;
-  dependencies: string[] = [];
-
-  constructor(fs = new FakeFS()) { this.FS = fs; }
-  addRunDependency(id: string) { this.dependencies.push(id); }
-  removeRunDependency(id: string) {
-    this.dependencies.splice(this.dependencies.indexOf(id), 1);
-  }
-}
-
-interface FakeLocks extends LockManagerLike {
-  asked: string[];
-  released: Promise<void> | null;
-}
-
-function fakeLocks(free: boolean): FakeLocks {
-  const locks: FakeLocks = {
-    asked: [],
-    released: null,
-    request(name, options, callback) {
-      locks.asked.push(name);
-      expect(options).toEqual({ mode: "exclusive", ifAvailable: true });
-      const result = callback(free ? { name } : null);
-      locks.released = result instanceof Promise ? result.then(() => undefined) : null;
-      return Promise.resolve(result);
-    },
-  };
-  return locks;
-}
+import { FakeFS, FakeModule, fakeLocks } from "./fake-fs";
 
 function seedEnginePaths(FS: PersistFS, root: string | null) {
   const prefix = root ? `${root}/` : "/";
@@ -117,11 +57,11 @@ describe("clearDanglingLink", () => {
 
 describe("mountVolume", () => {
   it("elects the volume writer, populates IDBFS, and seeds the mounted paths", async () => {
-    const mod = new FakeModule();
+    const mod = new FakeModule(new FakeFS("/lib"));
     const locks = fakeLocks(true);
     const handle = mountVolume(mod, VOLUMES.angband, { locks, seed: seedEnginePaths });
 
-    expect(mod.dependencies).toEqual(["angband-idbfs"]);
+    expect(mod.deps).toEqual(["angband-idbfs"]);
     await expect(handle.ready).resolves.toBe(true);
     expect(handle.persistent).toBe(true);
     expect(handle.reason).toBeNull();
@@ -132,12 +72,12 @@ describe("mountVolume", () => {
       mountpoint: VOLUMES.angband.mountpoint,
     }]);
     expect(mod.FS.syncs).toEqual([true]);
-    expect(mod.FS.paths).toContain(`${VOLUMES.angband.mountpoint}/save`);
-    expect(mod.dependencies).toEqual([]);
+    expect(mod.FS.kind(`${VOLUMES.angband.mountpoint}/save`)).toBe("dir");
+    expect(mod.deps).toEqual([]);
   });
 
   it("runs session-only after losing election and still seeds writable engine paths", async () => {
-    const mod = new FakeModule();
+    const mod = new FakeModule(new FakeFS("/lib"));
     const handle = mountVolume(mod, VOLUMES.angband, {
       locks: fakeLocks(false), seed: seedEnginePaths,
     });
@@ -148,7 +88,7 @@ describe("mountVolume", () => {
     // The code is what the page is shown, and it is a different sentence from
     // the other two classes: close the other tab (vect-hack-dem).
     expect(handle.reason?.code).toBe("another-tab");
-    expect(mod.FS.paths).toContain("/save");
+    expect(mod.FS.kind("/save")).toBe("dir");
     expect(mod.FS.mounts).toEqual([]);
     expect(mod.FS.syncs).toEqual([]);
     await handle.flush();
@@ -157,7 +97,7 @@ describe("mountVolume", () => {
 
   it("times out a blocked populate, reports IndexedDB unavailable, and releases boot", async () => {
     vi.useFakeTimers();
-    const fs = new FakeFS();
+    const fs = new FakeFS("/lib");
     fs.syncHangs = true;
     const mod = new FakeModule(fs);
     const locks = fakeLocks(true);
@@ -169,15 +109,15 @@ describe("mountVolume", () => {
     await expect(handle.ready).resolves.toBe(false);
     expect(handle.reason?.detail).toMatch(/^IndexedDB is unavailable: Error: syncfs\(populate=true\)/);
     expect(handle.reason?.code).toBe("browser-cannot");
-    expect(mod.dependencies).toEqual([]);
-    expect(fs.paths).toContain("/save");
-    expect(fs.paths).not.toContain(`${VOLUMES.angband.mountpoint}/save`);
+    expect(mod.deps).toEqual([]);
+    expect(fs.kind("/save")).toBe("dir");
+    expect(fs.made).not.toContain(`${VOLUMES.angband.mountpoint}/save`);
     expect(fs.unmounts).toEqual([VOLUMES.angband.mountpoint]);
     await expect(locks.released).resolves.toBeUndefined();
   });
 
   it("reports a failed populate, seeds mounted paths, and skips onPopulated", async () => {
-    const fs = new FakeFS();
+    const fs = new FakeFS("/lib");
     fs.syncError = new Error("SecurityError");
     const onPopulated = vi.fn();
     const mod = new FakeModule(fs);
@@ -189,16 +129,16 @@ describe("mountVolume", () => {
     await expect(handle.ready).resolves.toBe(false);
     expect(handle.reason?.detail).toBe("IndexedDB is unavailable: Error: SecurityError");
     expect(handle.reason?.code).toBe("browser-cannot");
-    expect(fs.paths).toContain("/save");
-    expect(fs.paths).not.toContain(`${VOLUMES.angband.mountpoint}/save`);
+    expect(fs.kind("/save")).toBe("dir");
+    expect(fs.made).not.toContain(`${VOLUMES.angband.mountpoint}/save`);
     expect(fs.unmounts).toEqual([VOLUMES.angband.mountpoint]);
     expect(onPopulated).not.toHaveBeenCalled();
-    expect(mod.dependencies).toEqual([]);
+    expect(mod.deps).toEqual([]);
     await expect(locks.released).resolves.toBeUndefined();
   });
 
   it("calls onPopulated only after populate succeeds", async () => {
-    const fs = new FakeFS();
+    const fs = new FakeFS("/lib");
     const onPopulated = vi.fn(() => expect(fs.syncs).toEqual([true]));
     const handle = mountVolume(new FakeModule(fs), VOLUMES.angband, {
       locks: fakeLocks(true), seed: seedEnginePaths, onPopulated,
@@ -210,7 +150,7 @@ describe("mountVolume", () => {
 
   it("does not expose ready while populate-triggered auto-persist is reconciling", async () => {
     vi.useFakeTimers();
-    const fs = new FakeFS();
+    const fs = new FakeFS("/lib");
     fs.syncfs = (populate, callback) => {
       fs.syncs.push(populate);
       if (populate) fs.mountState.idbPersistState = "idb";
@@ -232,7 +172,7 @@ describe("mountVolume", () => {
   });
 
   it("runs beforeFlush immediately before an owner flush", async () => {
-    const fs = new FakeFS();
+    const fs = new FakeFS("/lib");
     const beforeFlush = vi.fn(() => expect(fs.syncs).toEqual([true]));
     const handle = mountVolume(new FakeModule(fs), VOLUMES.angband, {
       locks: fakeLocks(true), seed: seedEnginePaths, beforeFlush,
@@ -246,7 +186,7 @@ describe("mountVolume", () => {
 
   it("rejects owner flush when preparation throws", async () => {
     const sentinel = new Error("prepare failed");
-    const fs = new FakeFS();
+    const fs = new FakeFS("/lib");
     const handle = mountVolume(new FakeModule(fs), VOLUMES.angband, {
       locks: fakeLocks(true), seed: seedEnginePaths,
       beforeFlush: () => { throw sentinel; },
@@ -259,7 +199,7 @@ describe("mountVolume", () => {
 
   it("rejects owner flush when syncfs reports or throws an error", async () => {
     const callbackFailure = new Error("callback failed");
-    const callbackFS = new FakeFS();
+    const callbackFS = new FakeFS("/lib");
     const callbackHandle = mountVolume(new FakeModule(callbackFS), VOLUMES.angband, {
       locks: fakeLocks(true), seed: seedEnginePaths,
     });
@@ -268,7 +208,7 @@ describe("mountVolume", () => {
     await expect(callbackHandle.flush()).rejects.toBe(callbackFailure);
 
     const thrownFailure = new Error("sync threw");
-    const thrownFS = new FakeFS();
+    const thrownFS = new FakeFS("/lib");
     const thrownHandle = mountVolume(new FakeModule(thrownFS), VOLUMES.angband, {
       locks: fakeLocks(true), seed: seedEnginePaths,
     });
@@ -279,7 +219,7 @@ describe("mountVolume", () => {
 
   it("rejects owner flush when syncfs never answers", async () => {
     vi.useFakeTimers();
-    const fs = new FakeFS();
+    const fs = new FakeFS("/lib");
     const handle = mountVolume(new FakeModule(fs), VOLUMES.angband, {
       locks: fakeLocks(true), seed: seedEnginePaths,
     });
@@ -294,7 +234,7 @@ describe("mountVolume", () => {
 
   it("drains an older auto-persist reconcile before the strict owner flush", async () => {
     vi.useFakeTimers();
-    const fs = new FakeFS();
+    const fs = new FakeFS("/lib");
     const handle = mountVolume(new FakeModule(fs), VOLUMES.angband, {
       locks: fakeLocks(true), seed: seedEnginePaths,
     });
@@ -312,7 +252,7 @@ describe("mountVolume", () => {
 
   it("rejects owner flush when an older auto-persist reconcile never settles", async () => {
     vi.useFakeTimers();
-    const fs = new FakeFS();
+    const fs = new FakeFS("/lib");
     const handle = mountVolume(new FakeModule(fs), VOLUMES.angband, {
       locks: fakeLocks(true), seed: seedEnginePaths,
     });
@@ -327,7 +267,7 @@ describe("mountVolume", () => {
   });
 
   it("runs session-only when Web Locks are unavailable", async () => {
-    const fs = new FakeFS();
+    const fs = new FakeFS("/lib");
     const handle = mountVolume(new FakeModule(fs), VOLUMES.angband, {
       locks: null, seed: seedEnginePaths,
     });
@@ -337,11 +277,11 @@ describe("mountVolume", () => {
     expect(handle.reason?.code).toBe("browser-cannot");
     expect(fs.mounts).toEqual([]);
     expect(fs.syncs).toEqual([]);
-    expect(fs.paths).toContain("/save");
+    expect(fs.kind("/save")).toBe("dir");
   });
 
   it("seeds session paths exactly once when IDBFS is not linked", async () => {
-    const fs = new FakeFS();
+    const fs = new FakeFS("/lib");
     delete fs.filesystems.IDBFS;
     const seed = vi.fn();
     const handle = mountVolume(new FakeModule(fs), VOLUMES.angband, {
@@ -369,7 +309,7 @@ describe("mountVolume", () => {
         return Promise.resolve();
       },
     };
-    const fs = new FakeFS();
+    const fs = new FakeFS("/lib");
     const handle = mountVolume(new FakeModule(fs), VOLUMES.angband, {
       locks, seed: seedEnginePaths,
     });
@@ -384,7 +324,7 @@ describe("mountVolume", () => {
 
   it("never runs beforeFlush for a session-only handle", async () => {
     const beforeFlush = vi.fn();
-    const handle = mountVolume(new FakeModule(), VOLUMES.angband, {
+    const handle = mountVolume(new FakeModule(new FakeFS("/lib")), VOLUMES.angband, {
       locks: fakeLocks(false), seed: seedEnginePaths, beforeFlush,
     });
     await handle.ready;
@@ -398,7 +338,7 @@ describe("mountVolume", () => {
     // its save lives without a volume. Every Module in the tree declares one
     // (vect-hack-47a); what is pinned here is that the fallback stayed honest
     // rather than packing an empty blob.
-    const handle = mountVolume(new FakeModule(), VOLUMES.angband, {
+    const handle = mountVolume(new FakeModule(new FakeFS("/lib")), VOLUMES.angband, {
       locks: fakeLocks(false), seed: seedEnginePaths,
     });
     await handle.ready;
@@ -411,23 +351,25 @@ describe("mountVolume", () => {
   });
 
   it("prepares the volume before packing it, as a flush would", async () => {
-    const beforeFlush = vi.fn();
-    const handle = mountVolume(new FakeModule(), VOLUMES.angband, {
+    const fs = new FakeFS("/lib");
+    // Whatever a Module stages on its way to IndexedDB — NetHack's bones —
+    // belongs in the blob the player keeps too, so the staged file has to be
+    // there by the time the volume is packed.
+    const beforeFlush = vi.fn(() =>
+      fs.writeFile(`${VOLUMES.angband.mountpoint}/save/staged`, "staged on the way out"));
+    const handle = mountVolume(new FakeModule(fs), VOLUMES.angband, {
       locks: fakeLocks(true), seed: seedEnginePaths, beforeFlush,
     });
     await handle.ready;
 
-    // FakeFS is the mount contract only — no readdir — so packing then fails
-    // by that call's name; the preparation must already have happened.
-    expect(() => handle.exportSave(new Date())).toThrow(/readdir/);
-    // Whatever a Module stages on its way to IndexedDB — NetHack's bones —
-    // belongs in the blob the player keeps too.
+    const { files } = unpackSave(handle.exportSave(new Date()).bytes);
+    expect(files.map((f) => f.path)).toContain("save/staged");
     expect(beforeFlush).toHaveBeenCalledOnce();
   });
 
   it("rejects export when volume preparation throws", async () => {
     const sentinel = new Error("export preparation failed");
-    const handle = mountVolume(new FakeModule(), VOLUMES.angband, {
+    const handle = mountVolume(new FakeModule(new FakeFS("/lib")), VOLUMES.angband, {
       locks: fakeLocks(true), seed: seedEnginePaths,
       beforeFlush: () => { throw sentinel; },
     });
@@ -437,7 +379,7 @@ describe("mountVolume", () => {
   });
 
   it("keeps a release that lands while the volume is still being set up", async () => {
-    const fs = new FakeFS();
+    const fs = new FakeFS("/lib");
     let finishPopulate!: () => void;
     let reachedPopulate!: () => void;
     const populating = new Promise<void>((resolve) => { reachedPopulate = resolve; });
@@ -461,15 +403,15 @@ describe("mountVolume", () => {
     expect(handle.reason?.code).toBe("another-tab");
     await expect(locks.released).resolves.toBeUndefined();
     expect(fs.unmounts).toEqual([VOLUMES.angband.mountpoint]);
-    expect(fs.paths).not.toContain(`${VOLUMES.angband.mountpoint}/save`);
-    expect(fs.paths).toContain("/save");
+    expect(fs.made).not.toContain(`${VOLUMES.angband.mountpoint}/save`);
+    expect(fs.kind("/save")).toBe("dir");
     await handle.flush();
     expect(fs.syncs).toEqual([true]);
   });
 
   it("keeps a release that lands while auto-persist is still draining", async () => {
     vi.useFakeTimers();
-    const fs = new FakeFS();
+    const fs = new FakeFS("/lib");
     fs.syncfs = (populate, callback) => {
       fs.syncs.push(populate);
       if (populate) fs.mountState.idbPersistState = "idb";
@@ -506,7 +448,7 @@ describe("mountVolume", () => {
         return Promise.resolve();
       },
     };
-    const fs = new FakeFS();
+    const fs = new FakeFS("/lib");
     const handle = mountVolume(new FakeModule(fs), VOLUMES.angband, {
       locks, seed: seedEnginePaths,
     });
@@ -523,11 +465,11 @@ describe("mountVolume", () => {
     expect(handle.reason?.code).toBe("another-tab");
     expect(fs.mounts).toEqual([]);
     expect(fs.syncs).toEqual([]);
-    expect(fs.paths).toContain("/save");
+    expect(fs.kind("/save")).toBe("dir");
   });
 
   it("release resolves the held lock and prevents later flushes", async () => {
-    const fs = new FakeFS();
+    const fs = new FakeFS("/lib");
     const locks = fakeLocks(true);
     const handle = mountVolume(new FakeModule(fs), VOLUMES.angband, {
       locks, seed: seedEnginePaths,
@@ -545,64 +487,33 @@ describe("mountVolume", () => {
   });
 });
 
-// A volume with contents, not just the mount contract FakeFS covers: an
-// import replaces what is in one, so these tests need files to destroy.
-class VolumeFS extends FakeFS implements SaveFS {
-  files = new Map<string, Uint8Array>();
-
-  readdir(path: string) {
-    const prefix = path.endsWith("/") ? path : `${path}/`;
-    const names = new Set<string>();
-    for (const key of [...this.files.keys(), ...this.paths]) {
-      if (!key.startsWith(prefix) || key === path) continue;
-      names.add(key.slice(prefix.length).split("/")[0]!);
-    }
-    return [".", "..", ...names];
-  }
-  stat(path: string) {
-    const body = this.files.get(path);
-    if (body) return { mode: 1, size: body.length };
-    if (this.paths.has(path)) return { mode: 0, size: 0 };
-    throw new Error(`ENOENT: ${path}`);
-  }
-  isDir(mode: number) { return mode === 0; }
-  isFile(mode: number) { return mode === 1; }
-  readFile(path: string, _opts: { encoding: "binary" }) {
-    const body = this.files.get(path);
-    if (!body) throw new Error(`ENOENT: ${path}`);
-    return body;
-  }
-  writeFile(path: string, data: Uint8Array | string) {
-    this.files.set(path, typeof data === "string" ? new TextEncoder().encode(data) : data);
-  }
-  mkdirTree(path: string) {
-    const parts = path.split("/").filter(Boolean);
-    for (let i = 1; i <= parts.length; i++) this.paths.add("/" + parts.slice(0, i).join("/"));
-  }
-  unlink(path: string) {
-    if (!this.files.delete(path)) throw new Error(`ENOENT: ${path}`);
-  }
-  rmdir(path: string) {
-    if (!this.paths.delete(path)) throw new Error(`ENOENT: ${path}`);
-  }
-  /** Every path the volume holds, for asserting what an import left behind. */
-  contents(root: string) {
-    return [...this.files.keys()].filter((p) => p.startsWith(`${root}/`)).sort();
-  }
-}
-
 /** Seeds the way a Module's does: fills in what the volume does not already
  *  have, rather than truncating what an import just restored. */
 function seedVolume(FS: PersistFS, root: string | null) {
-  const fs = FS as VolumeFS;
+  const fs = FS as FakeFS;
   const prefix = root ?? "";
   fs.mkdirTree(`${prefix}/save`);
-  if (!fs.files.has(`${prefix}/record`)) fs.writeFile(`${prefix}/record`, "");
+  if (fs.text(`${prefix}/record`) === undefined) fs.writeFile(`${prefix}/record`, "");
+}
+
+/** A volume whose files come back with IDBFS's populate, into the mountpoint
+ *  the mount made — where IndexedDB returns them, never there before the
+ *  mount. A name ending in "/" is a directory. */
+function populated(volume: typeof VOLUMES.nethack, files: Record<string, string>): FakeFS {
+  const fs = new FakeFS();
+  fs.onPopulate = () => {
+    for (const [relative, body] of Object.entries(files)) {
+      const path = `${volume.mountpoint}/${relative}`;
+      fs.mkdirTree(path.slice(0, path.lastIndexOf("/")));
+      if (!relative.endsWith("/")) fs.writeFile(path, body);
+    }
+  };
+  return fs;
 }
 
 /** One volume, packed exactly as an export packs it. */
 function packed(volume: typeof VOLUMES.nethack, files: Record<string, string>): Uint8Array {
-  const source = new VolumeFS();
+  const source = new FakeFS();
   source.mkdirTree(volume.mountpoint);
   for (const [relative, body] of Object.entries(files)) {
     const path = `${volume.mountpoint}/${relative}`;
@@ -633,7 +544,7 @@ describe("exporting without a volume", () => {
 
   /** The preload tree as a session-only tab leaves it, packaged data and all. */
   function sessionTree() {
-    const fs = new VolumeFS();
+    const fs = new FakeFS("/lib");
     fs.writeFile("/lib/gamedata", "the packaged embed, which is not a save");
     fs.mkdirTree("/lib/save");
     fs.mkdirTree("/lib/scores");
@@ -648,11 +559,11 @@ describe("exporting without a volume", () => {
    *  the load it was meant to complete. */
   function seedBothRoots(FS: PersistFS, root: string | null) {
     if (root === null) return;
-    const fs = FS as VolumeFS;
+    const fs = FS as FakeFS;
     fs.mkdirTree(`${root}/save`);
     fs.mkdirTree(`${root}/scores`);
-    if (!fs.files.has(`${root}/save/hero`)) fs.writeFile(`${root}/save/hero`, "volume-hero");
-    if (!fs.files.has(`${root}/scores/high`)) fs.writeFile(`${root}/scores/high`, "volume-scores");
+    if (fs.text(`${root}/save/hero`) === undefined) fs.writeFile(`${root}/save/hero`, "volume-hero");
+    if (fs.text(`${root}/scores/high`) === undefined) fs.writeFile(`${root}/scores/high`, "volume-scores");
   }
 
   function body(bytes: Uint8Array, path: string): string | undefined {
@@ -734,7 +645,7 @@ describe("exporting without a volume", () => {
       const exported = doomed.exportSave(AT);
 
       await stashPendingImport(VOLUMES.angband.id, exported.bytes);
-      const fresh = new VolumeFS();
+      const fresh = new FakeFS();
       const owner = mountVolume(new FakeModule(fresh), VOLUMES.angband, {
         locks: fakeLocks(true), seed: seedBothRoots, sessionSave: SESSION_SAVE,
       });
@@ -748,7 +659,7 @@ describe("exporting without a volume", () => {
       expect(text("scores/high")).toBe("session-scores");
       // And the volume is a volume, not a copy of /lib: the embed did not ride
       // in with the character.
-      expect(fresh.contents(mountpoint)).toEqual(
+      expect(fresh.files(mountpoint)).toEqual(
         [`${mountpoint}/save/hero`, `${mountpoint}/scores/high`].sort());
     } finally {
       delete (globalThis as { indexedDB?: unknown }).indexedDB;
@@ -784,13 +695,9 @@ describe("importing a volume at mount time", () => {
 
   /** A volume with a character already in it — the one an import buries. */
   function occupied() {
-    const fs = new VolumeFS();
-    // Only what IDBFS's populate would bring back: the mountpoint itself is
-    // mkdir'd by the mount, and a fake that already has it fails that call.
-    fs.paths.add(`${volume.mountpoint}/save`);
-    fs.writeFile(`${volume.mountpoint}/save/1player`, "the character playing now");
-    fs.writeFile(`${volume.mountpoint}/record`, "old scores");
-    return fs;
+    return populated(volume, {
+      "save/1player": "the character playing now", "record": "old scores",
+    });
   }
 
   it("replaces the volume with the parked blob, then stores and clears it", async () => {
@@ -806,11 +713,10 @@ describe("importing a volume at mount time", () => {
 
     // Replaced, not merged: the character that was here is gone, rather than
     // sitting in the save directory beside the imported one.
-    expect(fs.contents(volume.mountpoint)).toEqual([
+    expect(fs.files(volume.mountpoint)).toEqual([
       `${volume.mountpoint}/record`, `${volume.mountpoint}/save/1imported`,
     ]);
-    expect(new TextDecoder().decode(fs.files.get(`${volume.mountpoint}/record`)))
-      .toBe("imported scores");
+    expect(fs.text(`${volume.mountpoint}/record`)).toBe("imported scores");
     // The player was told it landed, so it is written back before boot goes on.
     expect(fs.syncs).toEqual([true, false]);
     expect(notices).toEqual(["Loaded the save file into your nethack game."]);
@@ -826,7 +732,7 @@ describe("importing a volume at mount time", () => {
     });
     await expect(handle.ready).resolves.toBe(true);
 
-    expect(fs.contents(volume.mountpoint)).toEqual([
+    expect(fs.files(volume.mountpoint)).toEqual([
       `${volume.mountpoint}/record`, `${volume.mountpoint}/save/1player`,
     ]);
     expect(notices[0]).toMatch(/Could not load that nethack save file — .*angband save/);
@@ -846,7 +752,7 @@ describe("importing a volume at mount time", () => {
     });
     await expect(handle.ready).resolves.toBe(true);
 
-    expect(fs.contents(volume.mountpoint)).toContain(`${volume.mountpoint}/save/1player`);
+    expect(fs.files(volume.mountpoint)).toContain(`${volume.mountpoint}/save/1player`);
     expect(notices[0]).toMatch(/this is not a volume this build made/);
   });
 
@@ -877,7 +783,7 @@ describe("importing a volume at mount time", () => {
     });
     await expect(handle.ready).resolves.toBe(true);
 
-    expect(fs.contents(volume.mountpoint)).toContain(`${volume.mountpoint}/save/1player`);
+    expect(fs.files(volume.mountpoint)).toContain(`${volume.mountpoint}/save/1player`);
     expect(fs.syncs).toEqual([true]);
     expect(notices).toEqual([]);
   });
@@ -912,12 +818,10 @@ describe("applying a parked reset", () => {
   });
 
   /** A volume with a character in it, as IDBFS populate would bring it back. */
-  function occupiedVolume() {
-    const fs = new VolumeFS();
-    fs.paths.add(`${volume.mountpoint}/save`);
-    fs.writeFile(`${volume.mountpoint}/save/1player`, "the character playing now");
-    fs.writeFile(`${volume.mountpoint}/record`, "old scores");
-    return fs;
+  function occupiedVolume(player = "the character playing now") {
+    return populated(volume, {
+      "save/1player": player, "record": "old scores",
+    });
   }
 
   it("empties the volume, then lets the seed rebuild it, and clears the flag", async () => {
@@ -931,8 +835,8 @@ describe("applying a parked reset", () => {
 
     // The character is gone and the layout is back: what the engine boots into
     // is a volume as new as a first visit, which is the point.
-    expect(fs.contents(volume.mountpoint)).not.toContain(`${volume.mountpoint}/save/1player`);
-    expect(fs.contents(volume.mountpoint)).toContain(`${volume.mountpoint}/record`);
+    expect(fs.files(volume.mountpoint)).not.toContain(`${volume.mountpoint}/save/1player`);
+    expect(fs.files(volume.mountpoint)).toContain(`${volume.mountpoint}/record`);
     expect(notices).toEqual(["Deleted your nethack save. This is a new game."]);
     // Cleared, or every reload for the rest of the volume's life empties it.
     expect(await readPendingReset(volume.id)).toBe(false);
@@ -943,8 +847,7 @@ describe("applying a parked reset", () => {
   it("removes a volume no Module gate would accept, which is why it has none", async () => {
     // The volume this exists for: bytes that fatal the engine, and a Module
     // import gate that would refuse them right back. A reset asks no gate.
-    const fs = occupiedVolume();
-    fs.writeFile(`${volume.mountpoint}/save/1player`, "bytes that crash restore.c");
+    const fs = occupiedVolume("bytes that crash restore.c");
     await stashPendingReset(volume.id);
 
     const handle = mountVolume(new FakeModule(fs), volume, {
@@ -954,7 +857,7 @@ describe("applying a parked reset", () => {
     });
     await expect(handle.ready).resolves.toBe(true);
 
-    expect(fs.contents(volume.mountpoint)).not.toContain(`${volume.mountpoint}/save/1player`);
+    expect(fs.files(volume.mountpoint)).not.toContain(`${volume.mountpoint}/save/1player`);
   });
 
   it("leaves the reset parked for the tab that owns the volume", async () => {
@@ -994,15 +897,10 @@ describe("refusing an export with no character in it", () => {
   /** A volume seeded exactly as a fresh NetHack one is: the four score files
    *  exist and are empty, and no save has been written. This is the case a
    *  count of files cannot see, and the reason the rule is about bytes. */
-  function freshNethack() {
-    const fs = new VolumeFS();
-    // Only what IDBFS's populate would bring back: the mountpoint itself is
-    // mkdir'd by the mount, and a fake that already has it fails that call.
-    fs.paths.add("/vect-nethack/save");
-    for (const name of ["record", "logfile", "xlogfile", "livelog"]) {
-      fs.writeFile("/vect-nethack/" + name, "");
-    }
-    return fs;
+  function freshNethack(files: Record<string, string> = {}) {
+    return populated(VOLUMES.nethack, {
+      "save/": "", "record": "", "logfile": "", "xlogfile": "", "livelog": "", ...files,
+    });
   }
 
   it("refuses a volume holding only seeded score files, and names the way out", async () => {
@@ -1019,8 +917,7 @@ describe("refusing an export with no character in it", () => {
   });
 
   it("packs the same volume once the game has written a save", async () => {
-    const fs = freshNethack();
-    fs.writeFile("/vect-nethack/save/1player", "a real character");
+    const fs = freshNethack({ "save/1player": "a real character" });
     const handle = mountVolume(new FakeModule(fs), VOLUMES.nethack, {
       locks: fakeLocks(true), seed: () => {},
     });
@@ -1035,9 +932,7 @@ describe("refusing an export with no character in it", () => {
   });
 
   it("counts a checkpoint, which can be the only copy a crashed tab left", async () => {
-    const fs = freshNethack();
-    fs.paths.add("/vect-nethack/recover");
-    fs.writeFile("/vect-nethack/recover/manifest.json", "{}");
+    const fs = freshNethack({ "recover/manifest.json": "{}" });
     const handle = mountVolume(new FakeModule(fs), VOLUMES.nethack, {
       locks: fakeLocks(true), seed: () => {},
     });
@@ -1049,7 +944,7 @@ describe("refusing an export with no character in it", () => {
   it("refuses a session-only tab whose engine has not written a save yet", async () => {
     // The tab vect-hack-47a gave the button to. It has no character either,
     // and the honest answer is the one a volume gets.
-    const fs = new VolumeFS();
+    const fs = new FakeFS("/lib");
     fs.writeFile("/lib/gamedata", "the packaged embed, which is not a save");
     fs.mkdirTree("/lib/save");
     fs.mkdirTree("/lib/scores");

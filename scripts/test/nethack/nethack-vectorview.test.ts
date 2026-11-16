@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MG } from "../../../src/modules/nethack/classifier";
 import { ctrl, key } from "../../../src/modules/nethack/ui/keys";
 import type { GlyphCell } from "../../../src/modules/nethack/protocol";
+import { installStubDocument, type StubEl } from "./stub-dom";
 
 const seam = vi.hoisted(() => ({ renderers: [] as FakeRenderer[] }));
 
@@ -50,76 +51,9 @@ vi.mock("../../../src/render/DungeonRenderer", () => ({ DungeonRenderer: FakeRen
 vi.mock("../../../src/ui/hud/Radar", () => ({ Radar: FakeRadar }));
 vi.mock("../../../src/ui/hud/Look", () => ({ LookHud: FakeLook }));
 
-type Listener = (e: never) => void;
-interface Bound { fn: Listener; once: boolean }
-
-/** Minimal local DOM: records listeners so a test can fire them, and keeps a
- *  parent chain so #overlay.contains() can tell a row from the map. */
-class StubEl {
-  id = "";
-  type = "";
-  title = "";
-  value = "";
-  innerHTML = "";
-  hidden = false;
-  scrollTop = 0;
-  scrollHeight = 0;
-  style = { visibility: "" };
-  parentElement: StubEl | null = null;
-  children: StubEl[] = [];
-  classes = new Set<string>();
-  listeners = new Map<string, Bound[]>();
-  onkeydown: ((e: unknown) => void) | null = null;
-  #text = "";
-  get textContent() { return this.#text; }
-  set textContent(v: string) { this.#text = v; this.children = []; }
-  get classList() {
-    const s = this.classes;
-    return {
-      add: (c: string) => void s.add(c),
-      remove: (c: string) => void s.delete(c),
-      toggle: (c: string, on?: boolean) => void ((on ?? !s.has(c)) ? s.add(c) : s.delete(c)),
-      contains: (c: string) => s.has(c),
-    };
-  }
-  get childElementCount() { return this.children.length; }
-  get firstChild(): StubEl | null { return this.children[0] ?? null; }
-  appendChild(c: StubEl) { c.parentElement = this; this.children.push(c); return c; }
-  append(...cs: StubEl[]) { for (const c of cs) this.appendChild(c); }
-  remove() {
-    if (this.parentElement) this.parentElement.children = this.parentElement.children.filter((c) => c !== this);
-  }
-  blur() {}
-  focus() {}
-  contains(n: unknown): boolean {
-    for (let p = n as StubEl | null; p; p = p.parentElement) if (p === this) return true;
-    return false;
-  }
-  addEventListener(t: string, fn: Listener, opts?: boolean | { once?: boolean }) {
-    const once = typeof opts === "object" && opts.once === true;
-    this.listeners.set(t, [...(this.listeners.get(t) ?? []), { fn, once }]);
-  }
-  removeEventListener(t: string, fn: Listener) {
-    this.listeners.set(t, (this.listeners.get(t) ?? []).filter((b) => b.fn !== fn));
-  }
-  emit(t: string, e: Record<string, unknown> = {}) {
-    const event = { preventDefault: vi.fn(), stopPropagation() {}, ...e };
-    for (const b of [...(this.listeners.get(t) ?? [])]) {
-      if (b.once) this.removeEventListener(t, b.fn);
-      b.fn(event as never);
-    }
-    return event;
-  }
-}
-
-const els = new Map<string, StubEl>();
-const doc = new StubEl();
-const body = new StubEl();
-(globalThis as Record<string, unknown>).document = Object.assign(doc, {
-  body,
-  getElementById: (id: string) => els.get(id) ?? null,
-  createElement: () => new StubEl(),
-});
+// #overlay.contains() must tell a row from the map, and the view builds its
+// own touch elements: an id nothing stood up answers null.
+const dom = installStubDocument({ lookup: "null" });
 // loadBindings() reads it while the view is constructed.
 (globalThis as Record<string, unknown>).localStorage = {
   getItem: () => null, setItem: () => {}, removeItem: () => {},
@@ -128,9 +62,8 @@ const body = new StubEl();
 const { VectorView } = await import("../../../src/modules/nethack/ui/VectorView");
 
 const add = (id: string, parent?: StubEl) => {
-  const el = new StubEl();
+  const el = dom.el(id);
   el.id = id;
-  els.set(id, el);
   parent?.appendChild(el);
   return el;
 };
@@ -173,15 +106,16 @@ async function engineReads(n = 1): Promise<number[]> {
 /** A pointerdown/up pair as the browser delivers it: down, then the click. */
 function gesture(type: "click" | "contextmenu", at: { x: number; y: number }, from = at) {
   canvas.emit("pointerdown", { clientX: from.x, clientY: from.y });
-  return canvas.emit(type, { clientX: at.x, clientY: at.y });
+  const e = { clientX: at.x, clientY: at.y, preventDefault: vi.fn() };
+  canvas.emit(type, e);
+  return e;
 }
 const PX = { x: 200, y: 150 }; // screen point; the fake pick decides the cell
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-  els.clear();
-  doc.listeners.clear();
-  body.classes.clear();
+  dom.reset();
+  dom.body.classes.clear();
   seam.renderers.length = 0;
   stage = add("stage");
   canvas = add("view", stage);
@@ -224,7 +158,7 @@ describe("NetHack VectorView pointer", () => {
     renderer.pick = { x: 11, y: 10 };
     gesture("click", { x: PX.x + 7, y: PX.y }, PX); // a drag that ended over the monster
     gesture("contextmenu", { x: PX.x, y: PX.y + 7 }, PX);
-    expect(els.get("overlay")!.innerHTML).toBe("");
+    expect(dom.el("overlay").innerHTML).toBe("");
     gesture("click", { x: PX.x + 6, y: PX.y }, PX); // six is still a click
     vi.useRealTimers();
     expect(await engineReads(2)).toEqual([key("l")]);
@@ -235,7 +169,7 @@ describe("NetHack VectorView pointer", () => {
     renderer.pick = { x: 10, y: 9 };
     const e = gesture("contextmenu", PX);
     expect(e.preventDefault).toHaveBeenCalled();
-    const overlay = els.get("overlay")!;
+    const overlay = dom.el("overlay");
     expect(overlay.hidden).toBe(false);
     expect(overlay.innerHTML).toContain("Attack");
     expect(overlay.innerHTML).toContain("Chat");
@@ -251,7 +185,7 @@ describe("NetHack VectorView pointer", () => {
     renderer.map.under = { ...renderer.map.at(HERO.x, HERO.y), ch: ">" };
     renderer.pick = HERO;
     gesture("click", PX);
-    const overlay = els.get("overlay")!;
+    const overlay = dom.el("overlay");
     expect(overlay.innerHTML).toContain("Pick up");
     expect(overlay.innerHTML).toContain("Go down stairs");
     overlay.emit("click", { target: { closest: () => ({ dataset: { pi: "2" } }) } });
@@ -266,12 +200,12 @@ describe("NetHack VectorView pointer", () => {
     renderer.pick = { x: 11, y: 10 };
     gesture("contextmenu", PX);
     vi.runAllTimers(); // the menu's outside-click listener goes on a tick later
-    expect(els.get("overlay")!.hidden).toBe(false);
+    expect(dom.el("overlay").hidden).toBe(false);
     // "click elsewhere to cancel" — elsewhere being the monster's cell.
-    doc.emit("pointerdown", { target: canvas });
+    dom.dispatch("pointerdown", { target: canvas });
     canvas.emit("pointerdown", { clientX: PX.x, clientY: PX.y });
     canvas.emit("click", { clientX: PX.x, clientY: PX.y });
-    expect(els.get("overlay")!.hidden).toBe(true);
+    expect(dom.el("overlay").hidden).toBe(true);
     gesture("click", PX); // a deliberate click afterwards still acts
     vi.useRealTimers();
     expect(await engineReads(2)).toEqual([key("l")]);
@@ -279,10 +213,10 @@ describe("NetHack VectorView pointer", () => {
 
   it("auto-opens the stand-on menu on an item-here message, and lets the next key through", async () => {
     view.handle({ name: "putstr", win: 1, attr: 0, text: "You see here a dagger." });
-    const overlay = els.get("overlay")!;
+    const overlay = dom.el("overlay");
     expect(overlay.hidden).toBe(false);
     expect(overlay.innerHTML).toContain("Pick up");
-    doc.emit("keydown", { key: "j" }); // passthrough: closes, then walks
+    dom.press("j"); // passthrough: closes, then walks
     expect(overlay.hidden).toBe(true);
     vi.useRealTimers();
     expect(await engineReads(2)).toEqual([key("j")]);
@@ -291,8 +225,8 @@ describe("NetHack VectorView pointer", () => {
   it("keeps a menu the player opened modal: a key does not leak past it", async () => {
     renderer.pick = HERO;
     gesture("click", PX);
-    doc.emit("keydown", { key: "j" });
-    expect(els.get("overlay")!.hidden).toBe(false);
+    dom.press("j");
+    expect(dom.el("overlay").hidden).toBe(false);
     vi.useRealTimers();
     expect(await engineReads()).toEqual([]);
   });
@@ -300,13 +234,12 @@ describe("NetHack VectorView pointer", () => {
 
 describe("NetHack VectorView F2", () => {
   it("switches the camera, says so, and never hands F2 to the engine", async () => {
-    const e = doc.emit("keydown", { key: "F2" });
-    expect(e.preventDefault).toHaveBeenCalled();
+    expect(dom.press("F2").defaultPrevented).toBe(true);
     expect(renderer.toggleMode).toHaveBeenCalledTimes(1);
-    expect(els.get("messages")!.children.at(-1)!.textContent).toMatch(/^First-person view/);
-    doc.emit("keydown", { key: "F2" });
-    expect(els.get("messages")!.children.at(-1)!.textContent).toMatch(/^Orbital view/);
-    doc.emit("keydown", { key: "F3" }); // not this view's key
+    expect(dom.el("messages").children.at(-1)!.textContent).toMatch(/^First-person view/);
+    dom.press("F2");
+    expect(dom.el("messages").children.at(-1)!.textContent).toMatch(/^Orbital view/);
+    dom.press("F3"); // not this view's key
     expect(renderer.toggleMode).toHaveBeenCalledTimes(2);
     vi.useRealTimers();
     expect(await engineReads()).toEqual([]);
@@ -317,8 +250,7 @@ describe("NetHack VectorView F2", () => {
     // the view's own, and it must not fall through to the page.
     add("linein");
     void view.handle({ name: "getlin", query: "Call it:" });
-    const e = doc.emit("keydown", { key: "F2" });
-    expect(e.preventDefault).toHaveBeenCalled();
+    expect(dom.press("F2").defaultPrevented).toBe(true);
     expect(renderer.toggleMode).toHaveBeenCalledTimes(1);
   });
 });
@@ -329,21 +261,21 @@ describe("NetHack VectorView touch", () => {
   it("builds none of the touch scheme unless installTouch is called", () => {
     // main.ts calls it only for ?touch; the view itself must never.
     expect(touchIds()).toEqual([]);
-    expect(body.classes.size).toBe(0);
+    expect(dom.body.classes.size).toBe(0);
   });
 
   it("installTouch builds the pad and bar in the stage, driving this view's HUD and camera", async () => {
     const controls = view.installTouch();
     expect(touchIds().sort()).toEqual(["touchbar", "touchcam", "touchpad"]);
-    expect(body.classes.has("vh-touch")).toBe(true);
+    expect(dom.body.classes.has("vh-touch")).toBe(true);
     const pad = stage.children.find((c) => c.id === "touchpad")!;
-    pad.children[4]!.emit("pointerdown"); // centre: face north, the renderer's own reset
+    pad.children[4]!.emit("pointerdown", { preventDefault() {} }); // centre: face north, the renderer's own reset
     expect(renderer.resetFacing).toHaveBeenCalledTimes(1);
-    pad.children[1]!.emit("pointerdown"); // top middle: forward, north at heading 0
+    pad.children[1]!.emit("pointerdown", { preventDefault() {} }); // top middle: forward, north at heading 0
     vi.useRealTimers();
     expect(await engineReads(2)).toEqual([key("k")]);
     controls.stop();
-    expect(body.classes.has("vh-touch")).toBe(false);
+    expect(dom.body.classes.has("vh-touch")).toBe(false);
   });
 });
 
@@ -358,12 +290,12 @@ describe("NetHack extended commands", () => {
   async function extCmd(line: string, finish: "Enter" | "Escape" = "Enter") {
     const input = add("linein"); // getLine's <input>, as innerHTML would have made it
     const r = view.handle({ name: "get_ext_cmd", commands: COMMANDS }) as Promise<number>;
-    expect(els.get("prompt")!.innerHTML).toContain("# (extended command)");
+    expect(dom.el("prompt").innerHTML).toContain("# (extended command)");
     input.value = line;
     input.onkeydown!({ key: finish, stopPropagation() {} });
     return r;
   }
-  const lastMessage = () => els.get("messages")!.children.at(-1)?.textContent;
+  const lastMessage = () => dom.el("messages").children.at(-1)?.textContent;
 
   it("answers an exact name with its index, even where it prefixes another", async () => {
     expect(await extCmd("quit")).toBe(2);
@@ -387,9 +319,9 @@ describe("NetHack extended commands", () => {
   });
 
   it("cancels on an empty line or Escape without a message", async () => {
-    const before = els.get("messages")!.children.length;
+    const before = dom.el("messages").children.length;
     expect(await extCmd("")).toBe(-1);
     expect(await extCmd("quit", "Escape")).toBe(-1);
-    expect(els.get("messages")!.children.length).toBe(before);
+    expect(dom.el("messages").children.length).toBe(before);
   });
 });

@@ -3,9 +3,8 @@ import { LarnBotPlayer } from "../../../src/modules/larn/bot/LarnBotPlayer";
 import { LarnRecorder } from "../../../src/modules/larn/bot/recorder";
 import type { LarnEvent } from "../../../src/modules/larn/protocol";
 import type { LarnHandler } from "../../../src/modules/larn/session";
-import { GRID, GRID_STRIDE, TERRAIN, TOP } from "../../../src/modules/larn/mapRecords";
-import { LARN_COLS, LARN_ROWS } from "../../../src/modules/larn/classifier";
 import { SLOT_STRIDE, STATUS, STATUS_HEADER } from "../../../src/modules/larn/statusRecords";
+import { mapRecords } from "./bot-fixtures";
 
 function stubView() {
   const seen: LarnEvent[] = [];
@@ -18,19 +17,6 @@ function stubView() {
     nextKey: () => { throw new Error("the view must never be asked for a key"); },
   };
   return { view, seen, notices, readyCount: () => ready };
-}
-
-function roomWithHero(x: number, y: number) {
-  const r = new Int32Array(LARN_COLS * LARN_ROWS * GRID_STRIDE);
-  let i = 0;
-  for (let yy = 0; yy < LARN_ROWS; yy++) for (let xx = 0; xx < LARN_COLS; xx++) {
-    r[i + GRID.X] = xx; r[i + GRID.Y] = yy;
-    const edge = xx === 0 || yy === 0 || xx === LARN_COLS - 1 || yy === LARN_ROWS - 1;
-    r[i + GRID.TERRAIN_CAT] = edge ? TERRAIN.WALL : TERRAIN.FLOOR; r[i + GRID.TERRAIN_CHAR] = 46; r[i + GRID.TERRAIN_COLOR] = 7;
-    if (xx === x && yy === y) r[i + GRID.TOP_CAT] = TOP.HERO;
-    i += GRID_STRIDE;
-  }
-  return r;
 }
 
 describe("LarnBotPlayer", () => {
@@ -53,7 +39,7 @@ describe("LarnBotPlayer", () => {
     bot.handle({ name: "text", x: 0, y: 20, rgb: 0, text: "Do you (o) try to open it, or (i) ignore it? " });
     expect(await bot.nextKey(true, false)).toEqual({ code: "o".charCodeAt(0), mods: 0 });
     expect(bot.model.textSinceLastKey).toBe("");
-    bot.handle({ name: "map", records: roomWithHero(5, 5) });
+    bot.handle({ name: "map", records: mapRecords({ hero: [5, 5] }) });
     const key = await bot.nextKey(true, true);
     expect(key).not.toBeNull();
     expect("hjklyubn.".includes(String.fromCharCode(key!.code))).toBe(true);
@@ -67,7 +53,7 @@ describe("LarnBotPlayer", () => {
     // below the bar of 8, so "(c) climb down" must come back as the ignore.
     const { view } = stubView();
     const bot = new LarnBotPlayer(view, 0);
-    bot.handle({ name: "map", records: roomWithHero(5, 5) });
+    bot.handle({ name: "map", records: mapRecords({ hero: [5, 5] }) });
     bot.handle({ name: "text", x: 0, y: 20, rgb: 0, text: "Do you (c) climb down, or (i) ignore it? " });
     expect(await bot.nextKey(true, false)).toEqual({ code: "i".charCodeAt(0), mods: 0 });
   });

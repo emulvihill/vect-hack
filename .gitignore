@@ -1,4 +1,4 @@
-# Offline renderer previews (scripts/dev/scene-preview.test.ts)
+# Offline renderer previews (scripts/dev/scene-preview.ts)
 .preview/
 
 # Headless bot gym output (scripts/dev/bot-gym.mjs): trajectories are large

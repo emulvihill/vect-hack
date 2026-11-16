@@ -9,49 +9,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { key } from "../../../src/modules/nethack/ui/keys";
 import { COMMAND_GROUPS } from "../../../src/modules/nethack/ui/commandMenu";
+import { installStubDocument } from "./stub-dom";
 
-type Listener = (e: never) => void;
-
-class StubEl {
-  innerHTML = "";
-  hidden = true;
-  scrollTop = 0;
-  scrollHeight = 0;
-  blurred = 0;
-  children: StubEl[] = [];
-  listeners = new Map<string, Set<Listener>>();
-  // Real DOM semantics, unlike the plain field the sibling stubs use:
-  // assigning textContent replaces every other child. The assertions here
-  // read innerHTML, so a plain field would let a blanked element keep the
-  // markup a test is checking has gone.
-  #text = "";
-  get textContent() { return this.#text; }
-  set textContent(v: string) { this.#text = v; this.innerHTML = v; this.children = []; }
-  get childElementCount() { return this.children.length; }
-  get firstChild() {
-    const c = this.children[0];
-    return c ? { remove: () => void this.children.shift() } : null;
-  }
-  appendChild(c: StubEl) { this.children.push(c); return c; }
-  blur() { this.blurred++; }
-  contains() { return true; }
-  addEventListener(t: string, fn: Listener) {
-    const set = this.listeners.get(t) ?? new Set<Listener>();
-    this.listeners.set(t, set).get(t)!.add(fn);
-  }
-  removeEventListener(t: string, fn: Listener) { this.listeners.get(t)?.delete(fn); }
-  emit(t: string, e: unknown) { for (const fn of [...(this.listeners.get(t) ?? [])]) fn(e as never); }
-}
-
-const els = new Map<string, StubEl>();
-const el = (id: string) => els.get(id) ?? els.set(id, new StubEl()).get(id)!;
-
-(globalThis as Record<string, unknown>).document = {
-  getElementById: (id: string) => el(id),
-  createElement: () => new StubEl(),
-  addEventListener: () => {},
-  removeEventListener: () => {},
-} as unknown as Document;
+const dom = installStubDocument();
+const { el } = dom;
 
 const { TextHud } = await import("../../../src/modules/nethack/ui/TextHud");
 
@@ -70,7 +31,7 @@ describe("the command menu", () => {
   let hud: InstanceType<typeof TextHud>;
 
   beforeEach(() => {
-    els.clear();
+    dom.reset();
     hud = new TextHud();
   });
 

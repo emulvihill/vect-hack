@@ -18,37 +18,10 @@
 // stale line behind per digit. Real messages are left in the DOM across a
 // clear; only a transient line's element comes out with it.
 import { beforeEach, describe, expect, it } from "vitest";
+import { installStubDocument } from "./stub-dom";
 
-/** Enough of an element for the message log. */
-class StubEl {
-  textContent = "";
-  innerHTML = "";
-  hidden = true;
-  scrollTop = 0;
-  scrollHeight = 0;
-  children: StubEl[] = [];
-  parent: StubEl | null = null;
-  get childElementCount() { return this.children.length; }
-  get firstChild() {
-    const c = this.children[0];
-    return c ? { remove: () => void this.children.shift() } : null;
-  }
-  appendChild(c: StubEl) { c.parent = this; this.children.push(c); return c; }
-  // clear_nhwindow removes a transient line by calling .remove() on the
-  // element itself (Element.prototype.remove), not through the parent.
-  remove() { this.parent?.children.splice(this.parent.children.indexOf(this), 1); }
-  addEventListener() {}
-  removeEventListener() {}
-  blur() {}
-}
-
-const els = new Map<string, StubEl>();
-
-(globalThis as Record<string, unknown>).document = {
-  getElementById: (id: string) => els.get(id) ?? els.set(id, new StubEl()).get(id)!,
-  createElement: () => new StubEl(),
-  addEventListener: () => {},
-} as unknown as Document;
+const dom = installStubDocument();
+const { els } = dom;
 
 // Imported after the stub: TextHud looks its elements up while constructing.
 const { TextHud } = await import("../../../src/modules/nethack/ui/TextHud");
@@ -65,7 +38,7 @@ describe("message() collapse/replace", () => {
   let win: number;
 
   beforeEach(() => {
-    els.clear();
+    dom.reset();
     hud = new TextHud();
     hud.onReady({ WIN_TYPE, ATTR });
     win = hud.handle({ name: "create_nhwindow", wintype: WIN_TYPE.NHW_MESSAGE }) as number;

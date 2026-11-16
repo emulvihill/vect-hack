@@ -8,50 +8,15 @@
 // queued before an engine window took over) must not blank what replaced it.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MenuItemData } from "../../../src/modules/nethack/protocol";
+import { installStubDocument } from "./stub-dom";
 
-/** Enough of an element for the message log, prompt line and overlay. */
-class StubEl {
-  textContent = "";
-  innerHTML = "";
-  hidden = true;
-  scrollTop = 0;
-  scrollHeight = 0;
-  children: StubEl[] = [];
-  get childElementCount() { return this.children.length; }
-  get firstChild() {
-    const c = this.children[0];
-    return c ? { remove: () => void this.children.shift() } : null;
-  }
-  appendChild(c: StubEl) { this.children.push(c); return c; }
-  listeners = new Map<string, Set<(e: never) => void>>();
-  addEventListener(t: string, fn: (e: never) => void) {
-    const set = this.listeners.get(t) ?? new Set<(e: never) => void>();
-    this.listeners.set(t, set).get(t)!.add(fn);
-  }
-  removeEventListener(t: string, fn: (e: never) => void) { this.listeners.get(t)?.delete(fn); }
-  emit(t: string, e: unknown) { for (const fn of [...(this.listeners.get(t) ?? [])]) fn(e as never); }
-}
-
-const els = new Map<string, StubEl>();
-let onKey: (e: { key: string; ctrlKey?: boolean; preventDefault(): void }) => void;
-
-// Routes by event type, unlike the single-slot stand-ins in the sibling test
-// files — showActionMenu registers a "pointerdown" listener on `document`
-// alongside TextHud's own "keydown" one, and a stub that just remembers
-// whichever handler registered last would let the former clobber `press()`.
-(globalThis as Record<string, unknown>).document = {
-  getElementById: (id: string) => els.get(id) ?? els.set(id, new StubEl()).get(id)!,
-  createElement: () => new StubEl(),
-  addEventListener: (t: string, fn: (e: never) => void) => {
-    if (t === "keydown") onKey = fn as typeof onKey;
-  },
-  removeEventListener: () => {},
-} as unknown as Document;
+const dom = installStubDocument();
+const { els } = dom;
 
 // Imported after the stub: TextHud looks its elements up while constructing.
 const { TextHud } = await import("../../../src/modules/nethack/ui/TextHud");
 
-const press = (key: string) => onKey({ key, preventDefault() {} });
+const press = (key: string) => dom.press(key);
 
 /** Keydowns whose own key is a modifier — every name a keyboard can send on
  *  its own, not just the four TextHud used to name (vect-hack-ca5). */
@@ -66,7 +31,7 @@ describe("#overlay ownership arbitration", () => {
   const WIN = 1;
 
   beforeEach(() => {
-    els.clear();
+    dom.reset();
     hud = new TextHud();
   });
 

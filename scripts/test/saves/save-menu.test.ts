@@ -3,7 +3,7 @@
 // to be right before a file is either handed to the player or parked for the
 // next engine boot. The volume-side half is in backplane-persist.test.ts.
 import { describe, expect, it, vi } from "vitest";
-import { MAX_SAVE_BYTES, packSave, type SaveFS } from "../../../src/backplane/saveBlob";
+import { MAX_SAVE_BYTES, packSave } from "../../../src/backplane/saveBlob";
 import { VOLUMES } from "../../../src/backplane/volumes";
 import { EXPORT_KEY, type DownloadTarget, type KeyTarget } from "../../../src/ui/saveDownload";
 import { IMPORT_KEY, loadSaveFile, readPickedFile, type PickedSave, type UploadTarget } from "../../../src/ui/saveUpload";
@@ -12,6 +12,7 @@ import {
   LOAD_ROW_ID, RESET_ROW_ID, SAVE_BUTTON_ID, SAVE_PANEL_ID, SAVE_ROW_ID, installSaveMenu,
   type MenuDocument, type MenuElement,
 } from "../../../src/ui/saveMenu";
+import { FakeFS } from "./fake-fs";
 
 class FakeDownloads implements DownloadTarget {
   readonly links: { href: string; download: string; clicked: boolean }[] = [];
@@ -105,36 +106,12 @@ function blob(
   volume: typeof VOLUMES.nethack,
   files: Record<string, string> = { "save/1player": "a real character" },
 ): Uint8Array {
-  const bodies = new Map(Object.entries(files).map(
-    ([path, body]) => [`${volume.mountpoint}/${path}`, new TextEncoder().encode(body)]));
-  const dirs = new Set<string>([volume.mountpoint]);
-  for (const path of bodies.keys()) {
-    for (let cut = path.lastIndexOf("/"); cut > 0; cut = path.lastIndexOf("/", cut - 1)) {
-      dirs.add(path.slice(0, cut));
-    }
+  const fs = new FakeFS(volume.mountpoint);
+  for (const [relative, body] of Object.entries(files)) {
+    const path = `${volume.mountpoint}/${relative}`;
+    fs.mkdirTree(path.slice(0, path.lastIndexOf("/")));
+    fs.writeFile(path, body);
   }
-  const fs: SaveFS = {
-    readdir: (path) => {
-      const prefix = `${path}/`;
-      const names = new Set<string>();
-      for (const key of [...bodies.keys(), ...dirs]) {
-        if (key === path || !key.startsWith(prefix)) continue;
-        names.add(key.slice(prefix.length).split("/")[0]!);
-      }
-      return [".", "..", ...names];
-    },
-    stat: (path) => {
-      const body = bodies.get(path);
-      if (body) return { mode: 1, size: body.length };
-      if (dirs.has(path)) return { mode: 0, size: 0 };
-      throw new Error(`ENOENT: ${path}`);
-    },
-    isDir: (mode) => mode === 0,
-    isFile: (mode) => mode === 1,
-    readFile: (path) => bodies.get(path)!,
-    writeFile: () => {},
-    mkdirTree: () => {},
-  };
   return packSave(fs, volume, new Date("2026-08-11T00:00:00Z"));
 }
 

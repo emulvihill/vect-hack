@@ -8,58 +8,12 @@
 // and scoped to that gesture: the next pointerdown clears it, so a stale
 // dismissal can never swallow a later, deliberate click.
 import { beforeEach, describe, expect, it } from "vitest";
+import { installStubDocument } from "./stub-dom";
 
-/** Enough of an element for the message log, prompt line and overlay. */
-class StubEl {
-  textContent = "";
-  innerHTML = "";
-  hidden = true;
-  scrollTop = 0;
-  scrollHeight = 0;
-  children: StubEl[] = [];
-  get childElementCount() { return this.children.length; }
-  get firstChild() {
-    const c = this.children[0];
-    return c ? { remove: () => void this.children.shift() } : null;
-  }
-  appendChild(c: StubEl) { this.children.push(c); return c; }
-  contains(n: unknown) { return n === this; }
-  listeners = new Map<string, Set<(e: never) => void>>();
-  addEventListener(t: string, fn: (e: never) => void) {
-    const set = this.listeners.get(t) ?? new Set<(e: never) => void>();
-    this.listeners.set(t, set).get(t)!.add(fn);
-  }
-  removeEventListener(t: string, fn: (e: never) => void) { this.listeners.get(t)?.delete(fn); }
-}
+const dom = installStubDocument();
+const { els } = dom;
 
-const els = new Map<string, StubEl>();
-let onKey: (e: { key: string; ctrlKey?: boolean; preventDefault(): void }) => void;
-
-// document routes by event type and honors `once`, since the dismissal flag
-// clears itself with a once pointerdown listener registered mid-dismissal —
-// which must NOT fire for the pointerdown being dispatched, matching the DOM
-// rule that listeners added during dispatch wait for the next event.
-type Entry = { fn: (e: never) => void; once: boolean };
-const docListeners = new Map<string, Entry[]>();
-(globalThis as Record<string, unknown>).document = {
-  getElementById: (id: string) => els.get(id) ?? els.set(id, new StubEl()).get(id)!,
-  createElement: () => new StubEl(),
-  addEventListener: (t: string, fn: (e: never) => void, opts?: boolean | { once?: boolean }) => {
-    if (t === "keydown") { onKey = fn as typeof onKey; return; }
-    const list = docListeners.get(t) ?? docListeners.set(t, []).get(t)!;
-    list.push({ fn, once: typeof opts === "object" && !!opts.once });
-  },
-  removeEventListener: (t: string, fn: (e: never) => void) => {
-    const list = docListeners.get(t);
-    if (list) docListeners.set(t, list.filter((l) => l.fn !== fn));
-  },
-} as unknown as Document;
-
-const pointerdown = (target: unknown) => {
-  const list = [...(docListeners.get("pointerdown") ?? [])];
-  docListeners.set("pointerdown", (docListeners.get("pointerdown") ?? []).filter((l) => !l.once));
-  for (const l of list) l.fn({ target } as never);
-};
+const pointerdown = (target: unknown) => dom.dispatch("pointerdown", { target });
 
 // Imported after the stub: TextHud looks its elements up while constructing.
 const { TextHud } = await import("../../../src/modules/nethack/ui/TextHud");
@@ -69,8 +23,7 @@ const settle = () => new Promise((r) => setTimeout(r, 1)); // outside-click list
 describe("action menu outside-click dismissal", () => {
   let hud: InstanceType<typeof TextHud>;
   beforeEach(() => {
-    els.clear();
-    docListeners.clear();
+    dom.reset();
     hud = new TextHud();
   });
 
@@ -86,7 +39,7 @@ describe("action menu outside-click dismissal", () => {
   it("does not mark the gesture when Escape closes the menu", async () => {
     hud.showActionMenu([{ label: "kick", run: () => {} }]);
     await settle();
-    onKey({ key: "Escape", preventDefault() {} });
+    dom.press("Escape");
     expect(els.get("overlay")!.hidden).toBe(true);
     expect(hud.consumeOutsideDismissal()).toBe(false);
   });

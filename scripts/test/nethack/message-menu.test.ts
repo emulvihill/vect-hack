@@ -4,39 +4,15 @@
 // worker, which silently picked an item nobody chose — so what is asserted
 // here is that a key comes back, and which key.
 import { beforeEach, describe, expect, it } from "vitest";
+import { installStubDocument } from "./stub-dom";
 
-/** Enough of an element for the message log and the prompt line. */
-class StubEl {
-  textContent = "";
-  innerHTML = "";
-  hidden = true;
-  scrollTop = 0;
-  scrollHeight = 0;
-  children: StubEl[] = [];
-  get childElementCount() { return this.children.length; }
-  get firstChild() {
-    const c = this.children[0];
-    return c ? { remove: () => void this.children.shift() } : null;
-  }
-  appendChild(c: StubEl) { this.children.push(c); return c; }
-  addEventListener() {}
-  removeEventListener() {}
-  blur() {}
-}
-
-const els = new Map<string, StubEl>();
-let onKey: (e: { key: string; ctrlKey?: boolean; preventDefault(): void }) => void;
-
-(globalThis as Record<string, unknown>).document = {
-  getElementById: (id: string) => els.get(id) ?? els.set(id, new StubEl()).get(id)!,
-  createElement: () => new StubEl(),
-  addEventListener: (_t: string, fn: typeof onKey) => (onKey = fn),
-} as unknown as Document;
+const dom = installStubDocument();
+const { els } = dom;
 
 // Imported after the stub: TextHud looks its elements up while constructing.
 const { TextHud } = await import("../../../src/modules/nethack/ui/TextHud");
 
-const press = (key: string) => onKey({ key, preventDefault() {} });
+const press = (key: string) => dom.press(key);
 const messages = () => els.get("messages")!.children.map((c) => c.textContent);
 const prompt = () => els.get("prompt")!;
 
@@ -44,7 +20,7 @@ describe("message_menu", () => {
   let hud: InstanceType<typeof TextHud>;
 
   beforeEach(() => {
-    els.clear();
+    dom.reset();
     hud = new TextHud();
   });
 

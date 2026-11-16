@@ -4,45 +4,20 @@
 // apart, so without an explicit gate a remapped ArrowUp answers "Really quit?"
 // with a k, or picks whichever inventory item is accelerated by one.
 import { beforeEach, describe, expect, it } from "vitest";
+import { installStubDocument } from "./stub-dom";
 
-/** Enough of an element for the message log and the prompt line. */
-class StubEl {
-  textContent = "";
-  innerHTML = "";
-  hidden = true;
-  scrollTop = 0;
-  scrollHeight = 0;
-  children: StubEl[] = [];
-  get childElementCount() { return this.children.length; }
-  get firstChild() {
-    const c = this.children[0];
-    return c ? { remove: () => void this.children.shift() } : null;
-  }
-  appendChild(c: StubEl) { this.children.push(c); return c; }
-  addEventListener() {}
-  removeEventListener() {}
-  blur() {}
-}
-
-const els = new Map<string, StubEl>();
-let onKey: (e: { key: string; ctrlKey?: boolean; preventDefault(): void }) => void;
-
-(globalThis as Record<string, unknown>).document = {
-  getElementById: (id: string) => els.get(id) ?? els.set(id, new StubEl()).get(id)!,
-  createElement: () => new StubEl(),
-  addEventListener: (_t: string, fn: typeof onKey) => (onKey = fn),
-} as unknown as Document;
+const dom = installStubDocument();
 
 // Imported after the stub: TextHud looks its elements up while constructing.
 const { TextHud } = await import("../../../src/modules/nethack/ui/TextHud");
 const { key } = await import("../../../src/modules/nethack/ui/keys");
 
-const press = (k: string) => onKey({ key: k, preventDefault() {} });
+const press = (k: string) => dom.press(k);
 
 describe("TextHud.remap", () => {
   let hud: InstanceType<typeof TextHud>;
   beforeEach(() => {
-    els.clear();
+    dom.reset();
     hud = new TextHud();
   });
 
@@ -134,7 +109,7 @@ describe("TextHud.remap", () => {
 describe("TextHud.remap during getdir()'s direction prompt", () => {
   let hud: InstanceType<typeof TextHud>;
   beforeEach(() => {
-    els.clear();
+    dom.reset();
     hud = new TextHud();
   });
 

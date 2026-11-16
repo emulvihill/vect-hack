@@ -1,75 +1,29 @@
 import { describe, expect, it } from "vitest";
 import {
-  SAVE_MAGIC, packSave, restoreSave, saveFileName, unpackSave, type SaveFS,
+  SAVE_MAGIC, packSave, restoreSave, saveFileName, unpackSave,
 } from "../../../src/backplane/saveBlob";
 import { VOLUMES } from "../../../src/backplane/volumes";
+import { FakeFS, S_IFREG } from "./fake-fs";
 
-const DIR = 0o040000, FILE = 0o100000, LINK = 0o120000;
-
-/** A path-keyed stand-in for Emscripten's FS: the real one is a whole engine
- *  away, and everything under test here is paths and bytes. */
-class FakeFS implements SaveFS {
-  readonly nodes = new Map<string, { mode: number; bytes?: Uint8Array }>();
-
-  constructor(root: string) { this.nodes.set(root, { mode: DIR }); }
-
-  put(path: string, bytes: Uint8Array, mode = FILE): this {
-    const parts = path.split("/");
-    for (let i = 1; i < parts.length; i++) {
-      const dir = parts.slice(0, i).join("/");
-      if (dir && !this.nodes.has(dir)) this.nodes.set(dir, { mode: DIR });
-    }
-    this.nodes.set(path, { mode, bytes });
-    return this;
+/** A tree of files under `root`, every parent directory made on the way. */
+function tree(root: string, files: Record<string, Uint8Array>): FakeFS {
+  const fs = new FakeFS(root);
+  for (const [path, body] of Object.entries(files)) {
+    fs.mkdirTree(path.slice(0, path.lastIndexOf("/")));
+    fs.writeFile(path, body);
   }
-
-  readdir(path: string): string[] {
-    // The FS root is a real root here — a session-only NetHack save sits at
-    // "/" — and "/" + "/" is the one path a naive join gets wrong.
-    const prefix = path.endsWith("/") ? path : `${path}/`;
-    const names = new Set<string>([".", ".."]);
-    for (const key of this.nodes.keys()) {
-      if (!key.startsWith(prefix)) continue;
-      const rest = key.slice(prefix.length);
-      if (rest) names.add(rest.split("/")[0]!);
-    }
-    return [...names];
-  }
-
-  stat(path: string) {
-    const node = this.nodes.get(path);
-    if (!node) throw new Error(`no such path ${path}`);
-    return { mode: node.mode, size: node.bytes?.length ?? 0 };
-  }
-
-  isDir(mode: number) { return (mode & 0o170000) === DIR; }
-  isFile(mode: number) { return (mode & 0o170000) === FILE; }
-
-  readFile(path: string): Uint8Array {
-    const node = this.nodes.get(path);
-    if (!node?.bytes) throw new Error(`not a file: ${path}`);
-    return node.bytes;
-  }
-
-  writeFile(path: string, data: Uint8Array): void { this.put(path, data); }
-
-  mkdirTree(path: string): void {
-    const parts = path.split("/");
-    for (let i = 1; i <= parts.length; i++) {
-      const dir = parts.slice(0, i).join("/");
-      if (dir && !this.nodes.has(dir)) this.nodes.set(dir, { mode: DIR });
-    }
-  }
+  return fs;
 }
 
 const bytes = (...values: number[]) => new Uint8Array(values);
 const AT = new Date("2026-08-03T21:07:00Z");
 
 function loaded(): FakeFS {
-  return new FakeFS(VOLUMES.nethack.mountpoint)
-    .put("/vect-nethack/save/1player.gz", bytes(1, 2, 3, 4))
-    .put("/vect-nethack/save/checkpoint/level.0", bytes(9))
-    .put("/vect-nethack/record", bytes(65, 66));
+  return tree(VOLUMES.nethack.mountpoint, {
+    "/vect-nethack/save/1player.gz": bytes(1, 2, 3, 4),
+    "/vect-nethack/save/checkpoint/level.0": bytes(9),
+    "/vect-nethack/record": bytes(65, 66),
+  });
 }
 
 function rawBlob(files: { path: string; bytes: Uint8Array; size?: number }[]): Uint8Array {
@@ -120,7 +74,7 @@ describe("save blobs", () => {
     expect(() => restoreSave(angband, VOLUMES.angband, contents))
       .toThrow(/nethack save; the angband volume cannot take it/);
     // Nothing was written on the way to that refusal.
-    expect([...angband.nodes.keys()]).toEqual([VOLUMES.angband.mountpoint]);
+    expect(angband.made).toEqual([VOLUMES.angband.mountpoint]);
   });
 
   /**
@@ -133,13 +87,16 @@ describe("save blobs", () => {
     /** The FS root as a session-only NetHack tab leaves it: the save at its
      *  root paths, and everything else a running engine has around it. */
     function sessionRoot(): FakeFS {
-      return new FakeFS("/")
-        .put("/save/1player.gz", bytes(1, 2, 3, 4))
-        .put("/save/checkpoint/level.0", bytes(9))
-        .put("/record", bytes(65, 66))
-        .put("/tmp/lock.0", bytes(7))
-        .put("/nhdat", bytes(3, 3, 3))
-        .put("/dev/random", bytes(), LINK);
+      const fs = tree("/", {
+        "/save/1player.gz": bytes(1, 2, 3, 4),
+        "/save/checkpoint/level.0": bytes(9),
+        "/record": bytes(65, 66),
+        "/tmp/lock.0": bytes(7),
+        "/nhdat": bytes(3, 3, 3),
+      });
+      fs.mkdirTree("/dev");
+      fs.mkdev("/dev/random");
+      return fs;
     }
 
     const NAMES = ["save", "record", "logfile"];
@@ -178,8 +135,9 @@ describe("save blobs", () => {
       // that sized from one root and read from the other would either throw on
       // the size check or quietly ship the volume's stale bytes as the session
       // tab's save.
-      const fs = sessionRoot()
-        .put(`${VOLUMES.nethack.mountpoint}/record`, bytes(99, 99, 99, 99, 99));
+      const fs = sessionRoot();
+      fs.mkdirTree(VOLUMES.nethack.mountpoint);
+      fs.writeFile(`${VOLUMES.nethack.mountpoint}/record`, bytes(99, 99, 99, 99, 99));
       const contents = unpackSave(
         packSave(fs, VOLUMES.nethack, AT, { root: "/", names: NAMES }));
 
@@ -194,8 +152,9 @@ describe("save blobs", () => {
     });
   });
 
-  it("packs regular files only, never a symlink", () => {
-    const fs = loaded().put("/vect-nethack/elsewhere", bytes(), LINK);
+  it("packs regular files only, never a device", () => {
+    const fs = loaded();
+    fs.mkdev("/vect-nethack/elsewhere");
     const { manifest } = unpackSave(packSave(fs, VOLUMES.nethack, AT));
     expect(manifest.files.map((f) => f.path)).not.toContain("elsewhere");
   });
@@ -263,7 +222,7 @@ describe("save blobs", () => {
       files: [{ path: "first", bytes: bytes(1) }, { path: "../escape", bytes: bytes(2) }],
     };
     expect(() => restoreSave(target, VOLUMES.nethack, malformed)).toThrow(/escapes|canonical/);
-    expect([...target.nodes.keys()]).toEqual([VOLUMES.nethack.mountpoint]);
+    expect(target.made).toEqual([VOLUMES.nethack.mountpoint]);
   });
 
   it("bounds manually constructed restore contents before writing", () => {
@@ -276,15 +235,14 @@ describe("save blobs", () => {
       files: [{ path: "save/game", bytes: bytes() }],
     };
     expect(() => restoreSave(target, VOLUMES.nethack, oversized)).toThrow(/too large/);
-    expect([...target.nodes.keys()]).toEqual([VOLUMES.nethack.mountpoint]);
+    expect(target.made).toEqual([VOLUMES.nethack.mountpoint]);
   });
 
   it("bounds an exported volume before allocating its container", () => {
-    const fs = new FakeFS(VOLUMES.nethack.mountpoint)
-      .put("/vect-nethack/record", bytes());
+    const fs = tree(VOLUMES.nethack.mountpoint, { "/vect-nethack/record": bytes() });
     const stat = fs.stat.bind(fs);
     fs.stat = (path: string) => path.endsWith("/record")
-      ? { mode: FILE, size: 128 * 1024 * 1024 }
+      ? { mode: S_IFREG, size: 128 * 1024 * 1024, mtime: new Date(0) }
       : stat(path);
     expect(() => packSave(fs, VOLUMES.nethack, AT)).toThrow(/too large/);
   });

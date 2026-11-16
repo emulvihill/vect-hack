@@ -1,29 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LarnBotModel, causeOfDeath, levelDepth, scoreOf } from "../../../src/modules/larn/bot/model";
 import { SLOT, SLOT_STRIDE, STATUS, STATUS_HEADER } from "../../../src/modules/larn/statusRecords";
-import { GRID, GRID_STRIDE, TERRAIN, TOP } from "../../../src/modules/larn/mapRecords";
-import { LARN_COLS, LARN_ROWS } from "../../../src/modules/larn/classifier";
-
-/** A full 67x17 batch: floor everywhere, walls on the border, the hero at
- *  `hero`, an optional monster, unseen at x >= seenTo. */
-function batch(opts: { hero: [number, number]; monster?: [number, number]; seenTo?: number }) {
-  const r = new Int32Array(LARN_COLS * LARN_ROWS * GRID_STRIDE);
-  let i = 0;
-  for (let y = 0; y < LARN_ROWS; y++) for (let x = 0; x < LARN_COLS; x++) {
-    r[i + GRID.X] = x; r[i + GRID.Y] = y;
-    const edge = x === 0 || y === 0 || x === LARN_COLS - 1 || y === LARN_ROWS - 1;
-    const unseen = x >= (opts.seenTo ?? LARN_COLS);
-    r[i + GRID.TERRAIN_CAT] = unseen ? TERRAIN.UNSEEN : edge ? TERRAIN.WALL : TERRAIN.FLOOR;
-    r[i + GRID.TERRAIN_CHAR] = unseen ? 32 : edge ? 35 : 46;
-    r[i + GRID.TERRAIN_COLOR] = 7;
-    if (x === opts.hero[0] && y === opts.hero[1]) r[i + GRID.TOP_CAT] = TOP.HERO;
-    if (opts.monster && x === opts.monster[0] && y === opts.monster[1]) {
-      r[i + GRID.TOP_CAT] = TOP.MONSTER; r[i + GRID.TOP_CHAR] = 66; r[i + GRID.TOP_COLOR] = 2;
-    }
-    i += GRID_STRIDE;
-  }
-  return r;
-}
+import { mapRecords } from "./bot-fixtures";
 
 /** One status push, the fields a test names and zeros elsewhere. */
 function status(m: LarnBotModel, fields: Partial<Record<keyof typeof STATUS, number>>) {
@@ -54,7 +32,7 @@ describe("causeOfDeath", () => {
 describe("LarnBotModel", () => {
   it("classifies map batches into the semantic grid and tracks the hero; level clears it", () => {
     const m = new LarnBotModel();
-    m.observe({ name: "map", records: batch({ hero: [5, 5], monster: [6, 5], seenTo: 40 }) });
+    m.observe({ name: "map", records: mapRecords({ hero: [5, 5], monsters: [[6, 5]], unseenFrom: 40 }) });
     expect(m.map.hero).toEqual({ x: 5, y: 5 });
     expect(m.map.at(6, 5).category).toBe("being");
     expect(m.map.at(1, 1).category).toBe("floor");

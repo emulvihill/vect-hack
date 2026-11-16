@@ -8,41 +8,10 @@
 // 2. One representative status-line frame: STATUS_FMT assembly, decodeMixed's
 //    \GXXXXNNNN -> "$" fold, and the blank-field skip.
 import { describe, expect, it } from "vitest";
+import { installStubDocument } from "./stub-dom";
 
-/** Enough of an element for the prompt line, status bar and getLine's input.
- *  textContent models the DOM link the prompt blanking rests on: assigning it
- *  replaces the element's markup and children, so what getLine wrote into
- *  innerHTML is really gone. Without that link a `toBe("")` on textContent
- *  compares this stub's own default against itself and cannot fail. */
-class StubEl {
-  innerHTML = "";
-  hidden = true;
-  value = "";
-  scrollTop = 0;
-  scrollHeight = 0;
-  children: StubEl[] = [];
-  onkeydown: ((e: { key: string; stopPropagation(): void }) => void) | null = null;
-  private text = "";
-  get textContent() { return this.text; }
-  set textContent(v: string) { this.text = v; this.innerHTML = v; this.children.length = 0; }
-  get childElementCount() { return this.children.length; }
-  get firstChild() {
-    const c = this.children[0];
-    return c ? { remove: () => void this.children.shift() } : null;
-  }
-  appendChild(c: StubEl) { this.children.push(c); return c; }
-  addEventListener() {}
-  removeEventListener() {}
-  blur() {}
-  focus() {}
-}
-
-const els = new Map<string, StubEl>();
-(globalThis as Record<string, unknown>).document = {
-  getElementById: (id: string) => els.get(id) ?? els.set(id, new StubEl()).get(id)!,
-  createElement: () => new StubEl(),
-  addEventListener: () => {},
-} as unknown as Document;
+const dom = installStubDocument();
+const { els } = dom;
 
 // Imported after the stub: TextHud looks its elements up while constructing.
 const { TextHud } = await import("../../../src/modules/nethack/ui/TextHud");

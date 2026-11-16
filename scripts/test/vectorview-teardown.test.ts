@@ -146,11 +146,13 @@ afterEach(() => {
   delete (globalThis as Record<string, unknown>).cancelAnimationFrame;
 });
 
-describe("Angband VectorView teardown", () => {
+// Angband's and Larn's views are one shape: a synchronous poll, and a parked
+// wait for a blocking read.
+describe.each([["Angband", AngbandVector], ["Larn", LarnVector]] as const)("%s VectorView teardown", (_game, View) => {
   it("delivers one key to BOTH views when neither is disposed — the leak this fixes", () => {
     const c = canvas();
-    const first = new AngbandVector(c);
-    const second = new AngbandVector(c);
+    const first = new View(c);
+    const second = new View(c);
     expect(bound()).toBe(2);
     press("j");
     expect(first.nextKey(false, false)).not.toBeNull();
@@ -159,8 +161,8 @@ describe("Angband VectorView teardown", () => {
 
   it("takes nothing after dispose, and leaves the surviving view alone", () => {
     const c = canvas();
-    const first = new AngbandVector(c);
-    const second = new AngbandVector(c);
+    const first = new View(c);
+    const second = new View(c);
     first.dispose();
     expect(bound()).toBe(1);
     press("j");
@@ -169,14 +171,14 @@ describe("Angband VectorView teardown", () => {
   });
 
   it("hands its dispose on to the renderer, the radar and the Look HUD", () => {
-    const view = new AngbandVector(canvas());
+    const view = new View(canvas());
     view.dispose();
     view.dispose(); // idempotent: each part is torn down once, not twice
     expect([seam.rendererDisposals, seam.radarDisposals, seam.lookDisposals]).toEqual([1, 1, 1]);
   });
 
   it("settles a parked key wait rather than leaving the engine's dispatch awaiting it", async () => {
-    const view = new AngbandVector(canvas());
+    const view = new View(canvas());
     const parked = view.nextKey(true, true) as Promise<unknown>;
     expect(parked).toBeInstanceOf(Promise);
     view.dispose();
@@ -221,38 +223,6 @@ describe("NetHack VectorView teardown", () => {
     const parked = view.handle({ name: "nhgetch" } as never) as Promise<number>;
     view.dispose();
     expect(await raceClock(parked)).toEqual({ won: "promise", value: 27 });
-  });
-});
-
-describe("Larn VectorView teardown", () => {
-  it("delivers one key to BOTH views when neither is disposed — the leak this fixes", () => {
-    const c = canvas();
-    const first = new LarnVector(c);
-    const second = new LarnVector(c);
-    expect(bound()).toBe(2);
-    press("j");
-    expect(first.nextKey(false, false)).not.toBeNull();
-    expect(second.nextKey(false, false)).not.toBeNull();
-  });
-
-  it("takes nothing after dispose, and hands its dispose on to every part", () => {
-    const c = canvas();
-    const first = new LarnVector(c);
-    const second = new LarnVector(c);
-    first.dispose();
-    expect(bound()).toBe(1);
-    press("j");
-    expect(first.nextKey(false, false)).toBeNull();
-    expect(second.nextKey(false, false)).not.toBeNull();
-    expect([seam.rendererDisposals, seam.radarDisposals, seam.lookDisposals]).toEqual([1, 1, 1]);
-  });
-
-  it("settles a parked key wait rather than leaving the engine's dispatch awaiting it", async () => {
-    const view = new LarnVector(canvas());
-    const parked = view.nextKey(true, true) as Promise<unknown>;
-    expect(parked).toBeInstanceOf(Promise);
-    view.dispose();
-    expect(await raceClock(parked)).toEqual({ won: "promise", value: null });
   });
 });
 

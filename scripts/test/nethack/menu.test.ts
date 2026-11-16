@@ -6,39 +6,15 @@
 // too, since it never had unit coverage of its own before this bead.
 import { beforeEach, describe, expect, it } from "vitest";
 import type { MenuItemData } from "../../../src/modules/nethack/protocol";
+import { installStubDocument } from "./stub-dom";
 
-/** Enough of an element for the message log, prompt line and overlay. */
-class StubEl {
-  textContent = "";
-  innerHTML = "";
-  hidden = true;
-  scrollTop = 0;
-  scrollHeight = 0;
-  children: StubEl[] = [];
-  get childElementCount() { return this.children.length; }
-  get firstChild() {
-    const c = this.children[0];
-    return c ? { remove: () => void this.children.shift() } : null;
-  }
-  appendChild(c: StubEl) { this.children.push(c); return c; }
-  addEventListener() {}
-  removeEventListener() {}
-  blur() {}
-}
-
-const els = new Map<string, StubEl>();
-let onKey: (e: { key: string; ctrlKey?: boolean; preventDefault(): void }) => void;
-
-(globalThis as Record<string, unknown>).document = {
-  getElementById: (id: string) => els.get(id) ?? els.set(id, new StubEl()).get(id)!,
-  createElement: () => new StubEl(),
-  addEventListener: (_t: string, fn: typeof onKey) => (onKey = fn),
-} as unknown as Document;
+const dom = installStubDocument();
+const { els } = dom;
 
 // Imported after the stub: TextHud looks its elements up while constructing.
 const { TextHud } = await import("../../../src/modules/nethack/ui/TextHud");
 
-const press = (key: string) => onKey({ key, preventDefault() {} });
+const press = (key: string) => dom.press(key);
 
 /** Keydowns whose own key is a modifier — every name a keyboard can send on
  *  its own, not just the four TextHud used to name (vect-hack-ca5). */
@@ -97,7 +73,7 @@ describe("full menu", () => {
   const WIN = 1;
 
   beforeEach(() => {
-    els.clear();
+    dom.reset();
     hud = new TextHud();
   });
 
@@ -276,7 +252,7 @@ describe("full menu", () => {
     clickRow(fakeRow(0, "2").label);
     press("Enter");
 
-    els.clear();
+    dom.reset();
     hud = new TextHud();
     const viaKeys = open([item(9, "5 daggers")], 2);
     press("2"); press("a");

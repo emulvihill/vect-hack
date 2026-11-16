@@ -10,45 +10,22 @@
 // see; the one wrong answer is executing the bare letter, so it is dropped.
 import { beforeEach, describe, expect, it } from "vitest";
 import { ctrl, key, meta } from "../../../src/modules/nethack/ui/keys";
+import { installStubDocument } from "./stub-dom";
 
-/** Enough of an element for the message log and the prompt line. */
-class StubEl {
-  textContent = "";
-  innerHTML = "";
-  hidden = true;
-  scrollTop = 0;
-  scrollHeight = 0;
-  children: StubEl[] = [];
-  get childElementCount() { return this.children.length; }
-  get firstChild() {
-    const c = this.children[0];
-    return c ? { remove: () => void this.children.shift() } : null;
-  }
-  appendChild(c: StubEl) { this.children.push(c); return c; }
-  addEventListener() {}
-  removeEventListener() {}
-}
-
-const els = new Map<string, StubEl>();
 type KeyEv = { key: string; ctrlKey?: boolean; altKey?: boolean; metaKey?: boolean; preventDefault(): void };
-let onKey: (e: KeyEv) => void;
 
-(globalThis as Record<string, unknown>).document = {
-  getElementById: (id: string) => els.get(id) ?? els.set(id, new StubEl()).get(id)!,
-  createElement: () => new StubEl(),
-  addEventListener: (_t: string, fn: typeof onKey) => (onKey = fn),
-} as unknown as Document;
+const dom = installStubDocument();
 
 // Imported after the stub: TextHud looks its elements up while constructing.
 const { TextHud } = await import("../../../src/modules/nethack/ui/TextHud");
 
 const press = (k: string, mods: Partial<KeyEv> = {}) =>
-  onKey({ key: k, ...mods, preventDefault() {} });
+  dom.press(k, mods);
 
 describe("Alt/Meta-modified letters", () => {
   let hud: InstanceType<typeof TextHud>;
   beforeEach(() => {
-    els.clear();
+    dom.reset();
     hud = new TextHud();
   });
 

@@ -13,6 +13,7 @@
 // it was a command or an answer typed ahead of the prompt it belongs to.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CellGrid } from "../../../src/backplane/cell";
+import { StubEl, installStubDocument } from "./stub-dom";
 
 const seam = vi.hoisted(() => ({ renderers: [] as FakeRenderer[] }));
 
@@ -42,37 +43,8 @@ class FakeRadar {
 vi.mock("../../../src/render/DungeonRenderer", () => ({ DungeonRenderer: FakeRenderer }));
 vi.mock("../../../src/ui/hud/Radar", () => ({ Radar: FakeRadar }));
 
-/** Enough of an element for the message log, the prompt line and the canvas. */
-class StubEl {
-  textContent = "";
-  innerHTML = "";
-  hidden = true;
-  scrollTop = 0;
-  scrollHeight = 0;
-  parentElement: StubEl | null = null;
-  children: StubEl[] = [];
-  get childElementCount() { return this.children.length; }
-  get firstChild() {
-    const c = this.children[0];
-    return c ? { remove: () => void this.children.shift() } : null;
-  }
-  appendChild(c: StubEl) { c.parentElement = this; this.children.push(c); return c; }
-  addEventListener() {}
-  removeEventListener() {}
-  blur() {}
-  focus() {}
-}
-
-const els = new Map<string, StubEl>();
-let keydown: Array<(e: { key: string; preventDefault(): void }) => void> = [];
-
-(globalThis as Record<string, unknown>).document = {
-  getElementById: (id: string) => els.get(id) ?? els.set(id, new StubEl()).get(id)!,
-  createElement: () => new StubEl(),
-  addEventListener: (type: string, fn: (e: { key: string; preventDefault(): void }) => void) => {
-    if (type === "keydown") keydown.push(fn);
-  },
-} as unknown as Document;
+const dom = installStubDocument();
+const { els } = dom;
 (globalThis as Record<string, unknown>).localStorage = {
   getItem: () => null, setItem: () => {}, removeItem: () => {},
 };
@@ -86,12 +58,11 @@ const { key } = await import("../../../src/modules/nethack/ui/keys");
 const WT = { NHW_MESSAGE: 1, NHW_MAP: 2, NHW_TEXT: 3 };
 
 const press = (k: string) => {
-  for (const fn of [...keydown]) fn({ key: k, preventDefault() {} });
+  dom.press(k);
 };
 
 beforeEach(() => {
-  els.clear();
-  keydown = [];
+  dom.reset();
   seam.renderers.length = 0;
 });
 

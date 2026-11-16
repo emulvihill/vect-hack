@@ -11,7 +11,7 @@
 // took nothing" would also pass on a build that never delivered anything.
 //
 // The DOM stub replays listeners rather than only recording them (the
-// command-menu-ui.test.ts pattern): every assertion here is about what
+// nethack/stub-dom.ts pattern): every assertion here is about what
 // happens when a key is dispatched at the document both views are on.
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -88,10 +88,12 @@ beforeEach(() => {
   docListeners.clear();
 });
 
-describe("Angband TtyView teardown", () => {
+// Angband's and Larn's views are one shape: a synchronous poll, and a parked
+// wait for a blocking read.
+describe.each([["Angband", AngbandTty], ["Larn", LarnTty]] as const)("%s TtyView teardown", (_game, View) => {
   it("delivers one key to BOTH views when neither is disposed — the leak this fixes", () => {
-    const first = new AngbandTty();
-    const second = new AngbandTty();
+    const first = new View();
+    const second = new View();
     expect(bound()).toBe(2);
     press("j");
     // One physical keypress, two engines fed. Without this assertion the
@@ -101,8 +103,8 @@ describe("Angband TtyView teardown", () => {
   });
 
   it("takes nothing after dispose, and leaves the surviving view alone", () => {
-    const first = new AngbandTty();
-    const second = new AngbandTty();
+    const first = new View();
+    const second = new View();
     first.dispose();
     expect(bound()).toBe(1);
     press("j");
@@ -111,7 +113,7 @@ describe("Angband TtyView teardown", () => {
   });
 
   it("settles a parked key wait rather than leaving the engine's dispatch awaiting it", async () => {
-    const view = new AngbandTty();
+    const view = new View();
     const parked = view.nextKey(true, true) as Promise<unknown>;
     expect(parked).toBeInstanceOf(Promise);
     view.dispose();
@@ -119,42 +121,13 @@ describe("Angband TtyView teardown", () => {
   });
 
   it("is idempotent: a second dispose unbinds nothing else", () => {
-    const view = new AngbandTty();
-    const other = new AngbandTty();
+    const view = new View();
+    const other = new View();
     view.dispose();
     view.dispose();
     expect(bound()).toBe(1);
     press("j");
     expect(other.nextKey(false, false)).toEqual({ code: 0x6a, mods: 0 });
-  });
-});
-
-describe("Larn TtyView teardown", () => {
-  it("delivers one key to BOTH views when neither is disposed — the leak this fixes", () => {
-    const first = new LarnTty();
-    const second = new LarnTty();
-    expect(bound()).toBe(2);
-    press("j");
-    expect(first.nextKey(false, false)).not.toBeNull();
-    expect(second.nextKey(false, false)).not.toBeNull();
-  });
-
-  it("takes nothing after dispose, and leaves the surviving view alone", () => {
-    const first = new LarnTty();
-    const second = new LarnTty();
-    first.dispose();
-    expect(bound()).toBe(1);
-    press("j");
-    expect(first.nextKey(false, false)).toBeNull();
-    expect(second.nextKey(false, false)).not.toBeNull();
-  });
-
-  it("settles a parked key wait rather than leaving the engine's dispatch awaiting it", async () => {
-    const view = new LarnTty();
-    const parked = view.nextKey(true, true) as Promise<unknown>;
-    expect(parked).toBeInstanceOf(Promise);
-    view.dispose();
-    expect(await raceClock(parked)).toEqual({ won: "promise", value: null });
   });
 });
 

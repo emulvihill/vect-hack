@@ -1,62 +1,19 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import type { ShimEvent } from "../../../src/modules/nethack/protocol";
+import { installStubDocument } from "./stub-dom";
 
-/** Enough of an element for the message log, prompt line and overlay. */
-class StubEl {
-  textContent = "";
-  innerHTML = "";
-  hidden = true;
-  scrollTop = 0;
-  scrollHeight = 0;
-  children: StubEl[] = [];
-  get childElementCount() { return this.children.length; }
-  get firstChild() {
-    const c = this.children[0];
-    return c ? { remove: () => void this.children.shift() } : null;
-  }
-  appendChild(c: StubEl) { this.children.push(c); return c; }
-  contains(n: unknown) { return n === this; }
-  listeners = new Map<string, Set<(e: never) => void>>();
-  addEventListener(t: string, fn: (e: never) => void) {
-    const set = this.listeners.get(t) ?? new Set<(e: never) => void>();
-    this.listeners.set(t, set).get(t)!.add(fn);
-  }
-  removeEventListener(t: string, fn: (e: never) => void) { this.listeners.get(t)?.delete(fn); }
-}
-
-const els = new Map<string, StubEl>();
-let onKey: (e: { key: string; ctrlKey?: boolean; preventDefault(): void }) => void;
-
-// document routes keydown to the handler these tests press through, and just
-// records the rest so TextHud can register and dispose its outside-click
-// listeners without throwing. Nothing here dispatches a pointerdown: the
-// outside-click dismissal, and the `once` semantics its one-shot flag relies
-// on, are action-menu-cancel.test.ts's subject, not this file's.
-const docListeners = new Map<string, ((e: never) => void)[]>();
-(globalThis as Record<string, unknown>).document = {
-  getElementById: (id: string) => els.get(id) ?? els.set(id, new StubEl()).get(id)!,
-  createElement: () => new StubEl(),
-  addEventListener: (t: string, fn: (e: never) => void) => {
-    if (t === "keydown") { onKey = fn as typeof onKey; return; }
-    docListeners.set(t, [...(docListeners.get(t) ?? []), fn]);
-  },
-  removeEventListener: (t: string, fn: (e: never) => void) => {
-    const list = docListeners.get(t);
-    if (list) docListeners.set(t, list.filter((l) => l !== fn));
-  },
-} as unknown as Document;
+const dom = installStubDocument();
+const { els } = dom;
 
 // Imported after the stub: TextHud looks its elements up while constructing.
 const { TextHud } = await import("../../../src/modules/nethack/ui/TextHud");
 
-import type { ShimEvent } from "../../../src/modules/nethack/protocol";
-
-const press = (keyName: string) => onKey({ key: keyName, preventDefault() {} });
+const press = (keyName: string) => dom.press(keyName);
 
 describe("pass-through stand-on menu", () => {
   let hud: InstanceType<typeof TextHud>;
   beforeEach(() => {
-    els.clear();
-    docListeners.clear();
+    dom.reset();
     hud = new TextHud();
   });
 

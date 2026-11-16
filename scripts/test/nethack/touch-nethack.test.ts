@@ -2,75 +2,16 @@
 // answering the shared layer's six seams, and TextHud's three new ones driven
 // against real engine prompts.
 //
-// The DOM stub is the command-menu-ui.test.ts one grown enough to build
-// elements as well as record listeners — TouchControls creates its own pad and
-// bar rather than unhiding markup, so a write-only stub could not see them.
+// The DOM stub builds elements as well as recording listeners — TouchControls
+// creates its own pad and bar rather than unhiding markup, so a write-only stub
+// could not see them.
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { key } from "../../../src/modules/nethack/ui/keys";
 import { barIsWellFormed, PAD_GRID, type PendingInput } from "../../../src/ui/touch/scheme";
+import { installStubDocument } from "./stub-dom";
 
-type Listener = (e: never) => void;
-
-class StubEl {
-  id = "";
-  type = "";
-  title = "";
-  tabIndex = 0;
-  className = "";
-  value = "";
-  innerHTML = "";
-  hidden = true;
-  scrollTop = 0;
-  scrollHeight = 0;
-  focused = 0;
-  removed = 0;
-  onkeydown: Listener | null = null;
-  children: StubEl[] = [];
-  classes = new Set<string>();
-  listeners = new Map<string, Set<Listener>>();
-  #text = "";
-  get textContent() { return this.#text; }
-  set textContent(v: string) { this.#text = v; this.innerHTML = v; this.children = []; }
-  get childElementCount() { return this.children.length; }
-  get firstChild() {
-    const c = this.children[0];
-    return c ? { remove: () => void this.children.shift() } : null;
-  }
-  get classList() {
-    const s = this.classes;
-    return {
-      add: (c: string) => void s.add(c),
-      remove: (c: string) => void s.delete(c),
-      toggle: (c: string, on: boolean) => void (on ? s.add(c) : s.delete(c)),
-      contains: (c: string) => s.has(c),
-    };
-  }
-  appendChild(c: StubEl) { this.children.push(c); return c; }
-  append(...cs: StubEl[]) { this.children.push(...cs); }
-  remove() { this.removed++; }
-  blur() {}
-  focus() { this.focused++; }
-  contains() { return true; }
-  querySelector() { return null; }
-  addEventListener(t: string, fn: Listener) {
-    const set = this.listeners.get(t) ?? new Set<Listener>();
-    this.listeners.set(t, set).get(t)!.add(fn);
-  }
-  removeEventListener(t: string, fn: Listener) { this.listeners.get(t)?.delete(fn); }
-  emit(t: string, e: unknown = {}) { for (const fn of [...(this.listeners.get(t) ?? [])]) fn(e as never); }
-}
-
-const els = new Map<string, StubEl>();
-const el = (id: string) => els.get(id) ?? els.set(id, new StubEl()).get(id)!;
-const body = new StubEl();
-
-(globalThis as Record<string, unknown>).document = {
-  body,
-  getElementById: (id: string) => els.get(id) ?? null,
-  createElement: () => new StubEl(),
-  addEventListener: () => {},
-  removeEventListener: () => {},
-} as unknown as Document;
+const dom = installStubDocument({ lookup: "null" });
+const { el, body } = dom;
 
 const { TextHud } = await import("../../../src/modules/nethack/ui/TextHud");
 const { TouchControls } = await import("../../../src/ui/touch/TouchControls");
@@ -111,7 +52,7 @@ describe("the touch layer over a live TextHud", () => {
                 resetFacing: ReturnType<typeof vi.fn>; toggleMode: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    els.clear();
+    dom.reset();
     body.classes.clear();
     for (const id of HUD_IDS) el(id);
     hud = new TextHud();
@@ -255,7 +196,7 @@ describe("TextHud's direction exception, asked directly", () => {
   // and "the caller happens never to lie" is not a property of the seam.
   let hud: InstanceType<typeof TextHud>;
   beforeEach(() => {
-    els.clear();
+    dom.reset();
     for (const id of HUD_IDS) el(id);
     hud = new TextHud();
   });
@@ -285,7 +226,7 @@ describe("TextHud's direction exception, asked directly", () => {
 
 describe("TextHud's pendingInput", () => {
   it("names the most specific shape when several are true at once", async () => {
-    els.clear();
+    dom.reset();
     for (const id of HUD_IDS) el(id);
     const hud = new TextHud();
     const shapes: PendingInput[] = [];

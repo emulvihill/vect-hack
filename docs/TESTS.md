@@ -42,9 +42,9 @@ engine drivers are run by name from `package.json`, through each Module's
 
 | Folder | What lives there |
 | --- | --- |
-| `nethack/` `angband/` `larn/` `moria/` | one Module each: its unit tests, its engine drivers, their shared helpers (`*-play.mjs`, `bot-fixtures.ts`, `moria-checkpoint-fixtures.ts`), native harnesses (`*.cpp`) and fixtures |
+| `nethack/` `angband/` `larn/` `moria/` | one Module each: its unit tests, its engine drivers, their shared helpers (`*-play.mjs`, `bot-fixtures.ts`, NetHack's DOM stub `stub-dom.ts`, `moria-checkpoint-fixtures.ts`), native harnesses (`*.cpp`) and fixtures |
 | `backplane/` | `src/backplane` outside the save path: cells, sessions, describe, the key queue |
-| `saves/` | the save system across `src/backplane` and `src/ui` (`docs/SAVES.md`) |
+| `saves/` | the save system across `src/backplane` and `src/ui` (`docs/SAVES.md`), and `fake-fs.ts`, the Emscripten FS stand-in every save-path test shares |
 | `render/` | `src/render`: terrain, entities, effects, cameras, picking |
 | `ui/` | `src/ui`: HUD, gaze, touch, GPU detection, page links |
 | `bot/` | the shared `src/bot` layer and its node-importability |
