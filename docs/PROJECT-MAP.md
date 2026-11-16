@@ -44,3 +44,15 @@ anything  -> main.ts               (none)
   whole NetBSD tree is too heavy to submodule. Pinned to `908b4c9`; never
   patched; `build-larn-wasm.sh` pins the commit and refuses a different or
   modified checkout.
+
+## The scripts
+
+- `scripts/build/` — the four `build-<game>-wasm.sh` engine builds with their makefiles and
+  `setup-toolchain.sh`, plus what the app build and the dev server load from here.
+- `scripts/dev/` — tools run by hand: the bot gym, the offline and mobile previews,
+  `serve-www.mjs`, and the worktree setup and teardown.
+- `scripts/browser-check/` — the render gates behind `npm run check:*`, real Chromium and
+  none part of `npm test`, with their shared utils and the nightly timer units.
+- `scripts/test/` — what `npm test` runs: the vitest unit tests (`*.test.ts`, one folder per
+  Module or area, `tooling/` for the scripts themselves) and each Module's engine tests
+  (`test-<game>-<name>.mjs`, run through `<game>.engine.ts`).
