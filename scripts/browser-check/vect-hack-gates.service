@@ -17,11 +17,11 @@
 #     gate is no exception: a 390x844 viewport in an emulated touch context is
 #     still headless Chromium (vect-hack-hnw).
 #
-# Install: scripts/dev/install-gate-timer.sh, from the primary checkout; it
-# renders @REPO@ as that checkout's absolute path.
+# Install: scripts/browser-check/install-gate-timer.sh, from the primary
+# checkout; it renders @REPO@ as that checkout's absolute path.
 [Unit]
 Description=Nightly vect-hack browser gates (GPU)
 
 [Service]
 Type=oneshot
-ExecStart=@REPO@/scripts/dev/vect-hack-gates-nightly
+ExecStart=@REPO@/scripts/browser-check/vect-hack-gates-nightly

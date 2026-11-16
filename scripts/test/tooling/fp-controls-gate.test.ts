@@ -10,7 +10,7 @@
 // first half and fail the gate exactly as before.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { nethackArmed } from "../../dev/fp-gate-utils.mjs";
+import { nethackArmed } from "../../browser-check/fp-gate-utils.mjs";
 
 const READY = { parked: true, queued: 0, pendingInput: "none", hero: { x: 4, y: 5 } };
 
@@ -52,7 +52,7 @@ describe("the NetHack arm's readiness predicate", () => {
 });
 
 describe("the NetHack arm of the control gate", () => {
-  const source = readFileSync(new URL("../../dev/fp-controls-check.mjs", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../../browser-check/fp-controls-check.mjs", import.meta.url), "utf8");
   const start = source.indexOf("async function nethackSection(");
   // The function body alone, to its closing brace in column 1 — not everything
   // up to angbandSection, which would sweep in the Angband helpers that sit

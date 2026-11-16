@@ -3,7 +3,7 @@ import {
   requestPersistentStorage,
   type StorageManagerLike,
 } from "../../../src/backplane/persistentStorage";
-import { STORAGE_DECLINED_WARNING } from "../../dev/gate-console.mjs";
+import { STORAGE_DECLINED_WARNING } from "../../browser-check/gate-console.mjs";
 
 /** Every path reports its answer to the console and nothing else — the
  *  player-facing storage UI was cut from vect-hack-9tv — so each case silences

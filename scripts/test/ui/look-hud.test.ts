@@ -301,7 +301,7 @@ describe("dispose", () => {
 describe("the browser gate's copy of LOOK_HINT", () => {
   it("still matches the hint this module exports", async () => {
     const { readFile } = await import("node:fs/promises");
-    const gate = await readFile(new URL("../../dev/browser-check.mjs", import.meta.url), "utf8");
+    const gate = await readFile(new URL("../../browser-check/browser-check.mjs", import.meta.url), "utf8");
     expect(gate).toContain(`const LOOK_HINT = ${JSON.stringify(LOOK_HINT)};`);
   });
 });

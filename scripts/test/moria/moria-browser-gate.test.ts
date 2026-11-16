@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { exactNewKeys } from "../../dev/moria-gate-utils.mjs";
+import { exactNewKeys } from "../../browser-check/moria-gate-utils.mjs";
 
 describe("Moria browser-gate input accounting", () => {
   const keys = [

@@ -50,7 +50,8 @@
 // regression under "told you nothing".
 //
 // Only a human passes --stamp, and only before a release. The nightly timer
-// does not: see the header of scripts/dev/vect-hack-gates.service and §4 above.
+// does not: see the header of scripts/browser-check/vect-hack-gates.service and
+// §4 above.
 import { spawn, spawnSync } from "node:child_process";
 import { accessSync, constants, createWriteStream } from "node:fs";
 import { copyFile, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";

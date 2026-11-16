@@ -25,8 +25,8 @@
 // would read zero however broken the protocol was. An unanswered key request
 // has an observable form in this run anyway: the engine stops asking for
 // anything, map traffic goes flat, and the stall check below fires.
-// scripts/dev/fp-controls-check.mjs is where the key encoding itself is
-// checked, against a session a human is driving.
+// scripts/browser-check/fp-controls-check.mjs is where the key encoding itself
+// is checked, against a session a human is driving.
 //
 // Everything read off the page is public API: DungeonRenderer's diagnostics
 // accessors, the CellGrid on renderer.map, and the view's own handle/onNotice

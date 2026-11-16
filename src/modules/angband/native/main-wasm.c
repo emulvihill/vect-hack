@@ -335,9 +335,9 @@ static void on_explosion(game_event_type type, game_event_data *data, void *user
  * explosion at the head every time it runs, and it runs at game start
  * (ui-game.c:752) and on leaving a store (ui-store.c:1322). One arming site
  * rather than a belt-and-braces second one, so the projection assertion in
- * scripts/dev/fp-controls-check.mjs is actually testing this: it fires its
- * blast in a game started that way, and would fail if the ordering here were
- * wrong. A store visit reaches the same handler.
+ * scripts/browser-check/fp-controls-check.mjs is actually testing this: it
+ * fires its blast in a game started that way, and would fail if the ordering
+ * here were wrong. A store visit reaches the same handler.
  *
  * Both call sites are outside any effect dispatch, and that is a requirement,
  * not a coincidence: display_bolt calls Term_fresh() from inside the EVENT_BOLT

@@ -167,7 +167,7 @@ function botDelayMs(bot: string): number {
 async function bootNethack(params: URLSearchParams): Promise<void> {
   // One await, for the GPU probe and the winning view's download. Everything
   // reading window.__nhView already polls for it
-  // (scripts/dev/browser-check.mjs), so the wait costs nothing.
+  // (scripts/browser-check/browser-check.mjs), so the wait costs nothing.
   const [{ NetHackSession }, chosen] = await Promise.all([
     import("./modules/nethack/session"),
     chooseView({
@@ -176,7 +176,7 @@ async function bootNethack(params: URLSearchParams): Promise<void> {
     }),
   ]);
   const view = chosen.view;
-  // Exposed for the console and for scripts/dev/browser-check.mjs.
+  // Exposed for the console and for scripts/browser-check/browser-check.mjs.
   window.__nhView = view;
   // ?bot: the self-playing decorator answers all input.
   const bot = params.get("bot");

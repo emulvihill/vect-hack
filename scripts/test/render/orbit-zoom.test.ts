@@ -7,7 +7,7 @@
 // Everything here is arithmetic over a DOM stub that records what the camera
 // binds and fires it back, so a two-finger gesture can be driven headlessly.
 // The browser half — a real pinch, through real touch events — is
-// scripts/dev/touch-check.mjs.
+// scripts/browser-check/touch-check.mjs.
 import { describe, expect, it } from "vitest";
 import { DungeonRenderer } from "../../../src/render/DungeonRenderer";
 import { FirstPersonCam } from "../../../src/render/FirstPersonCam";

@@ -48,7 +48,7 @@ engine drivers are run by name from `package.json`, through each Module's
 | `render/` | `src/render`: terrain, entities, effects, cameras, picking |
 | `ui/` | `src/ui`: HUD, gaze, touch, GPU detection, page links |
 | `bot/` | the shared `src/bot` layer and its node-importability |
-| `tooling/` | the gate drivers in `scripts/dev` and build guards in `scripts/build` |
+| `tooling/` | the gate drivers in `scripts/browser-check` and build guards in `scripts/build` |
 
 A test that spans every Module or guards the whole tree (layering, the
 cross-Module teardowns, `main.ts` with no GPU, skins) stays at the top level,

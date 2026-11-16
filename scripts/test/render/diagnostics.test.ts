@@ -1,8 +1,8 @@
-// The narrow surface scripts/dev/browser-check.mjs drives. That check needs a
-// GPU and so is not part of npm test, which is exactly why the seams it reads
-// belong here: an assertion aimed at something that has quietly moved reports
-// the app as broken, and one aimed at something that is always true reports it
-// as healthy whatever the renderer does.
+// The narrow surface scripts/browser-check/browser-check.mjs drives. That check
+// needs a GPU and so is not part of npm test, which is exactly why the seams it
+// reads belong here: an assertion aimed at something that has quietly moved
+// reports the app as broken, and one aimed at something that is always true
+// reports it as healthy whatever the renderer does.
 import { describe, expect, it } from "vitest";
 import type { DungeonCamera } from "../../../src/render/DungeonCamera";
 import { FirstPersonCam } from "../../../src/render/FirstPersonCam";

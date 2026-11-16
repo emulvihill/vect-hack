@@ -133,7 +133,7 @@ export class DungeonRenderer {
     this.renderer.setAnimationLoop(null);
   }
 
-  // ---- diagnostics for scripts/dev/browser-check.mjs, with backend above ----
+  // ---- diagnostics for scripts/browser-check/browser-check.mjs, with backend above ----
 
   /** Frames drawn since start(). Frame rate is this over wall time. */
   get frames(): number {
@@ -149,8 +149,8 @@ export class DungeonRenderer {
    * Static level geometry rebuilds since start(). Terrain is rebuilt when the
    * map's terrain changed *or* the hero moved (lighting is baked into the
    * geometry), so under fast autonomous play this tracks the hero, and its rate
-   * is what scripts/dev/angband-borg-check.mjs watches: it is the frame cost
-   * that grows with level size rather than with what changed.
+   * is what scripts/browser-check/angband-borg-check.mjs watches: it is the
+   * frame cost that grows with level size rather than with what changed.
    */
   get terrainRebuilds(): number {
     return this.rebuilds;
@@ -158,10 +158,10 @@ export class DungeonRenderer {
 
   /**
    * Effect glyphs the last frame actually DREW, for
-   * scripts/dev/fp-controls-check.mjs — the grid's own effect Cells plus the
-   * residue of the ones the engine has already erased. Counting effect Cells
-   * on the grid instead answers a different question, and at Angband's
-   * `delay_factor` 0 it answers zero for a blast the player can see
+   * scripts/browser-check/fp-controls-check.mjs — the grid's own effect Cells
+   * plus the residue of the ones the engine has already erased. Counting
+   * effect Cells on the grid instead answers a different question, and at
+   * Angband's `delay_factor` 0 it answers zero for a blast the player can see
    * (vect-hack-auo): the set and the repaint arrive in one batch, and the grid
    * a frame samples never holds it.
    */
@@ -170,9 +170,9 @@ export class DungeonRenderer {
   }
 
   /**
-   * The cell the look ring is on, for scripts/dev/browser-check.mjs. A public
-   * accessor rather than a reach into the private: an assertion that cannot
-   * fail is worse than no assertion (vect-hack-azf).
+   * The cell the look ring is on, for scripts/browser-check/browser-check.mjs.
+   * A public accessor rather than a reach into the private: an assertion that
+   * cannot fail is worse than no assertion (vect-hack-azf).
    */
   get highlightedCell(): { x: number; y: number } | null {
     return this.highlight;

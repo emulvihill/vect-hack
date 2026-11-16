@@ -162,7 +162,8 @@ const browser = await chromium.launch();
 // The no-GPU visitor's browser. --disable-3d-apis is Chromium's own switch for
 // "3D content is blocked": navigator.gpu returns no adapter and
 // getContext("webgl2") returns null, in the renderer process, before any page
-// script runs (scripts/dev/browser-check.mjs says the same at more length).
+// script runs (scripts/browser-check/browser-check.mjs says the same at more
+// length).
 const blindBrowser = await chromium.launch({ args: ["--disable-3d-apis"] });
 
 const report = { modules: {}, threeChunks, chunks: Object.fromEntries(chunks) };

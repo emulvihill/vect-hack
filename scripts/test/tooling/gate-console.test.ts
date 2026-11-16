@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import { STORAGE_DECLINED_WARNING } from "../../dev/gate-console.mjs";
+import { STORAGE_DECLINED_WARNING } from "../../browser-check/gate-console.mjs";
 import { requestPersistentStorage, type StorageManagerLike } from "../../../src/backplane/persistentStorage";
 
 // The three things src/backplane/persistentStorage.ts can say, taken from the
@@ -54,13 +54,13 @@ describe("both gates that assert on console output share it", () => {
   const gates = ["browser-check.mjs", "angband-borg-check.mjs"];
 
   it.each(gates)("%s imports the shared constant", (gate) => {
-    const src = readFileSync(new URL(`../../dev/${gate}`, import.meta.url), "utf8");
+    const src = readFileSync(new URL(`../../browser-check/${gate}`, import.meta.url), "utf8");
     expect(src).toContain('import { STORAGE_DECLINED_WARNING } from "./gate-console.mjs"');
     expect(src).toMatch(/EXPECTED_CONSOLE.some\(\(re\) => re\.test\(m\.text\(\)\)\)|\.\.\.arm\.expectedConsole/);
   });
 
   it.each(gates)("%s does not carry its own copy of the pattern", (gate) => {
-    const src = readFileSync(new URL(`../../dev/${gate}`, import.meta.url), "utf8");
+    const src = readFileSync(new URL(`../../browser-check/${gate}`, import.meta.url), "utf8");
     expect(src).not.toMatch(/the browser declined persistence\$?\//);
   });
 });

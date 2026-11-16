@@ -2,9 +2,9 @@
 // writes screenshots to .preview/mobile-*.png, plus a measurement of how much
 // of the map the camera actually shows and whether the page scrolls sideways.
 //
-// The settle() below is lifted from touch-check.mjs — same affordances, same
-// order — because reimplementing it simpler is how a preview ends up showing
-// a state a player never reaches.
+// The settle() below is lifted from scripts/browser-check/touch-check.mjs —
+// same affordances, same order — because reimplementing it simpler is how a
+// preview ends up showing a state a player never reaches.
 //
 // Scratch tool, not a gate. Needs a dev server and a GPU.
 import { chromium } from "playwright";

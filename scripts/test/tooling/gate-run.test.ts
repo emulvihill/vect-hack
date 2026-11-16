@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   GATES, appendProblem, buildSummary, notifiableFailures, parseGateArgs, pruneList,
   renderNodeProblem, splitGates, stampVerified, summaryLines, verdictOf,
-} from "../../dev/gate-run-utils.mjs";
+} from "../../browser-check/gate-run-utils.mjs";
 
 type Gate = { name: string; npm: string; report: string | null; standalone: boolean };
 

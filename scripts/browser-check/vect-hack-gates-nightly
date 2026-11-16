@@ -37,4 +37,4 @@ cd "$repo" || exit 3
 # the directory gate-run.mjs prunes, and that prune only sweeps run DIRECTORIES,
 # so those files would grow for ever. The run's own artifact is the durable
 # record, and `journalctl --user -u vect-hack-gates.service` is the transcript.
-exec node scripts/dev/gate-run.mjs
+exec node scripts/browser-check/gate-run.mjs

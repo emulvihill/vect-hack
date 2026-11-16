@@ -10,8 +10,10 @@
 # moment that worktree is removed, and the rendered ExecStart would point at a
 # tree that no longer exists.
 #
-#   scripts/dev/install-gate-timer.sh              install and start the timer
-#   scripts/dev/install-gate-timer.sh --uninstall  stop it and remove the units
+#   scripts/browser-check/install-gate-timer.sh
+#       install and start the timer
+#   scripts/browser-check/install-gate-timer.sh --uninstall
+#       stop it and remove the units
 set -euo pipefail
 
 units_dir="$HOME/.config/systemd/user"
