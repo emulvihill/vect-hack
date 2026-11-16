@@ -43,6 +43,4 @@ anything  -> main.ts               (none)
   `github.com/NetBSD/src` with its history (its README says how), because the
   whole NetBSD tree is too heavy to submodule. Pinned to `908b4c9`; never
   patched; `build-larn-wasm.sh` pins the commit and refuses a different or
-  modified checkout. NetBSD's copy rather than HunterZ 12.3/12.4: theirs have
-  static-after-extern conflicts, hard clang errors no `-W` flag downgrades,
-  so they need source patches; NetBSD's compiles cflags-only.
+  modified checkout.

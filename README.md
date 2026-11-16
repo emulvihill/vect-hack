@@ -150,7 +150,6 @@ green, red, or could-not-run (no render node, no Chromium, no WebGPU/WebGL2).
 | `npm run preview` | Renders still images of the scene and radar to `.preview/`. No browser, no GPU. Not a web server: that is `npx vite preview`. |
 | `npm run preview:mobile` | Phone-sized screenshots of all four games to `.preview/mobile-*.png`. |
 | `npm run bot:headless -- --game larn --games 20` | Plays N Larn games in child processes at full speed, writing to `.gym/`. |
-| `npm run bench:larn` | The frozen 500-seed Larn bench. |
 
 The bot is deterministic and learns nothing: its knobs are hand-tuned
 constants.

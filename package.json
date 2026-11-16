@@ -61,7 +61,6 @@
     "test:moria": "npm run test:moria-boot && npm run test:moria-play && npm run test:moria-checkpoint-native && npm run test:moria-map-contract && npm run test:moria-persist && npm run test:moria-save-restore && npm run test:moria-tabs && npm run test:moria-autosave && npm run test:moria-overlay && npm run test:moria-build-contract",
     "test:render": "vitest run",
     "bot:headless": "node scripts/dev/bot-gym.mjs",
-    "bench:larn": "node scripts/dev/bench-larn.mjs",
     "check:browser": "node scripts/dev/browser-check.mjs",
     "check:controls": "node scripts/dev/fp-controls-check.mjs",
     "check:angband-borg": "node scripts/dev/angband-borg-check.mjs",
