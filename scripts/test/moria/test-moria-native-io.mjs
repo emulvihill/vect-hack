@@ -371,12 +371,15 @@ await runNativeScenario(true);
 const harnessSource = join(ROOT, "scripts/test/moria/moria-native-io-harness.cpp");
 assert.ok(existsSync(harnessSource),
   "missing native terminal harness for source-faithful ui_io_wasm.cpp behavior");
+const upstreamObjectDir = join(ROOT, "build/moria/obj/upstream");
+assert.ok(existsSync(upstreamObjectDir) && statSync(upstreamObjectDir).isDirectory(),
+  "build/moria/obj/upstream is missing — run npm run build:moria (the native harness links the objects it leaves)");
 const harnessOut = mkdtempSync(join(tmpdir(), "vect-moria-native-io-"));
 try {
-  const upstreamObjects = readdirSync(join(ROOT, "build/moria/obj/upstream"))
+  const upstreamObjects = readdirSync(upstreamObjectDir)
     .filter((name) => name.endsWith(".o"))
     .sort()
-    .map((name) => join(ROOT, "build/moria/obj/upstream", name));
+    .map((name) => join(upstreamObjectDir, name));
   const harnessJs = join(harnessOut, "moria-native-harness.js");
   const harnessExports = [
     "_moria_start",

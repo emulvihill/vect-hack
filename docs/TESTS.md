@@ -95,8 +95,13 @@ Module's worker-entry test boots against.
 
 ## Moria — `npm run test:moria`
 
+`test:moria-build-contract` runs first: it rebuilds Moria, and
+`test:moria-play` links its native harness against the object tree that build
+leaves in `build/moria/obj`, which a fresh tree does not have.
+
 | Group | What it pins |
 | --- | --- |
+| `test:moria-build-contract` | what the artifact cannot show afterwards: the clean pinned source and toolchain, the exact compiled sources, seams and link flags, the seed allow-list and bytes, cache invalidation and failed-build publication, then one boot of the freshly published artifact |
 | `test:moria-boot` | the canonical splash reaches the blocking bridge |
 | `test:moria-play` | real original/roguelike terminal/input trace (`test-moria-native-io.mjs`, run nowhere else) and the real-artifact Worker bridge |
 | `test:moria-checkpoint-native` | exact writer rollback/trailer invariance harness |
@@ -106,7 +111,6 @@ Module's worker-entry test boots against.
 | `test:moria-tabs` | a concurrent loser cannot wipe writer data |
 | `test:moria-autosave` | an exact turn-tail checkpoint survives a bare tab crash |
 | `test:moria-overlay` | the overlay scope: upstream's unbalanced save/restore pair cannot leak and replace the vector view for the session |
-| `test:moria-build-contract` | what the artifact cannot show afterwards: the clean pinned source and toolchain, the exact compiled sources, seams and link flags, the seed allow-list and bytes, cache invalidation and failed-build publication, then one boot of the freshly published artifact |
 
 The recovery, import and persistence unit tests build checkpoints from one
 fixture, `moria-checkpoint-fixtures.ts`: a stock save, a valid payload, the
