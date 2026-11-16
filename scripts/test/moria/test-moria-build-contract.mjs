@@ -139,12 +139,13 @@ assert.equal(packageJson.scripts["test:moria-overlay"],
 assert.equal(packageJson.scripts["test:moria-build-contract"],
   "timeout 900 node scripts/test/moria/test-moria-build-contract.mjs --require-build",
   "package.json test:moria-build-contract does not run this gate with the behavioral build checks");
-assert.equal(packageJson.scripts["test:moria"],
-  "npm run test:moria-boot && npm run test:moria-play && npm run test:moria-checkpoint-native && npm run test:moria-map-contract && npm run test:moria-persist && npm run test:moria-save-restore && npm run test:moria-tabs && npm run test:moria-autosave && npm run test:moria-overlay && npm run test:moria-build-contract",
-  "package.json test:moria does not run every completed Moria engine gate");
-assert.equal(packageJson.scripts.test,
-  "npm run typecheck && npm run test:render && npm run test:nethack && npm run test:angband && npm run test:larn && npm run test:moria",
-  "package.json test does not run typecheck, render, and every Module group in the required order");
+assert.equal(packageJson.scripts["test:moria"], "vitest run --project engine-moria",
+  "package.json test:moria does not run the Moria engine project");
+assert.equal(packageJson.scripts.test, "npm run typecheck && vitest run",
+  "package.json test does not run typecheck and then every vitest project");
+// engine-moria runs every test:moria-* script above (scripts/test/engine.ts).
+assert.match(readFileSync(`${ROOT}/scripts/test/moria/moria.engine.ts`, "utf8"), /engineTests\("moria"\)/,
+  "scripts/test/moria/moria.engine.ts does not run the Moria engine scripts");
 
 if (!STRICT) {
   const buildScriptPath = `${ROOT}/scripts/build/build-moria-wasm.sh`;

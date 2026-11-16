@@ -116,14 +116,15 @@ special headers.
 
 | Command | What it does |
 |---|---|
-| `npm test` | Everything below in sequence: typecheck, unit tests, then every engine's tests. Needs all four engines built. |
+| `npm test` | Typecheck, then one Vitest run over the unit tests and every engine's tests in parallel. Needs all four engines built. |
 | `npm run typecheck` | `tsc` over the whole tree, no emit. |
 | `npm run lint` | ESLint over the JavaScript under `scripts/`. |
 | `npm run test:render` | Vitest unit tests: every game's adapters and the shared layers. Needs no engine. |
 | `npm run test:<game>` | One engine's tests against the real WASM build, e.g. `npm run test:moria`. |
+| `npm run test:engines` | All four engines' tests, without the unit tests. |
 
-`npm test` stops at the first failing group, and its exit code is what matters
-— never pipe it. `docs/TESTS.md` says what each engine test pins.
+`npm test` reports every failing test rather than stopping at the first, and
+its exit code is what matters — never pipe it. `docs/TESTS.md` says what each engine test pins.
 `.github/workflows/ci.yml` runs only the parts that need no engine build and
 no GPU: lint, typecheck, `test:render` and `check:payload`.
 

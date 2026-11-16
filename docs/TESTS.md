@@ -4,8 +4,31 @@ Every test group `package.json` runs, and what each one pins.
 
 `npm test` runs every Module's engine tests — **there is no fast subset worth
 preferring.** The per-Module groups name a failure; they are not permission to
-leave a Module unrun. `npm test` stops at the first failing group and its exit
-code is what matters: never pipe it.
+leave a Module unrun. `npm test` is typecheck, then one `vitest run` over every
+project: it reports every failure rather than stopping at the first, and its
+exit code is what matters: never pipe it.
+
+## Vitest projects
+
+`vitest.config.ts` splits the suite into projects; `--project` picks them
+(`npx vitest run --project engine-larn`, `--project "engine-*"`).
+
+| Project | Script | What it runs |
+| --- | --- | --- |
+| `unit` | `test:render` | every `*.test.ts`; no engine build (CI runs this) |
+| `engine-<game>` | `test:<game>` | `scripts/test/<game>/<game>.engine.ts`: each `test:<game>-*` script, in `package.json` order |
+| all `engine-*` | `test:engines` | the four engine projects |
+
+An engine test is a `package.json` script, `timeout N node <driver>`, and
+nothing else registers it: `scripts/test/engine.ts` turns every
+`test:<game>-*` script into one vitest test, run through `npm run`, with
+vitest's limit at N plus 30 seconds so the script's own `timeout` fires first.
+A script without a `timeout N` prefix is refused. Within a Module the scripts
+run one after another; the four Modules and `unit` run in parallel, which is
+safe because every driver boots its own engine against its own fake
+IndexedDB and temp directories. A failing script's last 80 lines of output are
+in the failure message; a passing one prints nothing. Run a single script
+directly (`npm run test:larn-trace`) to watch its output live.
 
 The authority for what exists is `package.json`. If a name here disagrees with
 it, `package.json` is right and this file is stale.
@@ -14,7 +37,8 @@ it, `package.json` is right and this file is stale.
 
 A test lives in the folder of the code it exercises. `vitest` finds every
 `*.test.ts` below `scripts/test/` and `scripts/dev/`; the `test-<game>-*.mjs`
-engine drivers are run by name from `package.json`.
+engine drivers are run by name from `package.json`, through each Module's
+`<game>.engine.ts`.
 
 | Folder | What lives there |
 | --- | --- |
