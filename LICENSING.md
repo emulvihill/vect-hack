@@ -10,7 +10,7 @@ keeping its own license. VectHack's own code is MIT.
 | **VectHack's own code** — renderer, HUD, backplane, skins, UI, bots, build scripts, and every file not listed below | MIT ([LICENSE](LICENSE)) |
 | **The NetHack Module** — `external/NetHack`, `src/modules/nethack/recoverSave.ts` (a port of NetHack's `util/recover.c`), and the built `public/modules/nethack/*` plus the NetHack worker bundle they compile into | NGPL ([LICENSE.NETHACK](LICENSE.NETHACK); notices in [NOTICE.NETHACK](NOTICE.NETHACK)) |
 | **The Angband Module** — `external/angband`, `src/modules/angband/native/`, and the built `public/modules/angband/*` | GPL-2.0-only ([LICENSE.GPL2](LICENSE.GPL2); notices in [NOTICE.ANGBAND](NOTICE.ANGBAND)) |
-| **The Umoria Module** — `external/umoria`, `src/modules/moria/native/`, and the built `public/modules/moria/*` and `public/modules/moria-versions/*` | GPL-3.0-or-later ([LICENSE.GPL3](LICENSE.GPL3)) |
+| **The Umoria Module** — `external/umoria`, `src/modules/moria/native/`, and the built `public/modules/moria/*` | GPL-3.0-or-later ([LICENSE.GPL3](LICENSE.GPL3)) |
 | **The Larn Module** — `external/larn`, `src/modules/larn/native/`, and the built `public/modules/larn/*` | Noah Morgan's no-profit grant ([LICENSE.LARN](LICENSE.LARN)) |
 | **Bundled runtime components** — three.js, the Emscripten runtime, musl libc | MIT / NCSA ([THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)) |
 

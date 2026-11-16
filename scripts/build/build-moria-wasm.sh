@@ -319,101 +319,15 @@ if [ "$FULL_COMPILE_REQUIRED" -eq 1 ]; then
   fi
 fi
 
-PUBLIC_PARENT="$ROOT/public/modules"
-PUBLIC="$PUBLIC_PARENT/moria"
-VERSIONS="$PUBLIC_PARENT/moria-versions"
-mkdir -p "$VERSIONS"
-PUBLISH_TMP="$(mktemp -d "$VERSIONS/.moria.publish.XXXXXX")"
-LINK_TMP_DIR=""
-PREVIOUS=""
-cleanup_publish() {
-  if [ -n "${PREVIOUS:-}" ] && [ -e "$PREVIOUS" ] && \
-     [ ! -e "$PUBLIC" ] && [ ! -L "$PUBLIC" ]; then
-    if mv -T -- "$PREVIOUS" "$PUBLIC"; then
-      PREVIOUS=""
-    else
-      echo "build-moria-wasm: could not restore previous public directory: $PREVIOUS" >&2
-    fi
-  fi
-  if [ -n "${PUBLISH_TMP:-}" ]; then
-    rm -rf -- "$PUBLISH_TMP"
-  fi
-  if [ -n "${LINK_TMP_DIR:-}" ]; then
-    rm -rf -- "$LINK_TMP_DIR"
-  fi
-}
-trap cleanup_publish EXIT
-cp -f -- "$OUT/moria.js" "$OUT/moria.wasm" "$OUT/moria.data" "$PUBLISH_TMP/"
-for extension in js wasm data; do
-  if [ ! -s "$PUBLISH_TMP/moria.$extension" ]; then
-    echo "build-moria-wasm: incomplete publication candidate: moria.$extension" >&2
-    exit 1
-  fi
-done
-chmod 0755 "$PUBLISH_TMP"
-
-VERSION_NAME="moria-$fingerprint"
-VERSION_DIR="$VERSIONS/$VERSION_NAME"
-if [ -d "$VERSION_DIR" ] && [ ! -L "$VERSION_DIR" ] && \
-   cmp -s "$PUBLISH_TMP/moria.js" "$VERSION_DIR/moria.js" && \
-   cmp -s "$PUBLISH_TMP/moria.wasm" "$VERSION_DIR/moria.wasm" && \
-   cmp -s "$PUBLISH_TMP/moria.data" "$VERSION_DIR/moria.data"; then
-  rm -rf -- "$PUBLISH_TMP"
-  PUBLISH_TMP=""
-elif [ -e "$VERSION_DIR" ] || [ -L "$VERSION_DIR" ]; then
-  VERSION_NAME="moria-$fingerprint-$$"
-  VERSION_DIR="$VERSIONS/$VERSION_NAME"
-  mv -T -- "$PUBLISH_TMP" "$VERSION_DIR"
-  PUBLISH_TMP=""
-else
-  mv -T -- "$PUBLISH_TMP" "$VERSION_DIR"
-  PUBLISH_TMP=""
+PUBLIC="$ROOT/public/modules/moria"
+# Builds before 2026-11-15 published through a public/modules/moria symlink into
+# public/modules/moria-versions/; replace that layout with a plain directory.
+if [ -L "$PUBLIC" ]; then
+  rm -f -- "$PUBLIC"
+  rm -rf -- "$ROOT/public/modules/moria-versions"
 fi
-chmod 0755 "$VERSION_DIR"
-
-LINK_TMP_DIR="$(mktemp -d "$PUBLIC_PARENT/.moria-link.XXXXXX")"
-ln -s -- "moria-versions/$VERSION_NAME" "$LINK_TMP_DIR/moria"
-if [ -d "$PUBLIC" ] && [ ! -L "$PUBLIC" ]; then
-  PREVIOUS="$(mktemp -d "$PUBLIC_PARENT/.moria.previous.XXXXXX")"
-  rmdir -- "$PREVIOUS"
-  mv -T -- "$PUBLIC" "$PREVIOUS"
-  if ! mv -fT -- "$LINK_TMP_DIR/moria" "$PUBLIC"; then
-    if mv -T -- "$PREVIOUS" "$PUBLIC"; then
-      PREVIOUS=""
-    else
-      echo "build-moria-wasm: publication failed and the previous directory could not be restored: $PREVIOUS" >&2
-    fi
-    exit 1
-  fi
-  rm -rf -- "$PREVIOUS"
-  PREVIOUS=""
-else
-  # rename(2) replaces the previous pointer atomically. Not `mv -T`: GNU mv
-  # does the same rename, but uutils mv dereferences a destination symlink,
-  # sees the version directory, and refuses to replace it.
-  node -e 'require("node:fs").renameSync(process.argv[1], process.argv[2])' \
-    "$LINK_TMP_DIR/moria" "$PUBLIC"
-fi
-rmdir -- "$LINK_TMP_DIR"
-LINK_TMP_DIR=""
-
-for candidate in "$VERSIONS"/moria-*; do
-  [ -e "$candidate" ] || continue
-  [ "$candidate" != "$VERSION_DIR" ] || continue
-  name="$(basename "$candidate")"
-  if [[ ! "$name" =~ ^moria-[0-9a-f]{64}(-[0-9]+)?$ ]] || \
-     [ ! -d "$candidate" ] || [ -L "$candidate" ]; then
-    continue
-  fi
-  if diff -q \
-    <(printf '%s\n' 'moria.data:f' 'moria.js:f' 'moria.wasm:f') \
-    <(find "$candidate" -mindepth 1 -maxdepth 1 -printf '%f:%y\n' | LC_ALL=C sort) \
-    >/dev/null; then
-    rm -rf -- "$candidate"
-  fi
-done
-
-trap - EXIT
+mkdir -p "$PUBLIC"
+cp -f -- "$OUT/moria.js" "$OUT/moria.wasm" "$OUT/moria.data" "$PUBLIC/"
 
 artifact_manifest_tmp="$OUT/.artifact-sha256.tmp.$$"
 if ! artifact_manifest_contents > "$artifact_manifest_tmp" || \

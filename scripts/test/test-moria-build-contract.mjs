@@ -10,7 +10,6 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  readlinkSync,
   readdirSync,
   rmSync,
   statSync,
@@ -18,7 +17,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { basename, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = resolve(fileURLToPath(new URL("../..", import.meta.url)));
@@ -166,8 +165,6 @@ if (!STRICT) {
 // publication behaviour the stub fixtures below exist to prove — which is how
 // those fixtures went vacuous when the Look HUD added the second export.
 const STUB_EXPORTS = "_moria_start _moria_describe";
-const stubArtifact = (label, extension) =>
-  (extension === "js" ? `${label} js\n${STUB_EXPORTS}\n` : `${label} ${extension}\n`);
 
 const buildScript = `${ROOT}/scripts/build/build-moria-wasm.sh`;
 const makefile = `${ROOT}/scripts/build/moria-wasm.mk`;
@@ -750,39 +747,6 @@ printf '%s\\n' '[asyncify] (anonymous namespace)::readBlockingKey(bool) can chan
     assert.ok(!existsSync(join(fixtureRoot, `build/moria/moria.${extension}`)),
       `incomplete cached canary left moria.${extension} reusable`);
   }
-  // This rebuild replaces the pointer symlink the earlier build published. GNU
-  // `mv -T` renames over a symlink to a directory; uutils `mv` dereferences it
-  // and refuses ("cannot overwrite directory ... with non-directory"). Run it
-  // under a mv with the uutils refusal so a GNU host catches the regression too.
-  const strictMvBin = join(scratch, "strict-mv-bin");
-  mkdirSync(strictMvBin);
-  const realMv = checked("which", ["mv"]).stdout.trim();
-  writeFileSync(join(strictMvBin, "mv"), `#!/usr/bin/env bash
-set -euo pipefail
-no_target=0
-for arg in "$@"; do
-  case "$arg" in
-    --) break ;;
-    --no-target-directory) no_target=1 ;;
-    --*) ;;
-    -*T*) no_target=1 ;;
-  esac
-done
-destination="\${!#}"
-if [ "$no_target" = 1 ] && [ -L "$destination" ] && [ -d "$destination" ]; then
-  echo "mv: cannot overwrite directory '$destination' with non-directory" >&2
-  exit 1
-fi
-exec "${realMv}" "$@"
-`);
-  chmodSync(join(strictMvBin, "mv"), 0o755);
-  assert.ok(lstatSync(join(fixtureRoot, "public/modules/moria")).isSymbolicLink(),
-    "republish fixture does not start from a published pointer");
-  checked(fixtureScript, [], {
-    cwd: fixtureRoot,
-    env: { ...process.env, PATH: `${strictMvBin}:${process.env.PATH}` },
-  });
-
   const guardedSource = join(scratch, "publication-source");
   checked("git", ["clone", "-q", "--no-hardlinks", MORIA, guardedSource]);
   rmSync(join(fixtureRoot, "external/umoria"));
@@ -821,164 +785,6 @@ printf 'dirtied during link\\n' >> "${guardedSource}/CHANGELOG.md"
   for (const extension of ["js", "wasm", "data"]) {
     assert.equal(readFileSync(join(fixturePublic, `moria.${extension}`), "utf8"),
       `previous public ${extension}\n`, `source guard ran after publishing moria.${extension}`);
-  }
-
-  const atomicRoot = join(scratch, "atomic-publication-fixture");
-  mkdirSync(join(atomicRoot, "scripts/build"), { recursive: true });
-  mkdirSync(join(atomicRoot, "src/modules/moria/native"), { recursive: true });
-  mkdirSync(join(atomicRoot, "external"), { recursive: true });
-  copyFileSync(buildScript, join(atomicRoot, "scripts/build/build-moria-wasm.sh"));
-  copyFileSync(makefile, join(atomicRoot, "scripts/build/moria-wasm.mk"));
-  copyFileSync(guardScript, join(atomicRoot, "scripts/build/guard-host-paths.sh"));
-  copyFileSync(mainNative, join(atomicRoot, "src/modules/moria/native/main-wasm.cpp"));
-  copyFileSync(uiNative, join(atomicRoot, "src/modules/moria/native/ui_io_wasm.cpp"));
-  copyFileSync(semanticNative, join(atomicRoot, "src/modules/moria/native/semantic-wasm.cpp"));
-  copyFileSync(semanticHeader, join(atomicRoot, "src/modules/moria/native/semantic-wasm.h"));
-  copyFileSync(checkpointNative, join(atomicRoot, "src/modules/moria/native/checkpoint-wasm.cpp"));
-  copyFileSync(checkpointHeader, join(atomicRoot, "src/modules/moria/native/checkpoint-wasm.h"));
-  copyFileSync(gameSaveNative, join(atomicRoot, "src/modules/moria/native/game-save-wasm.cpp"));
-  symlinkSync(MORIA, join(atomicRoot, "external/umoria"), "dir");
-  symlinkSync(EMSDK, join(atomicRoot, "external/emsdk"), "dir");
-  const atomicPublic = join(atomicRoot, "public/modules/moria");
-  mkdirSync(atomicPublic, { recursive: true });
-  for (const extension of ["js", "wasm", "data"]) {
-    writeFileSync(join(atomicPublic, `moria.${extension}`), `atomic previous ${extension}\n`);
-  }
-  const atomicBin = join(scratch, "atomic-publication-bin");
-  mkdirSync(atomicBin);
-  writeFileSync(join(atomicBin, "make"), `#!/usr/bin/env bash
-set -euo pipefail
-mkdir -p "${atomicRoot}/build/moria"
-for extension in js wasm data; do
-  printf 'atomic candidate %s\\n' "$extension" > "${atomicRoot}/build/moria/moria.$extension"
-done
-printf '%s\\n' '${STUB_EXPORTS}' >> "${atomicRoot}/build/moria/moria.js"
-printf '%s\\n' '[asyncify] wasm_wait_key is an import that can change the state'
-printf '%s\\n' '[asyncify] (anonymous namespace)::readBlockingKey(bool) can change the state due to wasm_wait_key'
-printf '%s\\n' '[asyncify] wasm_poll_key is an import that can change the state'
-printf '%s\\n' '[asyncify] flushInputBuffer() can change the state due to wasm_poll_key'
-printf '%s\\n' '[asyncify] vectMoriaGameRunKeyInput() can change the state due to (anonymous namespace)::readBlockingKey(bool)'
-printf '%s\\n' '[asyncify] wasm_before_exit is an import that can change the state'
-printf '%s\\n' '[asyncify] exitProgram() can change the state due to wasm_before_exit'
-printf '%s\\n' '[asyncify] wasm_checkpoint_landed is an import that can change the state'
-printf '%s\\n' '[asyncify] vectMoriaGameRunUpdateMonsters(bool) can change the state due to wasm_checkpoint_landed'
-`);
-  chmodSync(join(atomicBin, "make"), 0o755);
-  const realCp = checked("which", ["cp"]).stdout.trim();
-  writeFileSync(join(atomicBin, "cp"), `#!/usr/bin/env bash
-set -euo pipefail
-for arg in "$@"; do
-  case "$arg" in
-    */moria.js)
-      destination="\${!#}"
-      "${realCp}" -- "$arg" "$destination"
-      exit 71
-      ;;
-  esac
-done
-exec "${realCp}" "$@"
-`);
-  chmodSync(join(atomicBin, "cp"), 0o755);
-  const atomicBuild = run(join(atomicRoot, "scripts/build/build-moria-wasm.sh"), [], {
-    cwd: atomicRoot,
-    env: { ...process.env, PATH: `${atomicBin}:${process.env.PATH}` },
-  });
-  assert.notEqual(atomicBuild.status, 0, "build ignored a partial publication copy failure");
-  for (const extension of ["js", "wasm", "data"]) {
-    assert.equal(readFileSync(join(atomicPublic, `moria.${extension}`), "utf8"),
-      `atomic previous ${extension}\n`, `partial publication replaced public moria.${extension}`);
-  }
-  assert.deepEqual(readdirSync(atomicPublic).filter((name) => name.startsWith(".moria.publish.")), [],
-    "failed atomic publication left a temporary directory behind");
-  assert.deepEqual(readdirSync(join(atomicRoot, "public/modules/moria-versions"))
-    .filter((name) => name.startsWith(".moria.publish.")), [],
-    "failed publication left a version candidate behind");
-
-  rmSync(join(atomicBin, "cp"));
-  writeFileSync(join(atomicBin, "mv"), `#!/usr/bin/env bash
-set -euo pipefail
-destination="\${!#}"
-case "$destination" in
-  "${dirname(atomicPublic)}"/.moria.previous.*)
-    "${realMv}" "$@"
-    exit 73
-    ;;
-esac
-exec "${realMv}" "$@"
-`);
-  chmodSync(join(atomicBin, "mv"), 0o755);
-  const failedAfterLegacyMove = run(join(atomicRoot, "scripts/build/build-moria-wasm.sh"), [], {
-    cwd: atomicRoot,
-    env: { ...process.env, PATH: `${atomicBin}:${process.env.PATH}` },
-  });
-  assert.notEqual(failedAfterLegacyMove.status, 0,
-    "build ignored failure immediately after moving the legacy public directory");
-  assert.ok(lstatSync(atomicPublic).isDirectory(),
-    "EXIT cleanup did not restore the legacy public directory after the move failed");
-  for (const extension of ["js", "wasm", "data"]) {
-    assert.equal(readFileSync(join(atomicPublic, `moria.${extension}`), "utf8"),
-      `atomic previous ${extension}\n`, `post-move failure lost prior public moria.${extension}`);
-  }
-  rmSync(join(atomicBin, "mv"));
-
-  const mvCount = join(scratch, "publication-mv-count");
-  writeFileSync(join(atomicBin, "mv"), `#!/usr/bin/env bash
-set -euo pipefail
-destination="\${!#}"
-case "$destination" in
-  "${atomicPublic}"|"${atomicPublic}"/moria.*|"${dirname(atomicPublic)}"/.moria.previous.*)
-    count=0
-    if [ -f "${mvCount}" ]; then count="$(cat "${mvCount}")"; fi
-    count=$((count + 1))
-    printf '%s' "$count" > "${mvCount}"
-    if [ "$count" -eq 2 ]; then exit 72; fi
-    ;;
-esac
-exec "${realMv}" "$@"
-`);
-  chmodSync(join(atomicBin, "mv"), 0o755);
-  const interruptedCommit = run(join(atomicRoot, "scripts/build/build-moria-wasm.sh"), [], {
-    cwd: atomicRoot,
-    env: { ...process.env, PATH: `${atomicBin}:${process.env.PATH}` },
-  });
-  assert.notEqual(interruptedCommit.status, 0, "build ignored an interrupted publication commit");
-  for (const extension of ["js", "wasm", "data"]) {
-    assert.equal(readFileSync(join(atomicPublic, `moria.${extension}`), "utf8"),
-      `atomic previous ${extension}\n`, `interrupted commit partially replaced public moria.${extension}`);
-  }
-  rmSync(join(atomicBin, "mv"));
-  const atomicVersions = join(atomicRoot, "public/modules/moria-versions");
-  const staleVersion = join(atomicVersions, `moria-${"b".repeat(64)}`);
-  mkdirSync(staleVersion);
-  for (const extension of ["js", "wasm", "data"]) {
-    writeFileSync(join(staleVersion, `moria.${extension}`), `stale ${extension}\n`);
-  }
-  const unrelatedVersion = join(atomicVersions, "moria-not-a-version");
-  mkdirSync(unrelatedVersion);
-  writeFileSync(join(unrelatedVersion, "keep"), "unrelated version sibling\n");
-  const unrelatedPublic = join(atomicRoot, "public/modules/keep-unrelated");
-  writeFileSync(unrelatedPublic, "unrelated public sibling\n");
-  checked(join(atomicRoot, "scripts/build/build-moria-wasm.sh"), [], {
-    cwd: atomicRoot,
-    env: { ...process.env, PATH: `${atomicBin}:${process.env.PATH}` },
-  });
-  assert.ok(lstatSync(atomicPublic).isSymbolicLink(),
-    "normal retry did not migrate public/modules/moria to the atomic pointer");
-  assert.equal(statSync(atomicPublic).mode & 0o777, 0o755,
-    "resolved public Moria artifact directory is not explicitly traversable (0755)");
-  const activeVersion = resolve(dirname(atomicPublic), readlinkSync(atomicPublic));
-  assert.ok(existsSync(activeVersion), "active Moria version directory was pruned");
-  assert.ok(!existsSync(staleVersion), "unreferenced validated Moria version directory was not pruned");
-  assert.equal(readFileSync(join(unrelatedVersion, "keep"), "utf8"), "unrelated version sibling\n",
-    "version pruning touched a non-version sibling");
-  assert.equal(readFileSync(unrelatedPublic, "utf8"), "unrelated public sibling\n",
-    "version pruning touched a path outside the version root");
-  assert.deepEqual(readdirSync(dirname(atomicPublic)).filter((name) => name.startsWith(".moria.previous.")), [],
-    "publication recovery left a physical-directory backup behind");
-  for (const extension of ["js", "wasm", "data"]) {
-    assert.equal(readFileSync(join(atomicPublic, `moria.${extension}`), "utf8"),
-      stubArtifact("atomic candidate", extension),
-      `normal retry did not publish complete moria.${extension}`);
   }
 
   const build = checked(buildScript, []);
@@ -1061,10 +867,10 @@ exec "${realMv}" "$@"
     "one-object rebuild poisoned the canonical full-clean compile manifest");
 
   const publicRoot = `${ROOT}/public/modules/moria`;
-  assert.ok(lstatSync(publicRoot).isSymbolicLink(),
-    "public/modules/moria is not the atomic pointer to a complete artifact directory");
-  assert.equal(statSync(publicRoot).mode & 0o777, 0o755,
-    "resolved public Moria artifact directory is not explicitly traversable (0755)");
+  assert.ok(lstatSync(publicRoot).isDirectory(),
+    "public/modules/moria is not a plain directory, as the other engines publish");
+  assert.ok(!existsSync(`${ROOT}/public/modules/moria-versions`),
+    "the retired public/modules/moria-versions layout is still present");
   for (const extension of ["js", "wasm", "data"]) {
     const artifact = `${ROOT}/public/modules/moria/moria.${extension}`;
     assert.ok(existsSync(artifact) && statSync(artifact).size > 0,

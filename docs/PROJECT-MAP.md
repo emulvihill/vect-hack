@@ -34,8 +34,8 @@ anything  -> main.ts               (none)
   `3bf8abc4f76812810e59d738492c7b61fb8f1bb6`. Never patch it;
   `build-moria-wasm.sh` pins source/toolchain/flags/seed bytes, stages the
   12-file runtime seed itself (the allow-list `MORIA_RUNTIME_FILES` in
-  `src/modules/moria/persist.ts` mirrors), and publishes the complete
-  JS/WASM/data set atomically.
+  `src/modules/moria/persist.ts` mirrors), and copies the JS/WASM/data set
+  into `public/modules/moria/` like the other engines.
 - `external/larn` — NetBSD's BSD Larn 12.0 (`src/games/larn`, David
   Holland's 2008 modernization) under Morgan's no-profit permission; see
   `LICENSING.md` before distribution changes. A submodule of

@@ -47,7 +47,7 @@ fi
 
 echo "==> Module artifacts"
 mkdir -p "$here/public/modules"
-for m in nethack angband larn moria moria-versions; do
+for m in nethack angband larn moria; do
 	if [ -d "$primary/public/modules/$m" ]; then
 		cp -r "$primary/public/modules/$m" "$here/public/modules/"
 		echo "    $m"
