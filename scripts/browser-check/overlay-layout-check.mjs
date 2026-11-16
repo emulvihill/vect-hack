@@ -1,6 +1,8 @@
 // Real CSS layout, without an engine, server, or GPU. The shared panel must
 // center regardless of its content height, and still scroll within the screen.
 // Restoring the old fixed 6em top offset must fail the centering/prompt checks;
+// a bare 70vh cap must fail the prompt check in the 960x360 window, where a
+// centered panel that tall reaches over the message and prompt strips;
 // forgetting the touch transform override must fail the touch bounds check.
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -13,7 +15,7 @@ const SAMPLES = [
   { width: 1280, height: 800, rows: 24, clearPrompt: true },
   { width: 1280, height: 800, rows: 6, clearPrompt: true },
   { width: 390, height: 844, rows: 24, clearPrompt: true, scrollX: true },
-  { width: 960, height: 360, rows: 80, scrollY: true },
+  { width: 960, height: 360, rows: 80, clearPrompt: true, scrollY: true },
   { width: 390, height: 844, rows: 24, touch: true, scrollX: true },
 ];
 const html = await readFile(new URL("../../index.html", import.meta.url), "utf8");
