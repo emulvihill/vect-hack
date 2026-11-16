@@ -7,7 +7,7 @@
 // clock is the only thing that moves between a refused checkpoint and a taken
 // one. The mirror itself is covered by test-nethack-autosave.mjs, against the
 // real engine and a real IDBFS.
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   CHECKPOINT_FORMAT, DEFAULT_COMMANDS, DEFAULT_MIN_INTERVAL_MS, MANIFEST_FILE, RECOVER_DIR,
   createCheckpointer, restoreRecoverySet, type CheckpointFS,
@@ -230,5 +230,103 @@ describe("NetHack recovery manifest trust boundary", () => {
     });
     // Past the shape check and into the caller's own format check, which names the number.
     expect(restoreRecoverySet(FS, ROOT).reason).toContain(`format ${CHECKPOINT_FORMAT + 1}`);
+  });
+});
+
+describe("NetHack autosave giving up", () => {
+  /** A checkpointer whose save_currentstate() the test controls outright. */
+  function giving(save: () => void) {
+    const FS = new FakeFS();
+    FS.writeFile(`/${LOCK}.0`, level0(1));
+    FS.writeFile(`/${LOCK}.1`, new Uint8Array(64));
+    const dead: string[] = [];
+    let restored = 0;
+    let clock = 1_000;
+    const saveCurrentState = vi.fn(save);
+    const cp = createCheckpointer({
+      FS, root: ROOT, saveCurrentState,
+      suspendBridge: () => () => void restored++,
+      flush: async () => {},
+      onDead: (reason) => void dead.push(reason),
+      now: () => clock,
+    });
+    const rewrite = () => FS.writeFile(`/${LOCK}.0`, level0(1));
+    return {
+      cp, dead, saveCurrentState, rewrite, restoredCount: () => restored,
+      advance: (ms: number) => { clock += ms; },
+    };
+  }
+
+  it("stops after two checkpoints in a row that wrote nothing, and says so once", async () => {
+    // do.c's in_checkpoint guard: once one create_levelfile fails, every
+    // later save_currentstate() returns without writing.
+    const h = giving(() => {});
+    expect(await h.cp.maybe()).toBe(false);
+    expect(h.cp.dead).toBeNull(); // one quiet checkpoint can be a coincidence
+    expect(await h.cp.maybe()).toBe(false);
+    expect(h.cp.dead).toMatch(/stopped checkpointing/);
+    expect(h.dead).toEqual([h.cp.dead]);
+
+    // Dead is dead: no more engine calls, no second notice.
+    expect(await h.cp.maybe()).toBe(false);
+    expect(h.saveCurrentState).toHaveBeenCalledTimes(2);
+    expect(h.dead).toHaveLength(1);
+  });
+
+  it("forgives a miss once a checkpoint lands between them", async () => {
+    let write = false;
+    const h = giving(() => { if (write) h.rewrite(); });
+    expect(await h.cp.maybe()).toBe(false); // miss 1
+    write = true;
+    expect(await h.cp.maybe()).toBe(true); // landed: the count starts over
+    write = false;
+    // Due again only after the full cadence.
+    for (let i = 0; i < DEFAULT_COMMANDS; i++) h.cp.command();
+    h.advance(DEFAULT_MIN_INTERVAL_MS);
+    expect(await h.cp.maybe()).toBe(false); // a first miss again, not a second
+    expect(h.saveCurrentState).toHaveBeenCalledTimes(3); // it really was attempted
+    expect(h.cp.dead).toBeNull();
+  });
+
+  it("gives up rather than throwing when the checkpoint itself throws, and still restores the bridge", async () => {
+    const h = giving(() => { throw new Error("memory access out of bounds"); });
+    await expect(h.cp.maybe()).resolves.toBe(false);
+    expect(h.restoredCount()).toBe(1);
+    expect(h.cp.dead).toBe("checkpointing failed: Error: memory access out of bounds");
+    expect(h.dead).toEqual([h.cp.dead]);
+    expect(await h.cp.maybe()).toBe(false);
+    expect(h.saveCurrentState).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("NetHack recovery attempts", () => {
+  /** A committed set exactly as a landed checkpoint leaves it, attempts set by hand. */
+  async function committedSet(attempts: number) {
+    const h = harness();
+    expect(await h.cp.maybe()).toBe(true);
+    const manifest = JSON.parse(String(h.FS.readFile(MANIFEST, { encoding: "utf8" })));
+    h.FS.writeFile(MANIFEST, JSON.stringify({ ...manifest, attempts }));
+    return h.FS;
+  }
+
+  it("stops offering a set that two boots already took and came back for", async () => {
+    const FS = await committedSet(2);
+    const r = restoreRecoverySet(FS, ROOT);
+    expect(r).toEqual({ restored: [], reason: "recovery was already tried 2 times" });
+    expect(FS.readdir(`${ROOT}/${RECOVER_DIR}`)).toEqual([".", ".."]); // the whole set is gone
+  });
+
+  it("counts the attempt into the manifest before anything is handed to the engine", async () => {
+    const FS = await committedSet(1);
+    const writes: string[] = [];
+    const write = FS.writeFile.bind(FS);
+    FS.writeFile = (path, data) => {
+      writes.push(path === MANIFEST ? `manifest attempts=${JSON.parse(String(data)).attempts}` : path);
+      write(path, data);
+    };
+    restoreRecoverySet(FS, ROOT);
+    // First write of the restore, whatever happens after it: the boot it is
+    // handed to is the one that might never come back to count it.
+    expect(writes[0]).toBe("manifest attempts=2");
   });
 });
