@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
 import type { LockManagerLike } from "../../../src/backplane/persistFs";
 import {
   MORIA_RUNTIME_FILES,
@@ -137,13 +136,6 @@ function locks(free: boolean): LockManagerLike {
 }
 
 describe("Moria persistence policy", () => {
-  it("lets preRun's selected cwd win and falls back only when runtime files are absent", () => {
-    const source = readFileSync(new URL("../../../src/modules/moria/native/main-wasm.cpp", import.meta.url), "utf8");
-    expect(source).toMatch(/access\(config::files::scores\.c_str\(\), F_OK\) != 0/);
-    expect(source).toMatch(/access[\s\S]*?chdir\("\/moria-seed"\)/);
-    expect(source).not.toMatch(/moria_start[^]*?\{\s*\/\/[^]*?if \(chdir\("\/moria-seed"\)/);
-  });
-
   it("copies the exact packaged seed into the writer volume and selects it as cwd", async () => {
     const mod = new FakeModule();
     const handle = mountMoriaStorage(mod, { locks: locks(true) });

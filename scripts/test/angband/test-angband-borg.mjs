@@ -25,7 +25,6 @@ if (!existsSync(new URL("../../../public/modules/angband/angband.data", import.m
 // The decorator drives a stub view: this test is about the engine, and the
 // real views need a DOM. Everything it forwards is counted here.
 let maps = 0, messages = 0, levels = 0;
-let fatal = null;
 const heroSeen = new Set();
 // The current hero grid, not just every grid ever seen — heroSeen alone can
 // only prove the hero moved, not tell describe() where "now" is.
@@ -33,7 +32,9 @@ let heroAt = null;
 
 const view = {
   onReady: () => {},
-  onNotice: (text) => { if (/died|engine/i.test(text)) fatal = text; },
+  // Nothing reaches this headless: bootAngband has no notice channel, and an
+  // engine death fails the run from its quit hook instead.
+  onNotice: () => {},
   handle: (ev) => {
     if (ev.name === "level") levels++;
     if (ev.name === "message") messages++;
@@ -72,7 +73,6 @@ await until(() => maps > 0 && levels > 0, 60000, "the borg to start playing");
 const at = { maps, messages, hero: heroSeen.size };
 await new Promise((r) => setTimeout(r, SAMPLE_MS));
 
-if (fatal) fail("engine reported a fatal during borg play: " + fatal);
 if (!session.sawBirth) fail("no character was born — the borg had nothing to play");
 if (badPoll) fail("a wait:false poll was not answered immediately with 'no key'");
 if (commandWaits !== 1)
@@ -116,11 +116,7 @@ if (describe(-1, -1)) fail("vect_angband_describe answered an out-of-range grid"
 
 // The describe calls above are nested exports into an engine parked at its
 // Asyncify suspend point, and the risk they carry is leaving it unable to go
-// on. There is no `fatal` check here, because there could not be an honest
-// one: bootAngband is handed keys/onEvent/onPoll and no notice channel, so
-// view.onNotice never runs and the flag it writes can never be set — reading
-// it would be an assertion that cannot fail (vect-hack-azf).
-// An engine that died would stop playing, so the wait below is the assertion:
+// on. An engine that died would stop playing, so the wait below is the assertion:
 // it proves the engine survived being asked, which is the whole risk.
 //
 // A wait, not a fixed window: the borg runs long synchronous stretches and
@@ -134,7 +130,7 @@ await until(() => maps > beforeDescribe, AFTER_DESCRIBE_MS,
 const after = maps - beforeDescribe;
 
 console.log(`OK: borg played unattended — ${grew} map batches in ${SAMPLE_MS / 1000}s, `
-  + `${heroSeen.size} hero positions, ${messages} messages, no fatal; `
+  + `${heroSeen.size} hero positions, ${messages} messages; `
   + `${after} more batches after the describe; `
   + `its config reached ${VOLUME_BORG_TXT}`);
 process.exit(0);

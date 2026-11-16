@@ -166,13 +166,13 @@ describe("the cast step", () => {
 
   it("answers the direction prompt with the direction it aimed", () => {
     const m = new LarnBotModel();
-    room(m, [[10, 5]]); // due north
+    room(m, [[14, 8]]); // due east: not north, the direction it falls back to
     status(m, 1);
     const brain = new LarnBrain(casting);
     expect(brain.decide(m).intent).toBe("cast");
-    // movementKey(0) is "k" — north in Larn's vi keys, which is exactly the
+    // movementKey(2) is "l" — east in Larn's vi keys, which is exactly the
     // vocabulary dirsub() accepts.
-    expect(String.fromCharCode(brain.promptContext(m).castDirection.code)).toBe("k");
+    expect(brain.promptContext(m).castDirection).toEqual({ code: "l".charCodeAt(0), mods: 0 });
   });
 
   it("always offers SOME direction, because dirsub has no escape", () => {
@@ -183,7 +183,8 @@ describe("the cast step", () => {
     room(m); // nothing to shoot; nothing was ever aimed
     status(m, 1);
     const ctx = new LarnBrain(casting).promptContext(m);
-    expect("hjklyubn").toContain(String.fromCharCode(ctx.castDirection.code));
+    // North, DIRS[0]: a walking key, never the run byte dirsub() would reject.
+    expect(ctx.castDirection).toEqual({ code: "k".charCodeAt(0), mods: 0 });
   });
 });
 

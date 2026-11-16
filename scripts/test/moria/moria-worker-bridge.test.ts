@@ -207,11 +207,18 @@ describe("MoriaWorkerBridge input", () => {
   });
 
   it("honors the requested 10ms poll delay with a real task and elapsed-time floor", async () => {
-    const { bridge, posted } = harness();
+    // The floor is read when the poll is posted, not when waitFor notices:
+    // waitFor's own 50ms interval would clear 9ms with no delay at all.
+    let postedAfter = -1;
+    const posted: Posted[] = [];
+    const bridge = new MoriaWorkerBridge((message, transfer = []) => {
+      if (message.type === "getKey") postedAfter = performance.now() - started;
+      posted.push({ message, transfer });
+    });
     const started = performance.now();
     const answer = bridge.getKeyInput(poll(10_000));
     await vi.waitFor(() => expect(inputPosts(posted)).toHaveLength(1), { timeout: 250 });
-    expect(performance.now() - started).toBeGreaterThanOrEqual(9);
+    expect(postedAfter).toBeGreaterThanOrEqual(9);
     expect(bridge.handleMessage({
       type: "key", id: 1, result: { status: "none" },
     })).toBe(true);

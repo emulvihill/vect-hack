@@ -68,8 +68,14 @@ describe("wall fill emission", () => {
     expect(sink.quads).toHaveLength(8);
   });
 
-  it("emits nothing when no sink is passed", () => {
-    buildTerrain(fakeMap([[5, 5]]), nullBatch); // must simply not throw
+  it("draws the same wireframe with no sink, which only adds the fill", () => {
+    const map = fakeMap([[5, 5], [6, 5]], [[5, 6]]);
+    const bare = new LineRecorder();
+    const filled = new LineRecorder();
+    buildTerrain(map, bare as unknown as LineBatch);
+    buildTerrain(map, filled as unknown as LineBatch, undefined, new Recorder());
+    expect(bare.segments.length).toBeGreaterThan(0);
+    expect(bare.segments).toEqual(filled.segments);
   });
 
   it("draws floor beneath a being, while a being without underlay stays unseen", () => {

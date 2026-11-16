@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   LARN_COLS,
@@ -46,7 +47,10 @@ describe("LarnClassifier", () => {
   it("exports the Larn dungeon dimensions", () => {
     expect(LARN_COLS).toBe(67);
     expect(LARN_ROWS).toBe(17);
-    expect(new LarnClassifier()).toBeInstanceOf(LarnClassifier);
+    // The engine's own map size, which every array in the core is cut to.
+    const header = readFileSync(new URL("../../../external/larn/header.h", import.meta.url), "utf8");
+    expect([LARN_COLS, LARN_ROWS]).toEqual(
+      ["MAXX", "MAXY"].map((name) => Number(new RegExp(`^#define ${name} (\\d+)$`, "m").exec(header)?.[1])));
   });
 
   it("classifies an unseen terrain cell with no occupant", () => {

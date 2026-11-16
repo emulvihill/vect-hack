@@ -635,7 +635,13 @@ describe("Angband delegate", () => {
   });
 
   it("wires the fallback table it was written for", () => {
-    expect(harness().delegate.fallback).toBe(angbandFallback);
+    // Its answers, not its identity: a wrapped table is still the right one.
+    const { fallback } = harness().delegate;
+    expect(fallback({ type: "getKey", id: 7, wait: true, cmd: true }))
+      .toEqual({ type: "key", id: 7, code: KC_ESCAPE, mods: 0 });
+    expect(fallback({ type: "getKey", id: 8, wait: false, cmd: false }))
+      .toEqual({ type: "key", id: 8, code: 0, mods: 0 });
+    expect(fallback({ type: "event", ev: { name: "clear" } })).toBeNull();
   });
 });
 

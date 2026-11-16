@@ -32,12 +32,13 @@ describe("COMMAND_GROUPS", () => {
   });
 
   it("uses only codes one of the keys.ts folds can produce", () => {
-    // A bare printable byte, a Ctrl fold (< 32) or a Meta fold (>= 128).
-    // Anything else is a typo, not a NetHack command.
-    for (const c of ALL) {
-      const ok = (c.code >= 33 && c.code <= 126) || c.code < 32 || c.code >= 128;
-      expect(ok, `${c.label} -> ${c.code}`).toBe(true);
-    }
+    // A bare printable byte, Ctrl on a letter, or Meta on a printable byte.
+    // Anything else (NUL, ESC, DEL, a bare high byte, past 255) is a typo,
+    // not a NetHack command.
+    const printable = Array.from({ length: 126 - 33 + 1 }, (_, i) => String.fromCharCode(33 + i));
+    const letters = printable.filter((ch) => /[a-z]/.test(ch));
+    const folds = new Set([...printable.map(key), ...letters.map(ctrl), ...printable.map(meta)]);
+    for (const c of ALL) expect(folds.has(c.code), `${c.label} -> ${c.code}`).toBe(true);
   });
 
   it("keeps the two Meta folds exactly as cmd.c compiles them", () => {

@@ -3,6 +3,7 @@ import {
   requestPersistentStorage,
   type StorageManagerLike,
 } from "../../../src/backplane/persistentStorage";
+import { STORAGE_DECLINED_WARNING } from "../../dev/gate-console.mjs";
 
 /** Every path reports its answer to the console and nothing else — the
  *  player-facing storage UI was cut from vect-hack-9tv — so each case silences
@@ -48,7 +49,9 @@ describe("requestPersistentStorage", () => {
       persisted: async () => false,
       persist: async () => false,
     })).resolves.toBe(false);
-    expect(warn.mock.calls[0]![0]).toContain("declined");
+    // Whole call, against the gates' own pattern: every headless run makes
+    // this answer, and a reword the gates did not learn would red them all.
+    expect(warn.mock.calls).toEqual([[expect.stringMatching(STORAGE_DECLINED_WARNING)]]);
   });
 
   it("swallows a rejecting request", async () => {

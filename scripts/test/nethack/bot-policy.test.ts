@@ -58,6 +58,8 @@ describe("passable / frontier", () => {
 describe("nextStep", () => {
   it("routes around walls and reports the first step's direction", () => {
     // Hero at left, target right, wall between: must go around via the gap.
+    // Over the top is 3 moves (u, n, l); every other way round is 4 or more,
+    // so the shortest route has exactly one first step.
     const m = level([
       ".....",
       ".@|..",
@@ -65,21 +67,18 @@ describe("nextStep", () => {
       ".....",
     ]);
     const step = nextStep(m, (x, y) => x === 6 && y === 3, new Set());
-    expect(step).not.toBeNull();
-    expect(["k", "u", "j", "b", "h"]).toContain(step!.dir); // not "l": wall
+    expect(step).toEqual({ x: 4, y: 2, dir: "u", door: false });
   });
 
   it("never routes diagonally through a doorway", () => {
+    // The door is one diagonal step (y) from the hero; NetHack forbids that
+    // move, so the route has to step under the door first and enter it with k.
     const m = level([
-      ".+.",
-      ".@.",
+      "-+-",
+      "..@",
     ]);
-    // Target is diagonal past the door; first step must be orthogonal (k onto
-    // the door is disallowed too since door entry must be orthogonal - k IS
-    // orthogonal; the forbidden move is a diagonal like u onto '+').
     const step = nextStep(m, (x, y) => x === 3 && y === 2, new Set());
-    expect(step!.dir).toBe("k");
-    expect(step!.door).toBe(true);
+    expect(step).toEqual({ x: 3, y: 3, dir: "h", door: false });
   });
 
   it("respects the blocked set", () => {
@@ -176,12 +175,22 @@ describe("BotBrain priorities", () => {
   });
 
   it("explores toward the frontier, then descends on known stairs", () => {
+    // Unexplored dark all round: exploring outranks the stairs.
     const m = level(["@..>"]);
     statusHp(m, 20, 20);
-    const brain = new BotBrain();
-    const a = brain.decide(m);
-    expect(["explore", "descend"]).toContain(a.intent);
-    expect(a.keys.length).toBe(1); // a single movement key
+    const a = new BotBrain().decide(m);
+    expect(a.intent).toBe("explore");
+    expect(a.keys).toEqual([k("l")]);
+    // A sealed room has no frontier left, so the known stairs win.
+    const sealed = level([
+      "-----",
+      "-@.>-",
+      "-----",
+    ]);
+    statusHp(sealed, 20, 20);
+    const b = new BotBrain().decide(sealed);
+    expect(b.intent).toBe("descend");
+    expect(b.keys).toEqual([k("l")]);
   });
 
   it("searches when there is nothing else", () => {

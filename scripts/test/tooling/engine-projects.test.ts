@@ -22,10 +22,16 @@ describe("engine projects", () => {
   });
 
   it("finds every Module's engine scripts, in package.json order, each with its time limit", () => {
+    // Expected from what each script runs, not from its name: a script that
+    // runs a Module's driver but is named so its project misses it would
+    // silently drop out of `npm test`.
     for (const game of GAMES) {
-      const scripts = engineScripts(game, pkg.scripts);
-      expect(scripts.length, game).toBeGreaterThan(0);
-      expect(scripts.map((s) => s.name)).toEqual(Object.keys(pkg.scripts).filter((k) => k.startsWith(`test:${game}-`)));
+      const expected = Object.entries(pkg.scripts).flatMap(([name, command]) => {
+        const m = /^timeout (\d+) node scripts\/test\/([a-z]+)\/test-\2-[\w-]+\.mjs\b/.exec(command);
+        return m?.[2] === game ? [{ name, seconds: Number(m[1]) }] : [];
+      });
+      expect(expected.length, game).toBeGreaterThan(0);
+      expect(engineScripts(game, pkg.scripts)).toEqual(expected);
     }
   });
 

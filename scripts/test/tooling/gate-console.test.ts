@@ -1,14 +1,30 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { STORAGE_DECLINED_WARNING } from "../../dev/gate-console.mjs";
+import { requestPersistentStorage, type StorageManagerLike } from "../../../src/backplane/persistentStorage";
 
-// The three things src/backplane/persistentStorage.ts can say, copied verbatim
-// from lines 28, 36 and 39. Only the middle one is a healthy answer; the other
-// two mean the storage manager is missing or the request itself threw, and a
-// gate that swallowed those would be hiding a real fault.
-const NO_MANAGER = "[vect-hack] saves may be evicted: this browser has no storage manager";
-const DECLINED = "[vect-hack] saves may be evicted: the browser declined persistence";
-const REQUEST_FAILED = "[vect-hack] saves may be evicted: the persistence request failed: SecurityError";
+// The three things src/backplane/persistentStorage.ts can say, taken from the
+// code itself so a reword there fails here rather than only in check:browser.
+// Only the declined answer is a healthy one; the other two mean the storage
+// manager is missing or the request itself threw, and a gate that swallowed
+// those would be hiding a real fault. The page console joins a warning's
+// arguments with spaces, which is what the gate's m.text() sees.
+async function warning(storage: StorageManagerLike | null): Promise<string> {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  try {
+    await requestPersistentStorage(storage);
+    expect(warn).toHaveBeenCalledOnce();
+    return warn.mock.calls[0]!.map(String).join(" ");
+  } finally {
+    warn.mockRestore();
+  }
+}
+const NO_MANAGER = await warning(null);
+const DECLINED = await warning({ persisted: async () => false, persist: async () => false });
+const REQUEST_FAILED = await warning({
+  persisted: async () => false,
+  persist: () => Promise.reject(new Error("SecurityError")),
+});
 
 describe("the storage-grant warning the gates allow", () => {
   it("matches the declined answer, which every headless run makes", () => {

@@ -11,6 +11,7 @@ import "fake-indexeddb/auto";
 import createModule from "../../../external/NetHack/targets/wasm/nethack.js";
 import { PERSIST_ROOT } from "../../../src/modules/nethack/persist.ts";
 import { seedEngineFS } from "../../../src/modules/nethack/engineBoot.ts";
+import { writeMenuPicks } from "../../../src/modules/nethack/wasmAbi.ts";
 import {
   CHECKPOINT_FORMAT, MANIFEST_FILE, RECOVER_DIR, RECOVER_QUERY, createCheckpointer,
 } from "../../../src/modules/nethack/checkpoint.ts";
@@ -99,10 +100,7 @@ function play(label, { checkpoints = 2 } = {}) {
           const pick = items.find((i) => i.accel === want) ?? items.find((i) => i.id);
           messages.push(`? ${prompt} -> ${pick ? pick.text : "(nothing)"}`);
           if (!pick) { mod.setValue(a[2], 0, "*"); return 0; }
-          const list = mod._malloc(12); // menu_item: identifier, count, itemflags
-          mod.setValue(list, pick.id, "i32");
-          mod.setValue(list + 4, -1, "i32");
-          mod.setValue(list + 8, 0, "i32");
+          const list = writeMenuPicks(mod, [{ identifier: pick.id, count: -1, itemflags: 0 }]);
           mod.setValue(a[2], list, "*");
           return 1;
         }
