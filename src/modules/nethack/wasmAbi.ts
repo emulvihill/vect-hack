@@ -80,6 +80,17 @@ export interface DescribeAbiModule extends AbiModule {
 /** BUFSZ is 256 in NetHack; out_str is written but not shown in v1. */
 const DESCRIBE_BUFSZ = 256;
 
+/** include/global.h. */
+const COLNO = 80;
+const ROWNO = 21;
+
+/** NetHack's isok() (src/cmd.c): column 0 is not a map column. Integers only,
+ *  because setValue would truncate anything else to a different int16 cell. */
+function isok(x: number, y: number): boolean {
+  return Number.isInteger(x) && Number.isInteger(y)
+    && x >= 1 && x <= COLNO - 1 && y >= 0 && y <= ROWNO - 1;
+}
+
 /**
  * The engine's own name for the glyph at a map cell — the phrase autodescribe
  * itself shows ("dwarven valkyrie called player", "wall", "unexplored area").
@@ -106,10 +117,15 @@ const DESCRIBE_BUFSZ = 256;
  * this allocates one rather than passing two numbers. firstmatch is the
  * concise phrase; out_str is the long form, with a \G mixed-glyph escape and
  * the class phrase, and is deliberately not read here.
+ *
+ * A cell off the map answers null without reaching the engine: the C side
+ * never runs isok() on cc, and lookat() indexes levl[x][y] with it. Rejected
+ * rather than clamped, because a clamped cell is one the pointer is not on.
  */
 export function describeScreenCell(
   mod: DescribeAbiModule, x: number, y: number,
 ): string | null {
+  if (!isok(x, y)) return null;
   const cc = mod._malloc(4);
   const out = mod._malloc(DESCRIBE_BUFSZ);
   const firstmatch = mod._malloc(4);

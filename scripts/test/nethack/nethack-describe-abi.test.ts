@@ -49,4 +49,36 @@ describe("describeScreenCell", () => {
     const mod = fakeModule({ found: 1, firstmatch: null });
     expect(describeScreenCell(mod, 1, 1)).toBeNull();
   });
+
+  // isok() (src/cmd.c) is x in 1..COLNO-1, y in 0..ROWNO-1, COLNO 80 and
+  // ROWNO 21 (include/global.h). do_screen_description() never checks it, and
+  // lookat() indexes levl[x][y] with whatever it is given. Column 0 is inside
+  // the arrays but is not a map column. A fractional or huge value would be
+  // truncated to int16 by setValue and describe a cell the pointer is not on.
+  it.each([
+    ["column 0", 0, 5],
+    ["past the right edge", 80, 5],
+    ["negative x", -1, 5],
+    ["negative y", 10, -1],
+    ["past the bottom edge", 10, 21],
+    ["fractional x", 1.5, 5],
+    ["fractional y", 10, 0.5],
+    ["NaN x", NaN, 5],
+    ["NaN y", 10, NaN],
+    ["infinite x", Infinity, 5],
+    ["x that wraps to 1 as an int16", 65537, 5],
+  ])("never asks NetHack about %s", (_name, x, y) => {
+    const mod = fakeModule({ found: 1, firstmatch: "wall" });
+    expect(describeScreenCell(mod, x, y)).toBeNull();
+    expect(mod.calls).toHaveLength(0);
+  });
+
+  it.each([
+    [1, 0],
+    [79, 20],
+  ])("still asks NetHack about the edge cell %i,%i", (x, y) => {
+    const mod = fakeModule({ found: 1, firstmatch: "wall" });
+    expect(describeScreenCell(mod, x, y)).toBe("wall");
+    expect(mod.coordAt(mod.calls[0]!.cc)).toEqual({ x, y });
+  });
 });
