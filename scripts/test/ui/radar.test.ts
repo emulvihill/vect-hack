@@ -2,14 +2,14 @@
 // ring that has to stay Manhattan while the bearing stays euclidean. Driven by
 // a synthetic map, and painted into a recording 2D context so the drawing side
 // can be checked without a canvas.
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { CLR } from "../../../src/backplane/colors";
 import { CellGrid } from "../../../src/backplane/cell";
 import {
   MG, NETHACK_COLS, NETHACK_ROWS, NetHackClassifier,
 } from "../../../src/modules/nethack/classifier";
 import {
-  ALERT_RANGE, RADAR_RANGE, drawRadar, fitBacking, proximityInk, pulseEnvelope, radarBlips,
+  ALERT_RANGE, RADAR_RANGE, Radar, drawRadar, fitBacking, proximityInk, pulseEnvelope, radarBlips,
   underThreat,
 } from "../../../src/ui/hud/Radar";
 import type { Blip } from "../../../src/ui/hud/Radar";
@@ -315,5 +315,169 @@ describe("the approach warning", () => {
     expect(pulseEnvelope(99)).toBe(0);             // long over
     // The envelope fades: the second beat's peak is quieter than the first's.
     expect(pulseEnvelope(0.8)).toBeLessThan(pulseEnvelope(0.25));
+  });
+});
+
+// ---- the widget ------------------------------------------------------------
+
+/** The canvas the widget makes for itself: CSS size, backing store, 2D context. */
+class FakeCanvas {
+  id = "";
+  width = 300;
+  height = 150;
+  clientWidth = 200;
+  removed = false;
+  readonly rec = recordingCtx();
+  /** Device-pixel scale of every repaint, in order. */
+  readonly paints: number[] = [];
+  constructor() {
+    const ctx = this.rec.ctx as unknown as { setTransform: (a: number) => void; clearRect: () => void };
+    ctx.setTransform = (a) => this.paints.push(a);
+    // Every repaint starts by clearing, so the record holds the latest one only.
+    ctx.clearRect = () => { this.rec.strokes.length = 0; };
+  }
+  getContext(kind: string) { return kind === "2d" ? this.rec.ctx : null; }
+  remove() { this.removed = true; }
+}
+
+class FakeResizeObserver {
+  static last: FakeResizeObserver;
+  readonly observed: unknown[] = [];
+  disconnected = false;
+  constructor(private readonly onResize: () => void) { FakeResizeObserver.last = this; }
+  observe(el: unknown) { this.observed.push(el); }
+  disconnect() { this.disconnected = true; }
+  resize() { this.onResize(); }
+}
+
+describe("the Radar widget", () => {
+  let clock = 0;
+
+  function mount(ratio = 1) {
+    const canvas = new FakeCanvas();
+    const children: unknown[] = [];
+    vi.stubGlobal("document", {
+      createElement: (tag: string) => { expect(tag).toBe("canvas"); return canvas; },
+    });
+    vi.stubGlobal("ResizeObserver", FakeResizeObserver);
+    vi.stubGlobal("devicePixelRatio", ratio);
+    vi.spyOn(performance, "now").mockImplementation(() => clock);
+    const radar = new Radar({ appendChild: (el: unknown) => children.push(el) } as unknown as HTMLElement);
+    return { radar, canvas, children, observer: FakeResizeObserver.last };
+  }
+
+  /** The rim's ink on the last repaint: the first beam drawn is the rim. */
+  const rimInk = (canvas: FakeCanvas) => canvas.rec.strokes[0]!.style;
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    clock = 0;
+  });
+
+  it("mounts its own canvas in the parent and watches its size", () => {
+    const { canvas, children, observer } = mount();
+    expect(canvas.id).toBe("radar");
+    expect(children).toEqual([canvas]);
+    expect(observer.observed).toEqual([canvas]);
+  });
+
+  it("paints nothing while it has no size", () => {
+    const { radar, canvas } = mount();
+    canvas.clientWidth = 0;
+    radar.draw(withMonster(0, -4), NORTH_UP);
+    expect(canvas.paints).toHaveLength(0);
+    canvas.clientWidth = 200;
+    radar.draw(withMonster(0, -4), NORTH_UP);
+    expect(canvas.paints).toHaveLength(1);
+  });
+
+  it("repaints only when the map, the camera or its size has moved", () => {
+    const { radar, canvas, observer } = mount();
+    const m = withMonster(0, -4);
+    radar.draw(m, NORTH_UP);
+    radar.draw(m, NORTH_UP);
+    expect(canvas.paints).toHaveLength(1);
+    radar.draw(m, 0.5);
+    expect(canvas.paints).toHaveLength(2);
+    radar.invalidate();
+    radar.draw(m, 0.5);
+    expect(canvas.paints).toHaveLength(3);
+    observer.resize();
+    radar.draw(m, 0.5);
+    expect(canvas.paints).toHaveLength(4);
+    radar.draw(m, 0.5);
+    expect(canvas.paints).toHaveLength(4);
+  });
+
+  it("re-reads the map on invalidate, and not before", () => {
+    const { radar, canvas } = mount();
+    radar.draw(withMonster(0, -4), NORTH_UP);
+    const withBlip = canvas.rec.strokes.length;
+    radar.draw(model(), NORTH_UP);                 // the monster left, but nobody said so
+    expect(canvas.paints).toHaveLength(1);
+    radar.invalidate();
+    radar.draw(model(), NORTH_UP);
+    expect(canvas.paints).toHaveLength(2);
+    expect(canvas.rec.strokes.length).toBeLessThan(withBlip); // the rim alone
+  });
+
+  it("pulses the rim once when a threat first closes in, then rests", () => {
+    const { radar, canvas } = mount();
+    const near = withMonster(0, -(ALERT_RANGE - 1)), far = withMonster(0, -(ALERT_RANGE + 2));
+    radar.draw(far, NORTH_UP);
+    const resting = rimInk(canvas);
+
+    clock = 1000;
+    radar.invalidate();
+    radar.draw(near, NORTH_UP);                    // the edge: the pulse starts now
+    clock = 1250;
+    radar.draw(near, NORTH_UP);                    // nothing moved, but the rim is pulsing
+    expect(canvas.paints).toHaveLength(3);
+    expect(rimInk(canvas)).not.toBe(resting);
+
+    clock = 3000;                                  // long over
+    radar.draw(near, NORTH_UP);
+    expect(rimInk(canvas)).toBe(resting);
+    const settled = canvas.paints.length;
+    clock = 3100;
+    radar.draw(near, NORTH_UP);
+    expect(canvas.paints).toHaveLength(settled);
+
+    // Still threatened after another map update: no second warning.
+    radar.invalidate();
+    radar.draw(near, NORTH_UP);
+    clock = 3350;
+    radar.draw(near, NORTH_UP);
+    expect(canvas.paints).toHaveLength(settled + 1);
+
+    // Backed out and closed in again: a fresh warning.
+    radar.invalidate();
+    radar.draw(far, NORTH_UP);
+    radar.invalidate();
+    radar.draw(near, NORTH_UP);
+    clock = 3600;
+    radar.draw(near, NORTH_UP);
+    expect(canvas.paints).toHaveLength(settled + 4);
+    expect(rimInk(canvas)).not.toBe(resting);
+  });
+
+  it("sizes its backing store to the pixel ratio, capped at 2x", () => {
+    const sharp = mount(1.5);
+    sharp.radar.draw(model(), NORTH_UP);
+    expect([sharp.canvas.width, sharp.canvas.height]).toEqual([300, 300]);
+    expect(sharp.canvas.paints).toEqual([1.5]);
+
+    const dense = mount(3);
+    dense.radar.draw(model(), NORTH_UP);
+    expect([dense.canvas.width, dense.canvas.height]).toEqual([400, 400]);
+    expect(dense.canvas.paints).toEqual([2]);
+  });
+
+  it("stops watching and leaves the page on dispose", () => {
+    const { radar, canvas, observer } = mount();
+    radar.dispose();
+    expect(observer.disconnected).toBe(true);
+    expect(canvas.removed).toBe(true);
   });
 });

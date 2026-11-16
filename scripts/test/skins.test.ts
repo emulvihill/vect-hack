@@ -123,3 +123,52 @@ describe("palette derives from the active skin", () => {
     expect(TOKENS.glow.beam_layers).toBe(activeSkin().tokens.glow.beam_layers);
   });
 });
+
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { vi } from "vitest";
+import { applySkinCss } from "../../src/skins";
+
+/** Every custom property index.html's stylesheet reads. */
+const PAGE_VARS = [...new Set(
+  readFileSync(join(import.meta.dirname, "..", "..", "index.html"), "utf8")
+    .match(/var\(--vh-[a-z0-9-]+/g)!.map((v) => v.slice(4)),
+)];
+
+/** A root element that keeps what is set on its style. */
+function cssRoot() {
+  const props = new Map<string, string>();
+  return { props, root: { style: { setProperty: (p: string, v: string) => props.set(p, v) } } };
+}
+
+describe("applySkinCss", () => {
+  it("sets every custom property the page reads, from the active skin", () => {
+    const { props, root } = cssRoot();
+    applySkinCss(root as unknown as HTMLElement);
+    expect(PAGE_VARS.length).toBeGreaterThan(10);
+    for (const name of PAGE_VARS) expect(props.has(name), name).toBe(true);
+    const s = activeSkin();
+    expect(props.get("--vh-bg")).toBe(s.background);
+    for (const [name, value] of Object.entries(s.css)) expect(props.get(name), name).toBe(value);
+  });
+
+  it("gives the page every property it reads under every shipped skin", () => {
+    // applySkinCss copies the active skin's css block whole, so a skin missing
+    // one leaves that property unset on the page.
+    for (const skin of Object.keys(SKINS)) {
+      const css = { "--vh-bg": "", ...resolveSkin(skin).css };
+      for (const name of PAGE_VARS) expect(Object.hasOwn(css, name), `${skin} ${name}`).toBe(true);
+    }
+  });
+
+  it("styles the document root when given no element", () => {
+    const { props, root } = cssRoot();
+    vi.stubGlobal("document", { documentElement: root });
+    try {
+      applySkinCss();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(props.get("--vh-bg")).toBe(activeSkin().background);
+  });
+});

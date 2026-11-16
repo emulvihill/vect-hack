@@ -7,8 +7,8 @@
 // embedded browser exposes navigator.gpu, refuses every adapter, and offers no
 // WebGL 2 underneath — three then falls back to WebGL and throws on the null
 // context. Presence of the API is not evidence of a GPU.
-import { describe, expect, it } from "vitest";
-import { GPU_UNAVAILABLE_NOTICE, gpuAvailable, type GpuProbe } from "../../../src/ui/gpuSupport";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { GPU_UNAVAILABLE_NOTICE, browserGpuProbe, gpuAvailable, type GpuProbe } from "../../../src/ui/gpuSupport";
 
 const probe = (webgpuAdapter: () => Promise<boolean>, webgl2: () => boolean): GpuProbe =>
   ({ webgpuAdapter, webgl2 });
@@ -49,5 +49,59 @@ describe("GPU_UNAVAILABLE_NOTICE", () => {
     expect(GPU_UNAVAILABLE_NOTICE).not.toMatch(/error|failed|TypeError/i);
     expect(GPU_UNAVAILABLE_NOTICE).toMatch(/WebGL/);
     expect(GPU_UNAVAILABLE_NOTICE).toMatch(/text view/i);
+  });
+});
+
+describe("browserGpuProbe", () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  /** A browser whose adapter request answers `adapter` and whose canvases give `gl`. */
+  function browser(gpu: { requestAdapter: () => Promise<unknown> } | null | undefined, gl: unknown) {
+    const asked: string[] = [];
+    let canvases = 0;
+    vi.stubGlobal("navigator", gpu === undefined ? {} : { gpu });
+    vi.stubGlobal("document", {
+      createElement: (tag: string) => {
+        expect(tag).toBe("canvas");
+        canvases++;
+        return { getContext: (kind: string) => { asked.push(kind); return gl; } };
+      },
+    });
+    return { asked, canvases: () => canvases };
+  }
+
+  it("counts a WebGPU adapter only when one actually arrives", async () => {
+    browser({ requestAdapter: async () => ({}) }, null);
+    expect(await browserGpuProbe().webgpuAdapter()).toBe(true);
+    // VS Code's Simple Browser: navigator.gpu is there, every adapter is refused.
+    browser({ requestAdapter: async () => null }, null);
+    expect(await browserGpuProbe().webgpuAdapter()).toBe(false);
+  });
+
+  it("says no WebGPU without navigator.gpu, or without a navigator at all", async () => {
+    browser(undefined, null);
+    expect(await browserGpuProbe().webgpuAdapter()).toBe(false);
+    browser(null, null);
+    expect(await browserGpuProbe().webgpuAdapter()).toBe(false);
+    vi.stubGlobal("navigator", undefined);
+    expect(await browserGpuProbe().webgpuAdapter()).toBe(false);
+  });
+
+  it("asks a throwaway canvas for WebGL 2, never the real one", () => {
+    const yes = browser(undefined, {});
+    const probe = browserGpuProbe();
+    expect(probe.webgl2()).toBe(true);
+    expect(probe.webgl2()).toBe(true);
+    expect(yes.asked).toEqual(["webgl2", "webgl2"]);
+    expect(yes.canvases()).toBe(2);
+    browser(undefined, null);
+    expect(browserGpuProbe().webgl2()).toBe(false);
+  });
+
+  it("turns VS Code's Simple Browser away, end to end", async () => {
+    browser({ requestAdapter: async () => null }, null);
+    expect(await gpuAvailable(browserGpuProbe())).toBe(false);
+    browser({ requestAdapter: async () => null }, {});
+    expect(await gpuAvailable(browserGpuProbe())).toBe(true);
   });
 });

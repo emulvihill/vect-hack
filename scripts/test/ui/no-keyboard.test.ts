@@ -9,11 +9,11 @@
 // Everything else here is about not lying to the visitor: the demo offered has
 // to be one that exists, and the page the button opens has to be the game
 // rather than this notice again.
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DISMISS_BUTTON_ID, DISMISS_LABEL, NOTICE_ID, NOTICE_OFFER_ID,
   NOTICE_TEXT_ID, NO_KEYBOARD_NOTICE, SELF_PLAY_FLAG, WATCH_BUTTON_ID,
-  WATCH_DEMO_NOTICE, demoRunning, installNoKeyboardNotice, isTouchOnly,
+  WATCH_DEMO_NOTICE, browserPointerEnvironment, demoRunning, installNoKeyboardNotice, isTouchOnly,
   watchDemoFor, watchDemoLabel, watchDemoSearch,
   type NoticeDocument, type NoticeElement, type PointerEnvironment,
 } from "../../../src/ui/noKeyboard";
@@ -177,5 +177,42 @@ describe("the wording", () => {
     expect(NO_KEYBOARD_NOTICE).toMatch(/computer/i);
     expect(NO_KEYBOARD_NOTICE).not.toMatch(/sorry|unfortunately|error|unsupported/i);
     expect(WATCH_DEMO_NOTICE).toMatch(/no keys/i);
+  });
+});
+
+describe("browserPointerEnvironment", () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  /** A matchMedia that answers true for exactly the queries in `matching`. */
+  function media(...matching: string[]) {
+    const asked: string[] = [];
+    vi.stubGlobal("matchMedia", (query: string) => {
+      asked.push(query);
+      return { matches: matching.includes(query) };
+    });
+    return asked;
+  }
+
+  it("asks the two media queries and reports their answers", () => {
+    const asked = media("(pointer: coarse)", "(hover: none)");
+    expect(browserPointerEnvironment()).toEqual(phone);
+    expect(asked.sort()).toEqual(["(hover: none)", "(pointer: coarse)"]);
+
+    media("(pointer: coarse)");
+    expect(browserPointerEnvironment()).toEqual(hoverableCoarse);
+    media();
+    expect(browserPointerEnvironment()).toEqual(desktop);
+  });
+
+  it("answers nothing in a browser without matchMedia", () => {
+    vi.stubGlobal("matchMedia", undefined);
+    expect(browserPointerEnvironment()).toBeNull();
+  });
+
+  it("is what the notice asks when it is given no environment", () => {
+    media("(pointer: coarse)", "(hover: none)");
+    expect(install({ env: undefined }).dom.el(NOTICE_ID).hidden).toBe(false);
+    media("(pointer: coarse)");
+    expect(install({ env: undefined }).dom.el(NOTICE_ID).hidden).toBe(true);
   });
 });
