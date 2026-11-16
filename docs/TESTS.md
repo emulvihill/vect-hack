@@ -42,7 +42,7 @@ engine drivers are run by name from `package.json`, through each Module's
 
 | Folder | What lives there |
 | --- | --- |
-| `nethack/` `angband/` `larn/` `moria/` | one Module each: its unit tests, its engine drivers, their shared helpers (`*-play.mjs`, `bot-fixtures.ts`), native harnesses (`*.cpp`) and fixtures |
+| `nethack/` `angband/` `larn/` `moria/` | one Module each: its unit tests, its engine drivers, their shared helpers (`*-play.mjs`, `bot-fixtures.ts`, `moria-checkpoint-fixtures.ts`), native harnesses (`*.cpp`) and fixtures |
 | `backplane/` | `src/backplane` outside the save path: cells, sessions, describe, the key queue |
 | `saves/` | the save system across `src/backplane` and `src/ui` (`docs/SAVES.md`) |
 | `render/` | `src/render`: terrain, entities, effects, cameras, picking |
@@ -96,7 +96,7 @@ cross-Module teardowns, `main.ts` with no GPU, skins) stays at the top level.
 | Group | What it pins |
 | --- | --- |
 | `test:moria-boot` | the canonical splash reaches the blocking bridge |
-| `test:moria-play` | real original/roguelike terminal/input trace |
+| `test:moria-play` | real original/roguelike terminal/input trace (`test-moria-native-io.mjs`, run nowhere else) and the real-artifact Worker bridge |
 | `test:moria-checkpoint-native` | exact writer rollback/trailer invariance harness |
 | `test:moria-map-contract` | sanitizer/cache plus live semantic map |
 | `test:moria-persist` | seed/save/score/export/import and failure paths |
@@ -104,3 +104,10 @@ cross-Module teardowns, `main.ts` with no GPU, skins) stays at the top level.
 | `test:moria-tabs` | a concurrent loser cannot wipe writer data |
 | `test:moria-autosave` | an exact turn-tail checkpoint survives a bare tab crash |
 | `test:moria-overlay` | the overlay scope: upstream's unbalanced save/restore pair cannot leak and replace the vector view for the session |
+| `test:moria-build-contract` | what the artifact cannot show afterwards: the clean pinned source and toolchain, the exact compiled sources, seams and link flags, the seed allow-list and bytes, cache invalidation and failed-build publication, then one boot of the freshly published artifact |
+
+The recovery, import and persistence unit tests build checkpoints from one
+fixture, `moria-checkpoint-fixtures.ts`: a stock save, a valid payload, the
+trailer, the commit and tombstone records, and `CHECKPOINT_DEFECTS`, every
+one-defect checkpoint. Runtime recovery and import judge a checkpoint with the
+same validator, so both run the whole list.

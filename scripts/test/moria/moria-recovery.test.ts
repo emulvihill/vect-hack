@@ -1,32 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   MORIA_CHECKPOINT_PENDING,
-  MORIA_CHECKPOINT_PAYLOAD_BYTES,
-  MORIA_CHECKPOINT_SOURCE_SHA,
-  MORIA_CHECKPOINT_TRAILER_BYTES,
-  MORIA_CHECKPOINT_TRAILER_MAGIC,
   MORIA_RECOVERY_MAX_GENERATION,
   createMoriaRecovery,
-  fnv1a32Hex,
   type MoriaRecoveryFS,
 } from "../../../src/modules/moria/recovery";
+import { CHECKPOINT_DEFECTS, checkpoint, commitJson, terminalJson } from "./moria-checkpoint-fixtures";
 
 const DIR = 0o040000, FILE = 0o100000;
 const ROOT = "/vect-moria";
-const STORES_AT = 317;
-
-function validPayload(marker = 0): Uint8Array {
-  const payload = new Uint8Array(MORIA_CHECKPOINT_PAYLOAD_BYTES);
-  const view = new DataView(payload.buffer);
-  view.setUint32(0, 1, true); // live RNG seed
-  payload[4] = marker; // last command, useful for distinguishing generations
-  view.setInt32(22, 21, true); // bottom = top + screen height - 1
-  view.setInt32(30, 65, true); // right = left + screen width - 1
-  view.setInt32(34, -13, true); // col_prt = left - 13
-  view.setInt32(38, -1, true); // row_prt = top - 1
-  view.setInt16(63, 2, true); // next free monster id
-  return payload;
-}
 
 class FakeFS implements MoriaRecoveryFS {
   nodes = new Map<string, { mode: number; bytes?: Uint8Array }>([["/", { mode: DIR }]]);
@@ -80,32 +62,9 @@ class FakeFS implements MoriaRecoveryFS {
   }
 }
 
-function checkpoint(payloadByte: number, payload = validPayload(payloadByte)): Uint8Array {
-  const stock = new Uint8Array([5, 7, 15, 42, 1, 2, 3]);
-  const footer = new Uint8Array(MORIA_CHECKPOINT_TRAILER_BYTES);
-  footer.set(new TextEncoder().encode(MORIA_CHECKPOINT_TRAILER_MAGIC), 0);
-  const view = new DataView(footer.buffer);
-  view.setUint32(8, 1, true);
-  footer.set(Buffer.from(MORIA_CHECKPOINT_SOURCE_SHA, "hex"), 12);
-  view.setUint32(32, payload.byteLength, true);
-  view.setUint32(36, Number.parseInt(fnv1a32Hex(payload), 16), true);
-  const bytes = new Uint8Array(stock.byteLength + payload.byteLength + footer.byteLength);
-  bytes.set(stock, 0);
-  bytes.set(payload, stock.byteLength);
-  bytes.set(footer, stock.byteLength + payload.byteLength);
-  return bytes;
-}
-
 function addCommitted(fs: FakeFS, generation: number, bytes: Uint8Array): void {
   fs.writeFile(`${ROOT}/recover/checkpoint-${generation}.sav`, bytes);
-  fs.writeFile(`${ROOT}/recover/commit-${generation}.json`, new TextEncoder().encode(JSON.stringify({
-    schema: 1,
-    generation,
-    file: `checkpoint-${generation}.sav`,
-    size: bytes.byteLength,
-    checksum: fnv1a32Hex(bytes),
-    ancestor: null,
-  })));
+  fs.writeFile(`${ROOT}/recover/commit-${generation}.json`, commitJson(generation, bytes));
 }
 
 function pending(fs: FakeFS, bytes: Uint8Array) {
@@ -149,31 +108,24 @@ describe("Moria recovery generations", () => {
     expect(createMoriaRecovery(fs, ROOT).recoveryPath).toBe("");
   });
 
-  it.each([
-    ["wrong payload length", () => new Uint8Array([1, 2, 3])],
-    ["invalid Boolean", () => { const payload = validPayload(2); payload[payload.length - 1] = 2; return payload; }],
-    ["out-of-range store owner", () => { const payload = validPayload(2); payload[STORES_AT + 6] = 18; return payload; }],
-    ["out-of-range store item count", () => { const payload = validPayload(2); payload[STORES_AT + 7] = 25; return payload; }],
-    ["incoherent panel relation", () => { const payload = validPayload(2); new DataView(payload.buffer).setInt32(38, 99, true); return payload; }],
-    ["non-source panel maximum", () => { const payload = validPayload(2); new DataView(payload.buffer).setInt16(42, 2, true); return payload; }],
-    ["out-of-range store item id", () => {
-      const payload = validPayload(2), view = new DataView(payload.buffer);
-      payload[STORES_AT + 7] = 1; view.setUint16(STORES_AT + 16, 420, true); return payload;
-    }],
-    ["out-of-range store special name", () => {
-      const payload = validPayload(2); payload[STORES_AT + 7] = 1;
-      payload[STORES_AT + 18] = 56; return payload;
-    }],
-    ["unterminated store inscription", () => {
-      const payload = validPayload(2); payload[STORES_AT + 7] = 1;
-      payload.fill(1, STORES_AT + 19, STORES_AT + 32); return payload;
-    }],
-  ])("falls back past a recommitted newest generation with %s", (_label, invalidPayload) => {
+  // The control that keeps every defect case below from passing vacuously.
+  it("selects a valid recommitted newest generation", () => {
     const fs = new FakeFS();
     const recovery = createMoriaRecovery(fs, ROOT);
     pending(fs, checkpoint(1));
     recovery.publishPending();
-    addCommitted(fs, 2, checkpoint(2, invalidPayload()));
+    addCommitted(fs, 2, checkpoint(2));
+
+    expect(createMoriaRecovery(fs, ROOT).recoveryPath)
+      .toBe(`${ROOT}/recover/checkpoint-2.sav`);
+  });
+
+  it.each(CHECKPOINT_DEFECTS)("falls back past a recommitted newest generation with %s", (_label, defective) => {
+    const fs = new FakeFS();
+    const recovery = createMoriaRecovery(fs, ROOT);
+    pending(fs, checkpoint(1));
+    recovery.publishPending();
+    addCommitted(fs, 2, defective());
 
     expect(createMoriaRecovery(fs, ROOT).recoveryPath)
       .toBe(`${ROOT}/recover/checkpoint-1.sav`);
@@ -221,7 +173,7 @@ describe("Moria recovery generations", () => {
     const exhausted = new FakeFS();
     exhausted.writeFile(
       `${ROOT}/recover/terminal-${MORIA_RECOVERY_MAX_GENERATION}.json`,
-      JSON.stringify({ schema: 1, generation: MORIA_RECOVERY_MAX_GENERATION, terminal: true }),
+      terminalJson(MORIA_RECOVERY_MAX_GENERATION),
     );
     const exhaustedRecovery = createMoriaRecovery(exhausted, ROOT);
     pending(exhausted, checkpoint(2));

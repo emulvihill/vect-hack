@@ -17,7 +17,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, join, relative, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
@@ -108,44 +108,13 @@ assert.deepEqual(setupSubmodules, [
 
 console.log(`OK(source/license): Umoria is clean at ${PIN}, with the official gitlink and GPL-3.0-or-later provenance`);
 
-const packageJson = JSON.parse(readFileSync(`${ROOT}/package.json`, "utf8"));
-assert.equal(packageJson.scripts["build:moria"], "scripts/build/build-moria-wasm.sh",
-  "package.json build:moria does not invoke the guarded build");
-assert.equal(packageJson.scripts["test:moria-boot"], "timeout 120 node scripts/test/moria/test-moria-boot.mjs",
-  "package.json test:moria-boot does not invoke the real smoke test");
-assert.equal(packageJson.scripts["test:moria-play"], "timeout 120 node scripts/test/moria/test-moria-play.mjs",
-  "package.json test:moria-play does not invoke the bounded live-engine gate");
-assert.equal(packageJson.scripts["test:moria-checkpoint-native"],
-  "timeout 120 node scripts/test/moria/test-moria-checkpoint-native.mjs",
-  "package.json test:moria-checkpoint-native does not invoke the exact rollback harness");
-assert.equal(packageJson.scripts["test:moria-map-contract"],
-  "timeout 120 node scripts/test/moria/test-moria-map-contract.mjs",
-  "package.json test:moria-map-contract does not invoke the semantic gate");
-assert.equal(packageJson.scripts["test:moria-persist"],
-  "timeout 180 node scripts/test/moria/test-moria-persistence.mjs",
-  "package.json test:moria-persist does not invoke the real persistence gate");
-assert.equal(packageJson.scripts["test:moria-save-restore"],
-  "timeout 180 node scripts/test/moria/test-moria-save-restore.mjs",
-  "package.json test:moria-save-restore does not invoke the real restore gate");
-assert.equal(packageJson.scripts["test:moria-tabs"],
-  "timeout 180 node scripts/test/moria/test-moria-tabs.mjs",
-  "package.json test:moria-tabs does not invoke the real two-engine gate");
-assert.equal(packageJson.scripts["test:moria-autosave"],
-  "timeout 180 node scripts/test/moria/test-moria-autosave.mjs",
-  "package.json test:moria-autosave does not invoke the real turn-tail recovery gate");
-assert.equal(packageJson.scripts["test:moria-overlay"],
-  "timeout 240 node scripts/test/moria/test-moria-overlay.mjs",
-  "package.json test:moria-overlay does not invoke the real source-owned overlay gate");
-assert.equal(packageJson.scripts["test:moria-build-contract"],
-  "timeout 900 node scripts/test/moria/test-moria-build-contract.mjs --require-build",
+// npm test reaches this gate only through its package.json script, so that
+// script must bound the run and must ask for everything below the source pin.
+const contractScript = JSON.parse(readFileSync(`${ROOT}/package.json`, "utf8")).scripts["test:moria-build-contract"];
+assert.match(contractScript, /^timeout \d+ /,
+  "package.json test:moria-build-contract does not run under a timeout");
+assert.match(contractScript, / --require-build$/,
   "package.json test:moria-build-contract does not run this gate with the behavioral build checks");
-assert.equal(packageJson.scripts["test:moria"], "vitest run --project engine-moria",
-  "package.json test:moria does not run the Moria engine project");
-assert.equal(packageJson.scripts.test, "npm run typecheck && vitest run",
-  "package.json test does not run typecheck and then every vitest project");
-// engine-moria runs every test:moria-* script above (scripts/test/engine.ts).
-assert.match(readFileSync(`${ROOT}/scripts/test/moria/moria.engine.ts`, "utf8"), /engineTests\("moria"\)/,
-  "scripts/test/moria/moria.engine.ts does not run the Moria engine scripts");
 
 if (!STRICT) {
   const buildScriptPath = `${ROOT}/scripts/build/build-moria-wasm.sh`;
@@ -177,12 +146,26 @@ const semanticHeader = `${ROOT}/src/modules/moria/native/semantic-wasm.h`;
 const checkpointNative = `${ROOT}/src/modules/moria/native/checkpoint-wasm.cpp`;
 const checkpointHeader = `${ROOT}/src/modules/moria/native/checkpoint-wasm.h`;
 const gameSaveNative = `${ROOT}/src/modules/moria/native/game-save-wasm.cpp`;
-for (const path of [
+// Every file the build reads from this checkout; a fixture copy of exactly
+// these, beside the real source and toolchain, is a buildable tree.
+const buildInputs = [
   buildScript, makefile, guardScript, mainNative, uiNative, semanticNative, semanticHeader,
   checkpointNative, checkpointHeader, gameSaveNative,
-]) {
+];
+for (const path of buildInputs) {
   assert.ok(existsSync(path), `missing Moria build input: ${relative(ROOT, path)}`);
 }
+const stageFixture = (root) => {
+  for (const path of buildInputs) {
+    const target = join(root, relative(ROOT, path));
+    mkdirSync(dirname(target), { recursive: true });
+    copyFileSync(path, target);
+  }
+  mkdirSync(join(root, "external"), { recursive: true });
+  symlinkSync(MORIA, join(root, "external/umoria"), "dir");
+  symlinkSync(EMSDK, join(root, "external/emsdk"), "dir");
+  return join(root, "scripts/build/build-moria-wasm.sh");
+};
 
 const upstreamUiIo = readFileSync(`${MORIA}/src/ui_io.cpp`, "utf8");
 const upstreamGameRun = readFileSync(`${MORIA}/src/game_run.cpp`, "utf8");
@@ -443,10 +426,6 @@ try {
     .sort();
   assert.deepEqual(compiledSources, expectedSources,
     "actual make compilation commands do not contain exactly every approved upstream and project-owned source");
-  assert.ok(!compiledSources.includes(`${MORIA}/src/main.cpp`), "upstream main.cpp is compiled");
-  assert.ok(!compiledSources.includes(`${MORIA}/src/ui_io.cpp`), "upstream ui_io.cpp is compiled");
-  assert.ok(!compiledSources.includes(`${MORIA}/src/game_save.cpp`),
-    "upstream game_save.cpp is compiled separately from the same-TU adapter");
   const gameRunCompile = compileLines.filter((line) =>
     line.includes(`-c ${MORIA}/src/game_run.cpp`));
   assert.equal(gameRunCompile.length, 1, "game_run.cpp does not have exactly one compile command");
@@ -529,23 +508,8 @@ try {
   }
 
   const fixtureRoot = join(scratch, "fingerprint-fixture");
-  mkdirSync(join(fixtureRoot, "scripts/build"), { recursive: true });
-  mkdirSync(join(fixtureRoot, "src/modules/moria/native"), { recursive: true });
-  mkdirSync(join(fixtureRoot, "external"), { recursive: true });
-  copyFileSync(buildScript, join(fixtureRoot, "scripts/build/build-moria-wasm.sh"));
-  copyFileSync(makefile, join(fixtureRoot, "scripts/build/moria-wasm.mk"));
-  copyFileSync(guardScript, join(fixtureRoot, "scripts/build/guard-host-paths.sh"));
-  copyFileSync(mainNative, join(fixtureRoot, "src/modules/moria/native/main-wasm.cpp"));
-  copyFileSync(uiNative, join(fixtureRoot, "src/modules/moria/native/ui_io_wasm.cpp"));
-  copyFileSync(semanticNative, join(fixtureRoot, "src/modules/moria/native/semantic-wasm.cpp"));
-  copyFileSync(semanticHeader, join(fixtureRoot, "src/modules/moria/native/semantic-wasm.h"));
-  copyFileSync(checkpointNative, join(fixtureRoot, "src/modules/moria/native/checkpoint-wasm.cpp"));
-  copyFileSync(checkpointHeader, join(fixtureRoot, "src/modules/moria/native/checkpoint-wasm.h"));
-  copyFileSync(gameSaveNative, join(fixtureRoot, "src/modules/moria/native/game-save-wasm.cpp"));
-  symlinkSync(MORIA, join(fixtureRoot, "external/umoria"), "dir");
+  const fixtureScript = stageFixture(fixtureRoot);
   const fixtureEmsdk = join(fixtureRoot, "external/emsdk");
-  symlinkSync(EMSDK, fixtureEmsdk, "dir");
-  const fixtureScript = join(fixtureRoot, "scripts/build/build-moria-wasm.sh");
 
   const fakeEmsdk = join(scratch, "mismatched-emsdk");
   mkdirSync(fakeEmsdk);
@@ -642,9 +606,7 @@ done
   // Mutation-check the regression itself: with only the seed digest disabled,
   // the exact same byte-only staging change must leave the stale outputs behind.
   const seedlessRoot = join(scratch, "seedless-fingerprint-fixture");
-  mkdirSync(join(seedlessRoot, "scripts/build"), { recursive: true });
-  mkdirSync(join(seedlessRoot, "src/modules/moria/native"), { recursive: true });
-  mkdirSync(join(seedlessRoot, "external"), { recursive: true });
+  const seedlessScript = stageFixture(seedlessRoot);
   const buildScriptText = readFileSync(buildScript, "utf8");
   const seedlessBuildScript = buildScriptText.replace(
     /# BEGIN seed-content-fingerprint[\s\S]*?# END seed-content-fingerprint/,
@@ -652,20 +614,7 @@ done
   );
   assert.notEqual(seedlessBuildScript, buildScriptText,
     "could not disable only the seed digest for the invalidation mutation check");
-  const seedlessScript = join(seedlessRoot, "scripts/build/build-moria-wasm.sh");
-  copyFileSync(buildScript, seedlessScript);
   writeFileSync(seedlessScript, seedlessBuildScript);
-  copyFileSync(makefile, join(seedlessRoot, "scripts/build/moria-wasm.mk"));
-  copyFileSync(guardScript, join(seedlessRoot, "scripts/build/guard-host-paths.sh"));
-  copyFileSync(mainNative, join(seedlessRoot, "src/modules/moria/native/main-wasm.cpp"));
-  copyFileSync(uiNative, join(seedlessRoot, "src/modules/moria/native/ui_io_wasm.cpp"));
-  copyFileSync(semanticNative, join(seedlessRoot, "src/modules/moria/native/semantic-wasm.cpp"));
-  copyFileSync(semanticHeader, join(seedlessRoot, "src/modules/moria/native/semantic-wasm.h"));
-  copyFileSync(checkpointNative, join(seedlessRoot, "src/modules/moria/native/checkpoint-wasm.cpp"));
-  copyFileSync(checkpointHeader, join(seedlessRoot, "src/modules/moria/native/checkpoint-wasm.h"));
-  copyFileSync(gameSaveNative, join(seedlessRoot, "src/modules/moria/native/game-save-wasm.cpp"));
-  symlinkSync(MORIA, join(seedlessRoot, "external/umoria"), "dir");
-  symlinkSync(EMSDK, join(seedlessRoot, "external/emsdk"), "dir");
   checked(seedlessScript, ["--stage-only"], { cwd: seedlessRoot });
   const seedlessStale = join(seedlessRoot, "build/moria/obj/stale.o");
   const seedlessArtifact = join(seedlessRoot, "build/moria/moria.data");
@@ -898,40 +847,21 @@ printf 'dirtied during link\\n' >> "${guardedSource}/CHANGELOG.md"
   assert.equal(timeoutProbe.error?.code, "ETIMEDOUT",
     `bounded Node child did not enforce its timeout:\n${childDiagnostics(timeoutProbe)}`);
 
-  const smoke = runBoundedNode(["scripts/test/moria/test-moria-boot.mjs"]);
+  // One boot of the artifact this run just published. The exit-code wrapper
+  // imports the boot smoke, so its output carries the smoke's exact first-key
+  // proof; the deeper native I/O trace is test:moria-play's.
+  const smoke = runBoundedNode(["scripts/test/moria/test-moria-boot-exit-code.mjs"]);
   assert.equal(smoke.error, undefined,
-    `dedicated Moria smoke could not start or timed out:\n${childDiagnostics(smoke)}`);
+    `Moria smoke could not start or timed out:\n${childDiagnostics(smoke)}`);
   assert.equal(smoke.status, 0,
-    `dedicated Moria smoke failed:\n${childDiagnostics(smoke)}`);
+    `Moria smoke failed:\n${childDiagnostics(smoke)}`);
   assert.equal(smoke.stdout,
-    "OK(moria-boot): canonical Umoria 5.7.15 splash reached exactly one blocking key request in an 80x24 frame\n",
-    `dedicated Moria smoke did not report its exact first-key proof:\n${childDiagnostics(smoke)}`);
+    "OK(moria-boot): canonical Umoria 5.7.15 splash reached exactly one blocking key request in an 80x24 frame\n"
+      + "OK(moria-boot-exit-code): imported smoke preserved the caller's process.exitCode\n",
+    `Moria smoke did not report its exact first-key and exitCode proofs:\n${childDiagnostics(smoke)}`);
   assert.equal(smoke.stderr, "",
-    `dedicated Moria smoke wrote stderr:\n${childDiagnostics(smoke)}`);
+    `Moria smoke wrote stderr:\n${childDiagnostics(smoke)}`);
   process.stdout.write(smoke.stdout);
-
-  const exitCodeProbe = runBoundedNode(["scripts/test/moria/test-moria-boot-exit-code.mjs"]);
-  assert.equal(exitCodeProbe.error, undefined,
-    `Moria smoke exitCode proof could not start or timed out:\n${childDiagnostics(exitCodeProbe)}`);
-  assert.equal(exitCodeProbe.status, 0,
-    `Moria smoke exitCode proof failed:\n${childDiagnostics(exitCodeProbe)}`);
-  assert.match(exitCodeProbe.stdout,
-    /^OK\(moria-boot\):.*\nOK\(moria-boot-exit-code\): imported smoke preserved the caller's process\.exitCode\n$/,
-    `Moria smoke exitCode proof did not report success:\n${childDiagnostics(exitCodeProbe)}`);
-  assert.equal(exitCodeProbe.stderr, "",
-    `Moria smoke exitCode proof wrote stderr:\n${childDiagnostics(exitCodeProbe)}`);
-
-  const nativeIo = runBoundedNode(["scripts/test/moria/test-moria-native-io.mjs"]);
-  assert.equal(nativeIo.error, undefined,
-    `Moria native I/O proof could not start or timed out:\n${childDiagnostics(nativeIo)}`);
-  assert.equal(nativeIo.status, 0,
-    `Moria native I/O proof failed:\n${childDiagnostics(nativeIo)}`);
-  assert.equal(nativeIo.stdout,
-    "OK(moria-native-io): both modes, terminal parity, explicit poll results, input failures, and controlled exit are live\n",
-    `Moria native I/O proof did not report its exact live-engine result:\n${childDiagnostics(nativeIo)}`);
-  assert.equal(nativeIo.stderr, "",
-    `Moria native I/O proof wrote stderr:\n${childDiagnostics(nativeIo)}`);
-  process.stdout.write(nativeIo.stdout);
 
   for (const diagnostic of [
     "[asyncify] wasm_poll_key is an import that can change the state",

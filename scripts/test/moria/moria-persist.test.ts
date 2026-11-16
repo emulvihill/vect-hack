@@ -7,13 +7,7 @@ import {
   type MoriaPersistModule,
 } from "../../../src/modules/moria/persist";
 import { VOLUMES } from "../../../src/backplane/volumes";
-import {
-  MORIA_CHECKPOINT_SOURCE_SHA,
-  MORIA_CHECKPOINT_PAYLOAD_BYTES,
-  MORIA_CHECKPOINT_TRAILER_BYTES,
-  MORIA_CHECKPOINT_TRAILER_MAGIC,
-  fnv1a32Hex,
-} from "../../../src/modules/moria/recovery";
+import { checkpoint, commitJson } from "./moria-checkpoint-fixtures";
 
 const DIR = 0o040000, FILE = 0o100000;
 
@@ -95,28 +89,6 @@ class FakeFS implements MoriaPersistFS {
   }
 }
 
-function checkpoint(): Uint8Array {
-  const stock = new Uint8Array([5, 7, 15, 42]);
-  const payload = new Uint8Array(MORIA_CHECKPOINT_PAYLOAD_BYTES);
-  const payloadView = new DataView(payload.buffer);
-  payloadView.setUint32(0, 1, true);
-  payloadView.setInt32(22, 21, true);
-  payloadView.setInt32(30, 65, true);
-  payloadView.setInt32(34, -13, true);
-  payloadView.setInt32(38, -1, true);
-  payloadView.setInt16(63, 2, true);
-  const footer = new Uint8Array(MORIA_CHECKPOINT_TRAILER_BYTES);
-  footer.set(new TextEncoder().encode(MORIA_CHECKPOINT_TRAILER_MAGIC));
-  const view = new DataView(footer.buffer);
-  view.setUint32(8, 1, true);
-  footer.set(Buffer.from(MORIA_CHECKPOINT_SOURCE_SHA, "hex"), 12);
-  view.setUint32(32, payload.byteLength, true);
-  view.setUint32(36, Number.parseInt(fnv1a32Hex(payload), 16), true);
-  const out = new Uint8Array(stock.byteLength + payload.byteLength + footer.byteLength);
-  out.set(stock); out.set(payload, stock.byteLength); out.set(footer, stock.byteLength + payload.byteLength);
-  return out;
-}
-
 class FakeModule implements MoriaPersistModule {
   dependencies: string[] = [];
   constructor(readonly FS = new FakeFS()) {}
@@ -188,10 +160,7 @@ describe("Moria persistence policy", () => {
     mod.FS.populate = () => {
       const root = VOLUMES.moria.mountpoint;
       mod.FS.writeFile(`${root}/recover/checkpoint-1.sav`, bytes);
-      mod.FS.writeFile(`${root}/recover/commit-1.json`, new TextEncoder().encode(JSON.stringify({
-        schema: 1, generation: 1, file: "checkpoint-1.sav", size: bytes.byteLength,
-        checksum: fnv1a32Hex(bytes), ancestor: null,
-      })));
+      mod.FS.writeFile(`${root}/recover/commit-1.json`, commitJson(1, bytes));
     };
     const handle = mountMoriaStorage(mod, { locks: locks(true) });
     await expect(handle.ready).resolves.toBe(true);

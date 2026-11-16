@@ -7,18 +7,11 @@ import {
   validateMoriaImport,
   type MoriaImportFS,
 } from "../../../src/modules/moria/saveImport";
-import {
-  MORIA_CHECKPOINT_SOURCE_SHA,
-  MORIA_CHECKPOINT_PAYLOAD_BYTES,
-  MORIA_CHECKPOINT_PAYLOAD_MAX_BYTES,
-  MORIA_CHECKPOINT_TRAILER_BYTES,
-  MORIA_CHECKPOINT_TRAILER_MAGIC,
-  fnv1a32Hex,
-} from "../../../src/modules/moria/recovery";
+import { fnv1a32Hex } from "../../../src/modules/moria/recovery";
+import { CHECKPOINT_DEFECTS, checkpoint, commitJson, terminalJson, validGame } from "./moria-checkpoint-fixtures";
 
 const DIR = 0o040000, FILE = 0o100000;
 const AT = new Date("2026-08-08T12:00:00Z");
-const STORES_AT = 317;
 
 class FakeFS implements MoriaImportFS {
   nodes = new Map<string, { mode: number; bytes?: Uint8Array }>([["/", { mode: DIR }]]);
@@ -67,38 +60,6 @@ function validScores(): Uint8Array {
   return out;
 }
 
-function validGame(): Uint8Array {
-  const out = new Uint8Array(32);
-  out.set([5, 7, 15, 42]);
-  return out;
-}
-
-function validPayload(): Uint8Array {
-  const payload = new Uint8Array(MORIA_CHECKPOINT_PAYLOAD_BYTES);
-  const view = new DataView(payload.buffer);
-  view.setUint32(0, 1, true);
-  view.setInt32(22, 21, true);
-  view.setInt32(30, 65, true);
-  view.setInt32(34, -13, true);
-  view.setInt32(38, -1, true);
-  view.setInt16(63, 2, true);
-  return payload;
-}
-
-function checkpoint(payload = validPayload()): Uint8Array {
-  const stock = validGame();
-  const footer = new Uint8Array(MORIA_CHECKPOINT_TRAILER_BYTES);
-  footer.set(new TextEncoder().encode(MORIA_CHECKPOINT_TRAILER_MAGIC));
-  const view = new DataView(footer.buffer);
-  view.setUint32(8, 1, true);
-  footer.set(Buffer.from(MORIA_CHECKPOINT_SOURCE_SHA, "hex"), 12);
-  view.setUint32(32, payload.byteLength, true);
-  view.setUint32(36, Number.parseInt(fnv1a32Hex(payload), 16), true);
-  const out = new Uint8Array(stock.byteLength + payload.byteLength + footer.byteLength);
-  out.set(stock); out.set(payload, stock.byteLength); out.set(footer, stock.byteLength + payload.byteLength);
-  return out;
-}
-
 function add(contents: SaveContents, path: string, bytes: Uint8Array): void {
   contents.files.push({ path, bytes });
   contents.manifest.files.push({ path, size: bytes.byteLength });
@@ -112,10 +73,7 @@ function addCheckpoint(
 ): void {
   const file = `recover/checkpoint-${generation}.sav`;
   add(contents, file, bytes);
-  add(contents, `recover/commit-${generation}.json`, new TextEncoder().encode(JSON.stringify({
-    schema: 1, generation, file: `checkpoint-${generation}.sav`,
-    size: bytes.byteLength, checksum: fnv1a32Hex(bytes), ancestor,
-  })));
+  add(contents, `recover/commit-${generation}.json`, commitJson(generation, bytes, ancestor));
 }
 
 function exported(): SaveContents {
@@ -214,9 +172,7 @@ describe("Moria portable import", () => {
     terminal.files = terminal.files.filter((file) => file.path !== "game.sav");
     terminal.manifest.files = terminal.manifest.files.filter((file) => file.path !== "game.sav");
     addCheckpoint(terminal, 1, null);
-    add(terminal, "recover/terminal-2.json", new TextEncoder().encode(
-      JSON.stringify({ schema: 1, generation: 2, terminal: true }),
-    ));
+    add(terminal, "recover/terminal-2.json", terminalJson(2));
     expect(() => validateMoriaImport(pristine(), terminal)).not.toThrow();
 
     add(terminal, "game.sav", validGame());
@@ -245,87 +201,17 @@ describe("Moria portable import", () => {
     }
   });
 
-  it("rejects each independently recommitted trailer defect before installing any byte", () => {
-    const mutations: Array<() => Uint8Array> = [
-      () => {
-        const bytes = Uint8Array.from(checkpoint());
-        const at = bytes.byteLength - MORIA_CHECKPOINT_TRAILER_BYTES;
-        bytes[at] = bytes[at]! ^ 0x20;
-        return bytes;
-      },
-      () => {
-        const bytes = Uint8Array.from(checkpoint());
-        new DataView(bytes.buffer, bytes.byteOffset + bytes.byteLength - MORIA_CHECKPOINT_TRAILER_BYTES)
-          .setUint32(8, 2, true);
-        return bytes;
-      },
-      () => {
-        const bytes = Uint8Array.from(checkpoint());
-        const at = bytes.byteLength - MORIA_CHECKPOINT_TRAILER_BYTES + 12;
-        bytes[at] = bytes[at]! ^ 0x80;
-        return bytes;
-      },
-      () => {
-        const bytes = Uint8Array.from(checkpoint());
-        new DataView(bytes.buffer, bytes.byteOffset + bytes.byteLength - MORIA_CHECKPOINT_TRAILER_BYTES)
-          .setUint32(32, 0, true);
-        return bytes;
-      },
-      () => {
-        const bytes = Uint8Array.from(checkpoint());
-        const at = bytes.byteLength - 1;
-        bytes[at] = bytes[at]! ^ 0xff;
-        return bytes;
-      },
-      () => checkpoint(new Uint8Array(MORIA_CHECKPOINT_PAYLOAD_MAX_BYTES + 1)),
-      () => checkpoint(new Uint8Array([4, 5, 6])),
-      () => {
-        const payload = validPayload(); payload[payload.length - 1] = 2;
-        return checkpoint(payload);
-      },
-      () => {
-        const payload = validPayload(); payload[STORES_AT + 6] = 18;
-        return checkpoint(payload);
-      },
-      () => {
-        const payload = validPayload(); payload[STORES_AT + 7] = 25;
-        return checkpoint(payload);
-      },
-      () => {
-        const payload = validPayload(); new DataView(payload.buffer).setInt32(38, 99, true);
-        return checkpoint(payload);
-      },
-      () => {
-        const payload = validPayload(); new DataView(payload.buffer).setInt16(42, 2, true);
-        return checkpoint(payload);
-      },
-      () => {
-        const payload = validPayload(), view = new DataView(payload.buffer);
-        payload[STORES_AT + 7] = 1; view.setUint16(STORES_AT + 16, 420, true);
-        return checkpoint(payload);
-      },
-      () => {
-        const payload = validPayload(); payload[STORES_AT + 7] = 1;
-        payload[STORES_AT + 18] = 56; return checkpoint(payload);
-      },
-      () => {
-        const payload = validPayload(); payload[STORES_AT + 7] = 1;
-        payload.fill(1, STORES_AT + 19, STORES_AT + 32); return checkpoint(payload);
-      },
-    ];
-
-    for (const mutate of mutations) {
-      const contents = exported();
-      contents.files = contents.files.filter((file) => file.path !== "game.sav");
-      contents.manifest.files = contents.manifest.files.filter((file) => file.path !== "game.sav");
-      addCheckpoint(contents, 1, null, mutate());
-      const target = pristine();
-      const before = new Map([...target.nodes].map(([path, node]) => [path, {
-        mode: node.mode, bytes: node.bytes && Uint8Array.from(node.bytes),
-      }]));
-      expect(() => installMoriaImport(target, contents)).toThrow();
-      expect(target.nodes).toEqual(before);
-    }
+  it.each(CHECKPOINT_DEFECTS)("rejects a recommitted checkpoint with %s before installing any byte", (_label, defective) => {
+    const contents = exported();
+    contents.files = contents.files.filter((file) => file.path !== "game.sav");
+    contents.manifest.files = contents.manifest.files.filter((file) => file.path !== "game.sav");
+    addCheckpoint(contents, 1, null, defective());
+    const target = pristine();
+    const before = new Map([...target.nodes].map(([path, node]) => [path, {
+      mode: node.mode, bytes: node.bytes && Uint8Array.from(node.bytes),
+    }]));
+    expect(() => installMoriaImport(target, contents)).toThrow();
+    expect(target.nodes).toEqual(before);
   });
 
   it("rejects malformed JSON at an otherwise canonical paired commit path", () => {
