@@ -233,6 +233,10 @@ branch in its own git worktree, and a fresh worktree has none of the build
 state the tests need — run `scripts/dev/worktree-setup.sh` in it first, and
 `scripts/dev/worktree-teardown.sh` to remove it afterwards.
 
+## Changelog
+
+Each release's notes are on [GitHub Releases](https://github.com/emulvihill/vect-hack/releases).
+
 ## License
 
 Original client code is MIT © Eric Mulvihill ([LICENSE](LICENSE)). The native

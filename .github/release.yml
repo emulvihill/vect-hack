@@ -1,0 +1,10 @@
+# Sections for GitHub's "Generate release notes". Label a PR skip-changelog to leave it out.
+changelog:
+  exclude:
+    labels: [skip-changelog]
+    authors: [dependabot]
+  categories:
+    - title: Fixed
+      labels: [bug]
+    - title: Changed
+      labels: ["*"]
