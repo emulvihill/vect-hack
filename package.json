@@ -10,7 +10,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/build/stage-licenses.mjs",
+    "build": "npm run clean && npm run build:engines && vite build && node scripts/build/stage-licenses.mjs",
+    "clean": "scripts/build/clean.sh",
     "serve:www": "vite build --base /play/ && node scripts/build/stage-licenses.mjs && node scripts/dev/serve-www.mjs",
     "typecheck": "tsc",
     "lint": "eslint .",

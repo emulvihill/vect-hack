@@ -104,7 +104,8 @@ without copying anything into `public/modules/` when a check fails.
 
 | Command | What it does |
 |---|---|
-| `npm run build` | Static production build in `dist/`, served from `/`. Copies whatever engines `public/modules/` holds, so build them first. |
+| `npm run build` | Static production build in `dist/`, served from `/`. Runs `npm run clean` and rebuilds all four engines first, so `dist/` never ships an artifact older than the checkout. |
+| `npm run clean` | Deletes every engine build output (`build/`, `dist/`, `public/modules/`, the objects inside the engine submodules). |
 | `VH_BASE=/play/ npm run build` | The same for a site served under a sub-path. |
 | `npx vite preview` | Serves `dist/` on http://localhost:4173 to check a build. |
 | `npm run serve:www` | Builds for `/play/` and serves the vecthack.com layout on http://127.0.0.1:8080. The landing page comes from a `vect-hack-www` checkout beside this repo (`VH_SITE=<dir>` overrides); without one, only `/play/` works. |

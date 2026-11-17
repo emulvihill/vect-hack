@@ -48,7 +48,10 @@ message protocol. Keeping the Modules separable is a design constraint, not just
 
 ## Corresponding source
 
-`npm run build` stages every license and notice text into `dist/licenses/`,
+`npm run build` deletes every engine build output and rebuilds all four engines
+from the checkout before bundling, so the `SOURCE.txt` it writes names the
+commit the shipped WASM was compiled from. It stages every license and notice
+text into `dist/licenses/`,
 so a copied `dist/` carries its own terms. It also writes one page per game,
 `dist/licenses/<game>.html`, carrying VectHack's terms and that game's inline
 together with `SOURCE.txt` and nothing of another game; the game's Saves panel
