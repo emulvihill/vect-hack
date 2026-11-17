@@ -4,6 +4,7 @@
 // windows); this one speaks AngbandEvent and remains the debug/no-GPU sibling
 // of VectorView. Reuses index.html's existing .text-mode/#map styling.
 import { KeyQueue } from "../../../backplane/keyQueue";
+import { appendMessage } from "../../../ui/hud/messageLog";
 import type { AngbandEvent, AngbandKey } from "../protocol";
 import type { AngbandHandler } from "../session";
 import { AngbandGrid, gridToHtml } from "../grid";
@@ -51,9 +52,8 @@ export class TtyView implements AngbandHandler {
    * as plain message lines above the tty grid — index.html's #messages
    * survives the Angband boot, whose debug path removes #view and #cmdbtn. */
   onNotice(text: string) {
-    const div = document.createElement("div");
-    div.textContent = text;
-    document.getElementById("messages")?.appendChild(div);
+    const messages = document.getElementById("messages");
+    if (messages) appendMessage(messages, text);
   }
 
   nextKey(wait: boolean, _cmd: boolean): AngbandKey | null | Promise<AngbandKey | null> {

@@ -2,6 +2,7 @@ import { CellGrid } from "../../../backplane/cell";
 import { KeyQueue } from "../../../backplane/keyQueue";
 import { DungeonRenderer, type DungeonRendererOptions } from "../../../render/DungeonRenderer";
 import { Radar } from "../../../ui/hud/Radar";
+import { appendMessage } from "../../../ui/hud/messageLog";
 import { LookHud } from "../../../ui/hud/Look";
 import { STEP_OF } from "../../../ui/gaze";
 import { gazeKey } from "../../../ui/gazeControls";
@@ -21,7 +22,6 @@ import type { MoriaSemanticState } from "../semanticProtocol";
 import type { MoriaHandler } from "../session";
 
 const FRAME_FALLBACK_MS = 32;
-const MAX_MESSAGES = 200;
 const TTY_COLS = 80;
 const PROMPT_ROW = 0;
 const SIDEBAR_COLS = 13;
@@ -285,11 +285,8 @@ export class VectorView implements MoriaHandler {
 
   private message(text: string): void {
     if (!text) return;
-    const line = document.createElement("div");
-    line.textContent = text;
     const messages = document.getElementById("messages");
-    messages?.appendChild(line);
-    while (messages && messages.childElementCount > MAX_MESSAGES) messages.firstChild!.remove();
+    if (messages) appendMessage(messages, text);
   }
 
   private scheduleRender(): void {

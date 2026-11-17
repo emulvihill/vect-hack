@@ -12,6 +12,7 @@ import { KeyQueue } from "../../../backplane/keyQueue";
 import { CellGrid } from "../../../backplane/cell";
 import { DungeonRenderer, type DungeonRendererOptions } from "../../../render/DungeonRenderer";
 import { Radar } from "../../../ui/hud/Radar";
+import { appendMessage } from "../../../ui/hud/messageLog";
 import { LookHud } from "../../../ui/hud/Look";
 import { gazeKey } from "../../../ui/gazeControls";
 import { LARN_COLS, LARN_ROWS, LarnClassifier } from "../classifier";
@@ -21,7 +22,6 @@ import type { LarnEvent, LarnKey } from "../protocol";
 import type { LarnHandler } from "../session";
 
 const FRAME_FALLBACK_MS = 32;
-const MAX_MESSAGES = 200;
 
 // tty mirror geometry, pinned to external/larn/display.c.
 //
@@ -190,11 +190,8 @@ export class VectorView implements LarnHandler {
 
   private message(text: string): void {
     if (!text) return;
-    const line = document.createElement("div");
-    line.textContent = text;
     const messages = document.getElementById("messages");
-    messages?.appendChild(line);
-    while (messages && messages.childElementCount > MAX_MESSAGES) messages.firstChild!.remove();
+    if (messages) appendMessage(messages, text);
   }
 
   /** One redraw per burst — both the HTML build and the DOM write, since each

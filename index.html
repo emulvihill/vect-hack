@@ -21,7 +21,9 @@
       font: 14px/1.25 "DejaVu Sans Mono", "Cascadia Mono", monospace;
       display: flex; flex-direction: column; height: 100vh; overflow: hidden;
     }
-    #messages { height: 5.5em; overflow-y: auto; padding: 4px 8px; border-bottom: 1px solid var(--vh-rule); }
+    /* A whole number of lines (line-height 1.25): a fractional height always
+       leaves one line half-clipped. */
+    #messages { height: 5em; overflow-y: auto; padding: 4px 8px; border-bottom: 1px solid var(--vh-rule); }
     #prompt { padding: 2px 8px; color: var(--vh-accent); min-height: 1.25em; }
     #prompt input { background: var(--vh-input-bg); color: var(--vh-bright); border: 1px solid var(--vh-input-border); font: inherit; }
     .ynchip {
@@ -118,7 +120,7 @@
        clears #messages and a one-line #prompt above, and as much below. */
     #overlay {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      max-height: min(70vh, calc(100vh - 2 * (5.5em + 9px + 1.25em + 4px)));
+      max-height: min(70vh, calc(100vh - 2 * (5em + 9px + 1.25em + 4px)));
       background: var(--vh-panel-bg); border: 1px solid var(--vh-panel-border);
       padding: 8px 16px; box-shadow: 0 0 24px var(--vh-glow);
       white-space: pre;
@@ -177,7 +179,7 @@
     body.vh-touch #overlay {
       max-height: 52vh; top: 3em; transform: translateX(-50%); z-index: 3;
     }
-    body.vh-touch #messages { height: 4em; }
+    body.vh-touch #messages { height: 3.75em; }
     [hidden] { display: none !important; }
   </style>
 </head>

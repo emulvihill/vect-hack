@@ -1,4 +1,5 @@
 import { KeyQueue } from "../../../backplane/keyQueue";
+import { appendMessage } from "../../../ui/hud/messageLog";
 import { MoriaGrid, gridToHtml } from "../grid";
 import { mapKey } from "../keys";
 import type { MoriaEvent, MoriaInputContext, MoriaKeyMode } from "../protocol";
@@ -33,9 +34,8 @@ export class TtyView implements MoriaHandler {
   }
 
   onNotice(text: string): void {
-    const line = document.createElement("div");
-    line.textContent = text;
-    document.getElementById("messages")?.appendChild(line);
+    const messages = document.getElementById("messages");
+    if (messages) appendMessage(messages, text);
   }
 
   async nextKey(

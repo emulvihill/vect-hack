@@ -2,6 +2,7 @@ import { KeyQueue } from "../../../backplane/keyQueue";
 import { CellGrid, TERRAIN_CATEGORIES, type Cell } from "../../../backplane/cell";
 import { DungeonRenderer, type DungeonRendererOptions } from "../../../render/DungeonRenderer";
 import { Radar } from "../../../ui/hud/Radar";
+import { appendMessage } from "../../../ui/hud/messageLog";
 import { LookHud } from "../../../ui/hud/Look";
 import { gazeKey } from "../../../ui/gazeControls";
 import { ANGBAND_COLS, ANGBAND_ROWS, AngbandClassifier } from "../classifier";
@@ -12,7 +13,6 @@ import type { AngbandEvent, AngbandKey } from "../protocol";
 import type { AngbandHandler } from "../session";
 
 const FRAME_FALLBACK_MS = 32;
-const MAX_MESSAGES = 200;
 // Pinned to upstream ui-term.c's SIDEBAR_LEFT arrays and ui-term.h's map edge.
 const ROW_TOP = 1;
 const ROW_BOTTOM = 1;
@@ -209,11 +209,8 @@ export class VectorView implements AngbandHandler {
 
   private message(text: string): void {
     if (!text) return;
-    const line = document.createElement("div");
-    line.textContent = text;
     const messages = document.getElementById("messages");
-    messages?.appendChild(line);
-    while (messages && messages.childElementCount > MAX_MESSAGES) messages.firstChild!.remove();
+    if (messages) appendMessage(messages, text);
   }
 
   private scheduleRender(): void {

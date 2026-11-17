@@ -5,6 +5,7 @@
 // phase 2 adds the VectorView beside it. Reuses index.html's existing
 // .text-mode/#map styling.
 import { KeyQueue } from "../../../backplane/keyQueue";
+import { appendMessage } from "../../../ui/hud/messageLog";
 import type { LarnEvent, LarnKey } from "../protocol";
 import type { LarnHandler } from "../session";
 import { LarnGrid, gridToHtml } from "../grid";
@@ -52,9 +53,8 @@ export class TtyView implements LarnHandler {
    * plain message lines above the tty grid — index.html's #messages
    * survives the Larn boot, whose debug path removes #view and #cmdbtn. */
   onNotice(text: string) {
-    const div = document.createElement("div");
-    div.textContent = text;
-    document.getElementById("messages")?.appendChild(div);
+    const messages = document.getElementById("messages");
+    if (messages) appendMessage(messages, text);
   }
 
   nextKey(wait: boolean, _cmd: boolean): LarnKey | null | Promise<LarnKey | null> {
