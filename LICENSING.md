@@ -60,6 +60,13 @@ are one click away. `dist/licenses/index.html`, for a URL with no game, carries
 VectHack's terms alone. The game list lives in
 `scripts/build/stage-licenses.mjs`.
 
+Each GitHub release carries the engine object code it was cut with as assets:
+`vect-hack-<version>-modules.tar.gz` and `SHA256SUMS`, packed by
+`scripts/build/release-bundle.mjs` at the end of `npm run build` and attached
+by `npm run release:assets`. The tarball is a distributed copy in its own
+right, so it holds the same `licenses/` directory, `SOURCE.txt` included,
+beside `modules/`.
+
 The source for each Module is this repository — the pinned upstream tree plus
 VectHack's native adaptation and build script — with one exception worth
 naming: **Lua 5.4.8 is not in this repository.**

@@ -50,9 +50,9 @@ export function escapeHtml(text) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function builtCommit(root) {
+export function builtCommit(root) {
   const git = (...args) =>
-    execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+    execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
   try {
     const commit = git('rev-parse', 'HEAD');
     const dirty = git('status', '--porcelain') ? ' (built from a dirty tree)' : '';

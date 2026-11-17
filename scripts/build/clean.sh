@@ -21,3 +21,7 @@ git -C "$ROOT/external/NetHack" clean -fdxq -e /lib/
 for engine in angband larn umoria; do
   git -C "$ROOT/external/$engine" clean -fdxq
 done
+
+# Last, once nothing built is left: record HEAD and the tree's state, so
+# release-bundle.mjs can say what the next engines were compiled from.
+node "$ROOT/scripts/build/release-bundle.mjs" --cleaned
