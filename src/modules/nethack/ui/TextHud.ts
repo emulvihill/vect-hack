@@ -10,8 +10,8 @@ import { KeyQueue } from "../../../backplane/keyQueue";
 import { CLR } from "../../../backplane/colors";
 import { activeSkin } from "../../../skins";
 import type { PendingInput } from "../../../ui/touch/scheme";
+import { MAX_MESSAGES, keepNewestInView } from "../../../ui/hud/messageLog";
 
-const MAX_MESSAGES = 200;
 /** How long a non-blocking window stays up before it dismisses itself. */
 const TRANSIENT_OVERLAY_MS = 1500;
 /** delay_output() is a paced animation beat, not a real wait. */
@@ -422,23 +422,24 @@ export class TextHud implements NethackHandler {
     if (!text.trim()) return;
     const transient = (attr & Number(this.ATR["ATR_NOHISTORY"] ?? 0)) !== 0;
     const last = this.lastLine;
-    let div: HTMLDivElement;
+    let div!: HTMLDivElement;
     let count = 1;
-    if (last?.transient) {
-      div = last.el;
-      div.textContent = text;
-    } else if (last && text === last.text) {
-      count = last.count + 1;
-      div = last.el;
-      div.textContent = `${text} (x${count})`;
-    } else {
-      div = document.createElement("div");
-      div.textContent = text;
-      this.$messages.appendChild(div);
-      while (this.$messages.childElementCount > MAX_MESSAGES) this.$messages.firstChild!.remove();
-    }
+    keepNewestInView(this.$messages, () => {
+      if (last?.transient) {
+        div = last.el;
+        div.textContent = text;
+      } else if (last && text === last.text) {
+        count = last.count + 1;
+        div = last.el;
+        div.textContent = `${text} (x${count})`;
+      } else {
+        div = document.createElement("div");
+        div.textContent = text;
+        this.$messages.appendChild(div);
+        while (this.$messages.childElementCount > MAX_MESSAGES) this.$messages.firstChild!.remove();
+      }
+    });
     this.lastLine = { el: div, text, transient, count };
-    this.$messages.scrollTop = this.$messages.scrollHeight;
     this.onMessage?.(text);
   }
 
