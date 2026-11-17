@@ -20,10 +20,11 @@
 // SHA256SUMS is a separate asset in `sha256sum -c` format, one line per file
 // in the tarball, so a served file can be checked without downloading it all.
 //
-// The archive is written here, not by tar(1): entries sorted, mtime the commit
-// time, uid/gid 0, gzip with no timestamp. The same files at the same commit
-// give the same tarball under the same Node build; the deflate stream belongs
-// to the zlib Node was linked with, so another Node version may differ.
+// The archive is made by GNU tar with every varying field fixed (entries
+// sorted, mtime the commit time, owner 0, mode 644) and gzipped here with no
+// timestamp, so the tarball carries no account name and the same files at the
+// same commit give the same tarball under the same tar and Node. The flags are
+// GNU-only: the pack fails on a host whose tar is not GNU tar.
 //
 // What ties the bytes to a commit: public/modules/ is gitignored, so git cannot
 // say what built it. clean.sh deletes it and then runs --cleaned here, which
@@ -50,37 +51,23 @@ import { gzipSync } from 'node:zlib';
 import { ENGINES, missingEngines } from './engine-artifacts.mjs';
 import { builtCommit, builtVersion, stageLicenses } from './stage-licenses.mjs';
 
-const BLOCK = 512;
-
-/** One ustar header block for a regular file. */
-export function tarHeader(name, size, mtime) {
-  if (Buffer.byteLength(name) > 100) throw new Error(`release-bundle: path over 100 bytes: ${name}`);
-  const h = Buffer.alloc(BLOCK);
-  const octal = (value, width, at) => h.write(value.toString(8).padStart(width - 1, '0') + '\0', at, 'ascii');
-  h.write(name, 0, 'utf8');
-  octal(0o644, 8, 100);
-  octal(0, 8, 108); // uid
-  octal(0, 8, 116); // gid
-  octal(size, 12, 124);
-  octal(mtime, 12, 136);
-  h.write('        ', 148, 'ascii'); // checksum field counts as spaces while summing
-  h.write('0', 156, 'ascii'); // regular file
-  h.write('ustar\0' + '00', 257, 'ascii');
-  const sum = h.reduce((a, b) => a + b, 0);
-  h.write(sum.toString(8).padStart(6, '0') + '\0 ', 148, 'ascii');
-  return h;
-}
-
-/** A gzipped ustar archive of `entries` ({ name, data }), sorted by name. */
+/** A gzipped tar of `entries` ({ name, data }), by GNU tar from a scratch copy. */
 export function tarGz(entries, mtime) {
-  const blocks = [];
-  for (const { name, data } of sorted(entries)) {
-    blocks.push(tarHeader(name, data.length, mtime), data);
-    const pad = (BLOCK - (data.length % BLOCK)) % BLOCK;
-    if (pad) blocks.push(Buffer.alloc(pad));
+  const stage = mkdtempSync(join(tmpdir(), 'vh-release-stage-'));
+  try {
+    for (const { name, data } of entries) {
+      mkdirSync(dirname(join(stage, name)), { recursive: true });
+      writeFileSync(join(stage, name), data);
+    }
+    const tar = execFileSync('tar', [
+      '--sort=name', `--mtime=@${mtime}`, '--owner=0', '--group=0', '--numeric-owner',
+      '--mode=u=rw,go=r', '--format=ustar', '-cf', '-', '-C', stage,
+      ...sorted(entries).map((e) => e.name),
+    ], { maxBuffer: 1 << 30 });
+    return gzipSync(tar, { level: 9 });
+  } finally {
+    rmSync(stage, { recursive: true, force: true });
   }
-  blocks.push(Buffer.alloc(BLOCK * 2)); // end-of-archive marker
-  return gzipSync(Buffer.concat(blocks), { level: 9 });
 }
 
 /** `sha256sum -c` lines for `entries`, sorted by name. */

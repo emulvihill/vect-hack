@@ -1,6 +1,6 @@
 // scripts/build/release-bundle.mjs makes the only copy of a release's compile
 // units that outlives the host (vect-hack-z5ak). What must hold: the archive is
-// one a stock tar(1) unpacks to the exact bytes, SHA256SUMS verifies them, the
+// one tar(1) unpacks to the exact bytes, SHA256SUMS verifies them, the
 // same input gives the same archive, an unbuilt engine fails the pack instead
 // of shipping a short bundle, and an upload is refused for every way the bundle
 // on disk can fail to be the build of the tag at HEAD. public/modules/ is
@@ -15,8 +15,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { ENGINES } from "../../build/engine-artifacts.mjs";
 import { LICENSE_FILES } from "../../build/stage-licenses.mjs";
 import {
-  bundleEntries, packRelease, remoteTagCommit, sha256sums, stampCleaned, tarGz, tarHeader,
-  uploadRefusal,
+  bundleEntries, packRelease, remoteTagCommit, sha256sums, stampCleaned, tarGz, uploadRefusal,
 } from "../../build/release-bundle.mjs";
 
 const repo = join(import.meta.dirname, "..", "..", "..");
@@ -71,12 +70,14 @@ describe("release-bundle pack", () => {
     expect(sums.trimEnd().split("\n")).toHaveLength(meta.files);
   });
 
-  it("is deterministic and independent of entry order", () => {
+  it("is deterministic, independent of entry order, and names no account", () => {
     const entries = bundleEntries(root);
     const reversed = [...entries].reverse();
     expect(tarGz(reversed, 1700000000).equals(tarGz(entries, 1700000000))).toBe(true);
     expect(sha256sums(reversed)).toBe(sha256sums(entries));
     expect(tarGz(entries, 1700000001).equals(tarGz(entries, 1700000000))).toBe(false);
+    const listing = spawnSync("tar", ["-tvzf", join(out, meta.tarball)], { encoding: "utf8" }).stdout;
+    for (const line of listing.trimEnd().split("\n")) expect(line).toMatch(/^-rw-r--r-- 0\/0 /);
   });
 
   it("refuses to pack when an engine file is missing", () => {
@@ -88,30 +89,6 @@ describe("release-bundle pack", () => {
     const hollow = fakeRoot("hollow");
     writeFileSync(join(hollow, "public", "modules", "larn", "larn.wasm"), "");
     expect(() => packRelease(hollow, join(scratch, "hollow-out"))).toThrow(/empty engine file: modules\/larn\/larn\.wasm/);
-  });
-
-  it("refuses a path a ustar header cannot hold, and takes one that just fits", () => {
-    expect(() => tarGz([{ name: "x".repeat(101), data: Buffer.alloc(1) }], 0)).toThrow(/over 100 bytes/);
-    expect(tarHeader("x".repeat(100), 1, 0).subarray(0, 100).toString()).toBe("x".repeat(100));
-  });
-
-  // Stricter than any one reader: GNU tar forgives fields bsdtar may not.
-  it("writes every ustar header field where the format puts it", () => {
-    const h = tarHeader("modules/larn/larn.js", 700, 1700000000);
-    const field = (at: number, len: number) => h.subarray(at, at + len).toString("latin1");
-    expect(h).toHaveLength(512);
-    expect(field(0, 21)).toBe("modules/larn/larn.js\0");
-    expect(field(100, 8)).toBe("0000644\0");
-    expect(field(108, 8)).toBe("0000000\0");
-    expect(field(116, 8)).toBe("0000000\0");
-    expect(field(124, 12)).toBe("00000001274\0");
-    expect(field(136, 12)).toBe("14524770400\0");
-    expect(field(156, 1)).toBe("0");
-    expect(field(257, 8)).toBe("ustar\x0000");
-    expect(field(148, 8)).toMatch(/^[0-7]{6}\0 $/);
-    const blank = Buffer.from(h);
-    blank.fill(" ", 148, 156);
-    expect(parseInt(field(148, 6), 8)).toBe(blank.reduce((a, b) => a + b, 0));
   });
 });
 
