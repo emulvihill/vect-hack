@@ -104,7 +104,8 @@ without copying anything into `public/modules/` when a check fails.
 
 | Command | What it does |
 |---|---|
-| `npm run build` | Static production build in `dist/`, served from `/`. Runs `npm run clean` and rebuilds all four engines first, so `dist/` never ships an artifact older than the checkout. |
+| `npm run build` | Static production build in `dist/`, served from `/`. Runs `npm run clean` and rebuilds all four engines first, so `dist/` never ships an artifact older than the checkout. Also packs those engine outputs into `build/release/` for `npm run release:assets`. |
+| `npm run release:assets` | Attaches the bundle `npm run build` left in `build/release/` (`vect-hack-<version>-modules.tar.gz` and `SHA256SUMS`: every engine's `.wasm`, `.js` and `.data`, with the license texts) to the GitHub release for the tag at HEAD. Refuses unless HEAD is exactly a release tag that GitHub has at the same commit, the tree is clean and the bundle came from an `npm run build` of HEAD; never replaces an asset. Needs `gh`. |
 | `npm run clean` | Deletes every engine build output (`build/`, `dist/`, `public/modules/`, the objects inside the engine submodules). |
 | `VH_BASE=/play/ npm run build` | The same for a site served under a sub-path. |
 | `npx vite preview` | Serves `dist/` on http://localhost:4173 to check a build. |
