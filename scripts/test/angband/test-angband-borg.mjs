@@ -16,8 +16,10 @@ import { existsSync } from "node:fs";
 import { GRID_FLAGS, GRID_PLAYER, GRID_STRIDE, bootAngband, fail, until } from "./angband-play.mjs";
 import { BorgPlayer } from "../../../src/modules/angband/ui/BorgPlayer.ts";
 
-const SAMPLE_MS = 15000;   // sustained-play window once the borg is up
-const MIN_MAPS = 100;      // map batches that must land inside it
+// Sustained-play window once the borg is up. No batch-count bar inside it: the
+// rate measures host CPU, not the borg (87 under the full parallel suite, 400+
+// alone). A stalled engine still fails, because the hero cannot move.
+const SAMPLE_MS = 15000;
 
 if (!existsSync(new URL("../../../public/modules/angband/angband.data", import.meta.url)))
   fail("public/modules/angband/angband.{js,wasm,data} missing — run scripts/build/build-angband-wasm.sh");
@@ -91,8 +93,6 @@ if (!session.FS.analyzePath(VOLUME_BORG_TXT).exists) {
 }
 
 const grew = maps - at.maps;
-if (grew < MIN_MAPS)
-  fail(`map traffic stalled: only ${grew} batches in ${SAMPLE_MS}ms, expected ${MIN_MAPS}`);
 if (heroSeen.size <= at.hero)
   fail(`the hero never moved during ${SAMPLE_MS}ms of borg play (${heroSeen.size} positions)`);
 
