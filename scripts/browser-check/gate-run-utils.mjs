@@ -1,9 +1,9 @@
 /**
  * The pure half of scripts/browser-check/gate-run.mjs — argument parsing, the
- * run summary, the freshness-stamp rewriter, the artifact prune list and the
- * render-node check. Split out for the same reason moria-gate-utils.mjs is:
- * a gate script does its work at import time, so nothing inside one can be
- * unit tested. scripts/test/tooling/gate-run.test.ts is what tests this file.
+ * run summary, the artifact prune list and the render-node check. Split out
+ * for the same reason moria-gate-utils.mjs is: a gate script does its work at
+ * import time, so nothing inside one can be unit tested.
+ * scripts/test/tooling/gate-run.test.ts is what tests this file.
  */
 import { parseArgs } from "node:util";
 
@@ -76,34 +76,28 @@ export const EXIT_FOR_VERDICT = {
   green: EXIT.green, red: EXIT.red, "could-not-run": EXIT.cannotRun,
 };
 
-export const USAGE = `usage: gate-run.mjs [--only <gate>[,<gate>]] [--stamp]
+export const USAGE = `usage: gate-run.mjs [--only <gate>[,<gate>]]
 
   --only    run a subset; gates: ${GATES.map((g) => g.name).join(", ")}
             (payload needs no GPU and no server, so --only payload runs on a
             machine where the other four cannot)
-  --stamp   on an all-green full run, rewrite the "Last verified green" date in
-            docs/RELEASE-CHECKLIST.md. Never passed by the nightly timer, and
-            refused unless that sentence names every gate this run drove.
 
 env: NH_URL     an existing server to test against; the runner then starts and
                 stops nothing (default http://localhost:5199/, managed here)
      BORG_GATE_MS  passed through to the borg gate (120000 is the short pre-gate)`;
 
 /**
- * Parse and validate, or throw a message that is fit to print on its own. Both
- * refusals below happen here rather than 25 minutes later: `--stamp` with a
- * partial run would write "verified green" over a line that claims all ten
- * arms, and a misspelled gate name would otherwise silently run fewer gates
- * than asked for — the same class of quiet under-run this bead exists to stop.
+ * Parse and validate, or throw a message that is fit to print on its own. A
+ * misspelled gate name is refused here rather than 25 minutes later: it would
+ * otherwise silently run fewer gates than asked for.
  */
-export function parseGateArgs(argv, env = process.env) {
+export function parseGateArgs(argv) {
   let values;
   try {
     ({ values } = parseArgs({
       args: argv,
       options: {
         only: { type: "string" },
-        stamp: { type: "boolean", default: false },
         help: { type: "boolean", default: false },
       },
       allowPositionals: false,
@@ -111,7 +105,7 @@ export function parseGateArgs(argv, env = process.env) {
   } catch (err) {
     throw new Error(`${err.message}\n\n${USAGE}`, { cause: err });
   }
-  if (values.help) return { gates: [], stamp: false, help: true };
+  if (values.help) return { gates: [], help: true };
 
   const asked = values.only === undefined
     ? GATES.map((g) => g.name)
@@ -124,29 +118,16 @@ export function parseGateArgs(argv, env = process.env) {
   // Always in GATES order, however --only listed them: the run order is a
   // property of the gates (cheapest first), not of the command line.
   const gates = GATES.filter((g) => asked.includes(g.name));
-  if (values.stamp && gates.length !== GATES.length) {
-    throw new Error(`--stamp refuses a partial run: the checklist line it writes claims every gate,`
-      + ` and this run would only drive ${gates.map((g) => g.name).join(", ")}.\n\n${USAGE}`);
-  }
-  // The stamp records "this tree was verified green", and the summary beside it
-  // names this checkout's sha. With NH_URL set the gates drove somebody else's
-  // server, whose code this process cannot see — stamping that is the same kind
-  // of lie as stamping a red run, so it is refused rather than guessed at.
-  if (values.stamp && env.NH_URL) {
-    throw new Error(`--stamp refuses a run against NH_URL (${env.NH_URL}): the gates would test that`
-      + ` server while the stamp claims this checkout was verified. Drop --stamp, or unset NH_URL`
-      + ` and let the runner start its own server.\n\n${USAGE}`);
-  }
-  return { gates, stamp: values.stamp, help: false };
+  return { gates, help: false };
 }
 
 /**
  * Add one harness problem to whatever has already been recorded.
  *
  * Appends rather than overwrites, because a single run really can hit more than
- * one: a `--stamp` that threw AND a prune that failed. The slot they share used
- * to keep only the last, so the first survived nowhere but the console — and
- * the console is not a channel for a run nobody watched.
+ * one: a prune that failed AND an artifact that could not be written. The
+ * slot they share used to keep only the last, so the first survived nowhere
+ * but the console — and the console is not a channel for a run nobody watched.
  *
  * It stays a single string rather than becoming an array on purpose.
  * `harnessProblem` is `string | null` in summary.json, and that file is a record
@@ -207,66 +188,6 @@ export function notifiableFailures(results) {
 }
 
 /**
- * The freshness stamp. It replaces the date and nothing else: the prose after
- * it ("ten arms — all four Modules on ...") is a human's claim about what the
- * gates cover, and a runner that rewrote it would be inventing coverage.
- *
- * It throws when the line is absent rather than returning the text unchanged.
- * A rewriter that silently matches nothing is the classic failure here — the
- * stamp would go on reporting success while the file it was meant to edit had
- * moved on years ago.
- *
- * And since vect-hack-r1s it VERIFIES that prose instead of trusting it. The
- * line pairs a date the runner writes, which cannot rot, with a gate list a
- * human maintains, which rotted inside twenty-four hours: `check:touch` landed
- * on a parallel branch and the sentence went on naming three gates while a run
- * drove four, and the stamp re-dated the stale claim without a word. So the
- * fourth refusal, beside the three in parseGateArgs and the red-run one in
- * gate-run.mjs: every gate the run actually drove must be NAMED in the
- * sentence, by its npm script name, or the stamp refuses and says which is
- * missing. Same mechanism as the other three — refuse rather than guess.
- *
- * WHAT THIS DOES NOT CATCH, and it is deliberate: a stale COUNT. "85 checks"
- * becoming 90, or "ten arms" becoming twelve, leaves every gate mentioned and
- * the sentence still wrong. Closing that needs option B in vect-hack-r1s —
- * every gate emitting a structured coverage report the stamp composes from —
- * and the cost there is not the composer but agreeing a schema four
- * differently-shaped gates can fill honestly. Judged not worth its price; read
- * that bead before deciding otherwise.
- *
- * The mention test is the npm name (`check:browser`, `check:angband-borg`)
- * rather than the gate's short name, because that is exact: `borg` alone would
- * match the word in any passing remark, and the checklist already writes gates
- * this way.
- */
-const STAMP_RE = /^(Last verified green: \*\*)(\d{4}-\d{2}-\d{2})(\*\*)/m;
-
-export function stampVerified(text, date, gates) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    throw new Error(`the stamp date must be YYYY-MM-DD, got ${JSON.stringify(date)}`);
-  }
-  const at = text.match(STAMP_RE);
-  if (!at) {
-    throw new Error(`no "Last verified green: **<date>**" line to stamp — the runner will not invent one.`
-      + ` Restore that line in docs/RELEASE-CHECKLIST.md or drop --stamp.`);
-  }
-  // The sentence is the whole paragraph that line starts — it wraps over
-  // several lines — and it ends at the blank line. Scoped rather than
-  // file-wide on purpose: every gate is named further down in the command
-  // block, so searching the file would make this check unable to fail.
-  const end = text.indexOf("\n\n", at.index);
-  const sentence = end === -1 ? text.slice(at.index) : text.slice(at.index, end);
-  const missing = gates.filter((g) => !sentence.includes(g.npm));
-  if (missing.length) {
-    throw new Error(`this run drove ${missing.map((g) => g.name).join(", ")}, and the`
-      + ` "Last verified green" sentence does not mention ${missing.map((g) => `\`${g.npm}\``).join(", ")}.`
-      + ` A date the runner writes beside a gate list nobody updates is how that line went stale`
-      + ` (vect-hack-r1s). Say what this run covered in docs/RELEASE-CHECKLIST.md, then stamp it.`);
-  }
-  return text.replace(STAMP_RE, `$1${date}$3`);
-}
-
-/**
  * The run's one verdict, in precedence order.
  *
  * A gate that RAN and failed outranks "could not run", and that order is the
@@ -303,20 +224,19 @@ export function buildSummary(run) {
     durationMs: run.durationMs,
     verdict: verdictOf(results, run.cannotRun),
     cannotRun: run.cannotRun ?? null,
-    // Something the harness itself could not do: the stamp, the prune, or the
-    // artifact write itself. It never changes the verdict — the gates' own
-    // result stands — but a nightly that quietly lost half its record should
-    // say so in the half it kept. All three really can land here: the prune
-    // runs BEFORE this is built (gate-run.mjs's pruneQuietly), and a failed
-    // artifact write is reported to the console because by then there is
-    // nowhere durable left to put it.
+    // Something the harness itself could not do: the prune or the artifact
+    // write. It never changes the verdict — the gates' own result stands —
+    // but a nightly that quietly lost half its record should say so in the
+    // half it kept. Only the prune can land here — it runs
+    // BEFORE this is built (gate-run.mjs's pruneQuietly); a failed artifact
+    // write is reported to the console and the notification, because by then
+    // there is nowhere durable left to put it.
     harnessProblem: run.harnessProblem ?? null,
     host: run.host,
     git: { sha: run.gitSha, dirty: run.gitDirty },
     url: run.url,
     server: run.server,
     borgGateMs: run.borgGateMs,
-    stamped: run.stamped ?? false,
     gates: results.map((r) => ({
       name: r.name, ok: r.ok, exitCode: r.exitCode, signal: r.signal ?? null,
       durationMs: r.durationMs, log: `${r.name}.log`,

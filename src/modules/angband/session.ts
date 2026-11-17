@@ -59,8 +59,7 @@ export function makeDelegate(
     // Unlike NetHack's, this needs no recovery wording: Angband checkpoints
     // through its own save_game_checked(), so there is no rebuilt-save case
     // to explain — the quit message reports the outcome through `saved`.
-    fatalNotice: (message) =>
-      `The Angband engine died — ${message}. Reload the page to restart.`,
+    fatalNotice: "The Angband engine died. Reload the page to restart.",
     dispatch: async (msg) => {
       switch (msg.type) {
         case "ready":

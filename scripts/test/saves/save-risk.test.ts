@@ -210,7 +210,7 @@ describe("a tab whose save volume never mounted", () => {
     onSessionOnly((code) => showSessionOnlySaves({ code, dom }));
     const worker = { onmessage: null as ((e: { data: unknown }) => void) | null };
     new EngineSession(worker as unknown as Worker, {
-      onNotice: () => {}, fatalNotice: (m) => m, dispatch: async () => null, fallback: () => null,
+      onNotice: () => {}, fatalNotice: "", dispatch: async () => null, fallback: () => null,
     });
     try {
       worker.onmessage?.({ data: { type: "sessionOnly", code: "a-code-from-another-build" } });

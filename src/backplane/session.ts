@@ -46,8 +46,9 @@ export type LifecycleToMain =
 export interface SessionDelegate<In, Out> {
   onNotice(text: string): void;
   /** Player-facing wording for an engine death (checkpoint wording is
-   *  NetHack's; Angband's says reload-to-restart). Routed to onNotice. */
-  fatalNotice(message: string): string;
+   *  NetHack's; Angband's says reload-to-restart). Routed to onNotice. The
+   *  engine's diagnostic is the console's, never part of this sentence. */
+  readonly fatalNotice: string;
   /** Handle one game message; a returned message is posted to the worker. */
   dispatch(msg: In): Promise<Out | null>;
   /** The reply that unwedges the Asyncify-suspended engine when dispatch
@@ -124,7 +125,7 @@ export class EngineSession<In extends { type: string }, Out> {
     this.reported = true;
     // Unguarded, unlike the catch in dispatch(): a death owes the engine no
     // reply, so a throwing onNotice costs only the notice here.
-    this.delegate.onNotice(notice ?? this.delegate.fatalNotice(message) + this.resetAdvice());
+    this.delegate.onNotice(notice ?? this.delegate.fatalNotice + this.resetAdvice());
   }
 
   /**

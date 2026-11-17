@@ -48,19 +48,15 @@
 // verdictOf: a gate that RAN and failed outranks a preflight nothing could
 // have satisfied. Otherwise a logged-out nightly would file a real payload
 // regression under "told you nothing".
-//
-// Only a human passes --stamp, and only before a release. The nightly timer
-// does not: see the header of scripts/browser-check/vect-hack-gates.service and
-// §4 above.
 import { spawn, spawnSync } from "node:child_process";
 import { accessSync, constants, createWriteStream } from "node:fs";
-import { copyFile, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { homedir, hostname } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   EXIT, EXIT_FOR_VERDICT, USAGE, appendProblem, buildSummary, durationText, notifiableFailures,
-  parseGateArgs, pruneList, renderNodeProblem, splitGates, stampVerified, summaryLines, verdictOf,
+  parseGateArgs, pruneList, renderNodeProblem, splitGates, summaryLines, verdictOf,
 } from "./gate-run-utils.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -119,8 +115,8 @@ let harnessProblem = null;
 /**
  * Record one thing the harness could not do, and return just that message so a
  * console line stays about the thing that has only now gone wrong. The slot
- * accumulates (appendProblem), so a run that fails its stamp AND its prune
- * carries both into summary.json rather than only the later one.
+ * accumulates (appendProblem), so a run that fails its prune AND its artifact
+ * write still names both in the notification rather than only the later one.
  */
 function noteHarnessProblem(message) {
   harnessProblem = appendProblem(harnessProblem, message);
@@ -466,52 +462,13 @@ const verdict = verdictOf(results, cannotRun);
 console.log(`\n=== ${verdict.toUpperCase()} in ${durationText(Date.now() - startedAtMs)} ===`);
 if (results.length) console.log(summaryLines(results).join("\n"));
 
-// The stamp is last: it may only record a run that has already finished green.
-// Stamping a failed run is precisely the failure this bead exists to prevent,
-// so a red run refuses out loud rather than quietly skipping it. A run that
-// could not be completed is refused the same way and for the same reason.
-let stamped = false;
-if (opts.stamp) {
-  const checklist = join(repoRoot, "docs", "RELEASE-CHECKLIST.md");
-  const tmp = `${checklist}.gate-run.tmp`;
-  if (verdict !== "green") {
-    const failed = results.filter((r) => !r.ok).map((r) => r.name).join(", ");
-    console.error(`\n--stamp REFUSED: ${failed ? `${failed} failed` : `the run could not be completed`}`
-      + `${cannotRun ? ` (${cannotRun})` : ""},`
-      + ` and "Last verified green" may only record a green run.`);
-  } else {
-    // Written beside the file and renamed over it. rename(2) is atomic within a
-    // filesystem, so a crash mid-write leaves a stray .tmp rather than a
-    // truncated RELEASE-CHECKLIST.md — this is a TRACKED file, and half of one
-    // is worse than none.
-    //
-    // stampVerified throws when the line is gone — or, since vect-hack-r1s,
-    // when the sentence beside the date does not name a gate this run drove —
-    // and that throw is caught here rather than left to become an unhandled
-    // rejection: a nightly whose only symptom is exit 1 is indistinguishable
-    // from a failing gate.
-    try {
-      const text = await readFile(checklist, "utf8");
-      await writeFile(tmp, stampVerified(text, new Date().toISOString().slice(0, 10), opts.gates));
-      await rename(tmp, checklist);
-      stamped = true;
-      console.log(`\nstamped docs/RELEASE-CHECKLIST.md — commit it with the release`);
-    } catch (err) {
-      noteHarnessProblem(`the stamp failed: ${err.message}`);
-      console.error(`\n--stamp FAILED: ${err.message}`);
-      console.error(`docs/RELEASE-CHECKLIST.md is unchanged, and the gates' own verdict stands.`);
-      await rm(tmp, { force: true }).catch(() => {});
-    }
-  }
-}
-
 // Neither of these may take the run down. The gates have already produced a
 // verdict; losing the artifact is a separate failure and is reported as one.
 // Prune first, so that a prune failure is still something summary.json can carry.
 await pruneQuietly();
 let summary = null;
 try {
-  summary = await writeSummary({ results, server: serverState, stamped, cannotRun });
+  summary = await writeSummary({ results, server: serverState, cannotRun });
   console.log(`\nartifact ${runDir}/summary.json`);
 } catch (err) {
   console.error(`\nHARNESS PROBLEM: ${noteHarnessProblem(

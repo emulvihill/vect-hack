@@ -77,7 +77,6 @@ describe("Moria session delegate", () => {
     expect(await delegate.dispatch({
       type: "getKey", id: 5, wait: false, context: "poll", mode: "original", delayMicroseconds: 0,
     })).toEqual({ type: "key", id: 5, result: { status: "none" } });
-    expect(delegate.fatalNotice("trap")).toBe("The Moria engine died — trap. Reload the page to restart.");
     expect(delegate.fallback({
       type: "getKey", id: 6, wait: true, context: "literal", mode: "original", delayMicroseconds: 0,
     })).toEqual({ type: "key", id: 6, result: { status: "key", key: KC_ESCAPE } });

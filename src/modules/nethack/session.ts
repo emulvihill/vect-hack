@@ -62,8 +62,7 @@ export function makeDelegate(
     onNotice: (text) => handler.onNotice?.(text),
     // Checkpoint wording is NetHack's own: autosave means a reload offers
     // the last checkpoint (src/modules/nethack/checkpoint.ts).
-    fatalNotice: (message) =>
-      `The NetHack engine died — ${message}. Reload the page; your last autosave will be offered.`,
+    fatalNotice: "The NetHack engine died. Reload the page; your last autosave will be offered.",
     dispatch: async (msg) => {
       switch (msg.type) {
         case "ready":

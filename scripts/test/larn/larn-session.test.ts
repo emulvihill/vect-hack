@@ -84,12 +84,6 @@ describe("Larn delegate", () => {
     expect(calls).toEqual(["ready"]);
   });
 
-  it("words an engine death around the engine's own diagnostic", () => {
-    const { delegate } = harness();
-    expect(delegate.fatalNotice("wasm trap"))
-      .toBe("The Larn engine died — wasm trap. Reload the page to restart.");
-  });
-
   it("answers the key wait with the view's key", async () => {
     const calls: Array<[boolean, boolean]> = [];
     const delegate = makeDelegate({

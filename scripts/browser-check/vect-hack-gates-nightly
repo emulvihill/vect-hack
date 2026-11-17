@@ -6,11 +6,8 @@
 # It runs from the PRIMARY checkout on purpose. Worktrees are throwaway, and a
 # unit symlinked into one stops working the moment that worktree is removed.
 #
-# --stamp is deliberately absent: it would rewrite a tracked line in
-# docs/RELEASE-CHECKLIST.md and leave a dirty tree every morning, which the
-# deploy preflight refuses. The nightly freshness signal is the artifact under
-# ~/.local/state/vect-hack/gates/ plus the failure notification, not a file in
-# git. A human passes --stamp by hand before a release.
+# The nightly freshness signal is the artifact under
+# ~/.local/state/vect-hack/gates/ plus the failure notification.
 set -uo pipefail
 
 repo="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"

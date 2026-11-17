@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   GATES, appendProblem, buildSummary, notifiableFailures, parseGateArgs, pruneList,
-  renderNodeProblem, splitGates, stampVerified, summaryLines, verdictOf,
+  renderNodeProblem, splitGates, summaryLines, verdictOf,
 } from "../../browser-check/gate-run-utils.mjs";
 
 type Gate = { name: string; npm: string; report: string | null; standalone: boolean };
@@ -40,97 +40,6 @@ describe("gate-run argument parsing", () => {
     expect(() => parseGateArgs(["--onlyy", "borg"])).toThrow(/usage:/);
   });
 
-  // Refused here, not 25 minutes later: the line --stamp writes claims every
-  // gate, so a partial run may never write it.
-  it("refuses --stamp on a partial run, up front", () => {
-    expect(() => parseGateArgs(["--stamp", "--only", "browser"], {}))
-      .toThrow(/--stamp refuses a partial run/);
-    expect(parseGateArgs(["--stamp"], {}).stamp).toBe(true);
-    expect(parseGateArgs([], {}).stamp).toBe(false);
-  });
-
-  // The stamp claims THIS checkout was verified, and the summary beside it
-  // records this checkout's sha — but with NH_URL set the gates drove a server
-  // whose code this process never saw.
-  it("refuses --stamp against a foreign server", () => {
-    expect(() => parseGateArgs(["--stamp"], { NH_URL: "http://elsewhere:5199/" }))
-      .toThrow(/--stamp refuses a run against NH_URL \(http:\/\/elsewhere:5199\/\)/);
-    // ... and only for --stamp: a plain run against NH_URL is fine.
-    expect(parseGateArgs([], { NH_URL: "http://elsewhere:5199/" }).gates).toHaveLength(GATES.length);
-  });
-});
-
-describe("the freshness stamp", () => {
-  const all = GATES as Gate[];
-  const doc = [
-    "## 1. The browser gates",
-    "",
-    "Last verified green: **2026-08-26**, ten arms — `check:payload` four Modules,",
-    "`check:browser` on WebGPU and WebGL at 60fps plus the WebGL-fallback and no-GPU",
-    "arms (`vect-hack-4d0`), `check:controls` 85 checks, `check:touch` 32 checks, and",
-    "`check:angband-borg` 130s of play.",
-    "",
-  ].join("\n");
-
-  it("rewrites the date and nothing else", () => {
-    const out = stampVerified(doc, "2026-09-01", all);
-    expect(out).toContain("Last verified green: **2026-09-01**, ten arms — `check:payload`");
-    expect(out).toContain("arms (`vect-hack-4d0`), `check:controls` 85 checks");
-    expect(stampVerified(out, "2026-09-01", all)).toBe(out);
-  });
-
-  // The classic failure of a pattern rewriter is matching nothing and
-  // reporting success, which would leave the stamp "working" forever over a
-  // file that had moved on.
-  it("throws when the line it expects is gone", () => {
-    expect(() => stampVerified("## 1. The browser gates\n\nnothing to stamp here\n", "2026-09-01", all))
-      .toThrow(/no "Last verified green/);
-    expect(() => stampVerified(doc, "last Tuesday", all)).toThrow(/must be YYYY-MM-DD/);
-    expect(() => stampVerified(doc.replace("**2026-08-26**", "**2026-8-26**"), "2026-09-01", all))
-      .toThrow(/no "Last verified green/);
-  });
-
-  // vect-hack-r1s, and the bug it was filed on: on 2026-08-26 the sentence
-  // named three gates while the run drove four, and the stamp re-dated it
-  // anyway. The refusal has to NAME the gate, or it just moves the puzzle.
-  it("refuses when the sentence does not mention a gate the run drove", () => {
-    const withoutTouch = doc.replace("`check:touch` 32 checks, and", "and");
-    expect(() => stampVerified(withoutTouch, "2026-09-01", all))
-      .toThrow(/does not mention.*check:touch/);
-    expect(() => stampVerified(withoutTouch, "2026-09-01", all)).toThrow(/touch/);
-    // The real 2026-08-26 shape: every GPU gate named, payload missing.
-    const withoutPayload = doc.replace("`check:payload` four Modules,", "");
-    expect(() => stampVerified(withoutPayload, "2026-09-01", all))
-      .toThrow(/does not mention.*check:payload/);
-  });
-
-  // Only the gates this run actually drove. --stamp refuses a partial run up
-  // front, so nothing reaches here with a short list today; the rule is still
-  // "what ran must be named", not "every gate that exists".
-  it("asks only about the gates it was given", () => {
-    const withoutPayload = doc.replace("`check:payload` four Modules,", "");
-    const gpuOnly = all.filter((g) => g.name !== "payload");
-    expect(stampVerified(withoutPayload, "2026-09-01", gpuOnly))
-      .toContain("Last verified green: **2026-09-01**");
-  });
-
-  // The sentence is the paragraph the line starts, and it ends at the blank
-  // line. A gate named further down the file — in the command block, say, where
-  // every gate name appears — is not a claim about the verified run.
-  it("reads only the paragraph the line starts, not the rest of the file", () => {
-    const elsewhere = doc.replace("`check:touch` 32 checks, and", "and")
-      + "\nSee also `npm run check:touch`, the phone gate.\n";
-    expect(() => stampVerified(elsewhere, "2026-09-01", all))
-      .toThrow(/does not mention.*check:touch/);
-  });
-
-  // What this check CANNOT do, pinned so the next reader does not assume it
-  // can: the counts are prose, and a stale one leaves every gate mentioned.
-  // Only option B in vect-hack-r1s closes that, and B was not worth its price.
-  it("does not notice a stale count", () => {
-    expect(stampVerified(doc.replace("85 checks", "1 check"), "2026-09-01", all))
-      .toContain("`check:controls` 1 check");
-  });
 });
 
 describe("the run summary", () => {
@@ -188,9 +97,9 @@ describe("the run summary", () => {
   // A harness failure is recorded beside the verdict and never instead of it:
   // the gates ran, and what they found still stands.
   it("carries a harness problem without touching the verdict", () => {
-    const s = buildSummary({ ...base, results: green, harnessProblem: "the stamp failed: ENOSPC" });
+    const s = buildSummary({ ...base, results: green, harnessProblem: "old runs could not be pruned: EACCES" });
     expect(s.verdict).toBe("green");
-    expect(s.harnessProblem).toBe("the stamp failed: ENOSPC");
+    expect(s.harnessProblem).toBe("old runs could not be pruned: EACCES");
     expect(buildSummary({ ...base, results: green }).harnessProblem).toBeNull();
   });
 
@@ -366,37 +275,18 @@ describe("which failures reach a desktop notification", () => {
 });
 
 describe("a run that hits more than one harness problem", () => {
-  const STAMP = 'the stamp failed: no "Last verified green" line to stamp';
   const PRUNE = "old runs could not be pruned under ~/.local/state/vect-hack/gates: EACCES";
+  const ARTIFACT = "the run artifact could not be written: ENOSPC";
 
   it("keeps both, in the order they happened", () => {
     let p: string | null = null;
-    p = appendProblem(p, STAMP);
     p = appendProblem(p, PRUNE);
-    expect(p).toBe(`${STAMP}; ${PRUNE}`);
+    p = appendProblem(p, ARTIFACT);
+    expect(p).toBe(`${PRUNE}; ${ARTIFACT}`);
   });
 
   it("starts from nothing without a stray separator", () => {
-    expect(appendProblem(null, STAMP)).toBe(STAMP);
-    expect(appendProblem("", STAMP)).toBe(STAMP);
-  });
-
-  // The one that matters: --stamp threw, then the prune failed. The prune used
-  // never to write this slot at all, so overwriting it lost the stamp failure
-  // to the console — and the console is not a channel for an unwatched run.
-  it("carries both into summary.json, and neither touches the verdict", () => {
-    const gates = [{ name: "browser", ok: true, exitCode: 0, durationMs: 1000 }];
-    let p: string | null = null;
-    p = appendProblem(p, STAMP);
-    p = appendProblem(p, PRUNE);
-    const s = buildSummary({
-      startedAt: "2026-08-26T03:30:00.000Z", endedAt: "2026-08-26T03:31:00.000Z",
-      durationMs: 60000, host: "devbox", gitSha: "deadbee", gitDirty: false,
-      url: "http://localhost:5199/", server: { mode: "started", note: "" },
-      borgGateMs: 600000, results: gates, harnessProblem: p,
-    });
-    expect(s.harnessProblem).toContain("the stamp failed");
-    expect(s.harnessProblem).toContain("could not be pruned");
-    expect(s.verdict).toBe("green");
+    expect(appendProblem(null, PRUNE)).toBe(PRUNE);
+    expect(appendProblem("", PRUNE)).toBe(PRUNE);
   });
 });

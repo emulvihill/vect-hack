@@ -64,7 +64,7 @@ function harness(opts: { noticeThrows?: boolean } = {}) {
       if (opts.noticeThrows) throw new Error("notice renderer exploded");
       notices.push(text);
     },
-    fatalNotice: (message) => `engine died: ${message}`,
+    fatalNotice: "engine died.",
     dispatch: async (msg) => {
       dispatched.push(msg);
       if (msg.type === "ping") return { type: "pong", id: msg.id };
@@ -141,24 +141,16 @@ describe("EngineSession", () => {
     // Every death below is a death on the way in — nothing has reached the
     // delegate yet — so each one also carries the reset advice
     // (vect-hack-60i), pinned on its own further down.
-    expect(notices).toEqual([`engine died: wasm trap${BOOT_ADVICE}`]);
+    expect(notices).toEqual([`engine died.${BOOT_ADVICE}`]);
   });
 
   // vect-hack-4p9: a worker can die before its own error listener posts a
   // fatal (a script that never loaded, an OOM kill), and a value that fails
   // to deserialize never arrives as a message at all. Both were console-only.
-  it("notices a worker error, naming where it happened (vect-hack-4p9)", () => {
+  it("notices a worker error (vect-hack-4p9)", () => {
     const { worker, notices } = harness();
     worker.onerror?.(errorEvent("RangeError: out of memory", "http://x/worker.js", 12));
-    expect(notices).toEqual([`engine died: RangeError: out of memory (http://x/worker.js:12)${BOOT_ADVICE}`]);
-  });
-
-  it("says the worker never started when the error carries no message", () => {
-    // A script that fails to fetch fires an ErrorEvent with nothing in it;
-    // wording it as an engine diagnostic would be inventing one.
-    const { worker, notices } = harness();
-    worker.onerror?.(errorEvent(""));
-    expect(notices).toEqual([`engine died: the engine worker failed to start${BOOT_ADVICE}`]);
+    expect(notices).toEqual([`engine died.${BOOT_ADVICE}`]);
   });
 
   it("notices a messageerror as the deserialization failure it is (vect-hack-4p9)", () => {
@@ -168,8 +160,7 @@ describe("EngineSession", () => {
     // nobody could read, so the suspended engine can never be answered.
     const { worker, notices } = harness();
     worker.onmessageerror?.(new MessageEvent("messageerror"));
-    expect(notices).toEqual(
-      [`engine died: a message from the engine could not be deserialized${BOOT_ADVICE}`]);
+    expect(notices).toEqual([`engine died.${BOOT_ADVICE}`]);
   });
 
   it("tells the player about one death once, error then posted fatal", async () => {
@@ -177,7 +168,7 @@ describe("EngineSession", () => {
     worker.onerror?.(errorEvent("boom", "w.js", 1));
     worker.emit({ type: "fatal", message: "worker error: boom" }); // the worker's own listener
     await flush();
-    expect(notices).toEqual([`engine died: boom (w.js:1)${BOOT_ADVICE}`]);
+    expect(notices).toEqual([`engine died.${BOOT_ADVICE}`]);
   });
 
   it("tells the player about one death once, posted fatal then error", async () => {
@@ -186,7 +177,7 @@ describe("EngineSession", () => {
     await flush();
     worker.onerror?.(errorEvent("boom", "w.js", 1));
     worker.onmessageerror?.(new MessageEvent("messageerror"));
-    expect(notices).toEqual([`engine died: wasm trap${BOOT_ADVICE}`]);
+    expect(notices).toEqual([`engine died.${BOOT_ADVICE}`]);
   });
 
   // vect-hack-60i. A save file's bytes reach the engine's own C save code, and
@@ -199,10 +190,9 @@ describe("EngineSession", () => {
     worker.emit({ type: "fatal", message: "wasm trap in restore" });
     await flush();
 
-    expect(notices).toEqual([`engine died: wasm trap in restore${BOOT_ADVICE}`]);
-    // The Module's own wording still leads: the first move is a reload, and
-    // most deaths are not the volume's fault.
-    expect(notices[0]).toMatch(/^engine died: wasm trap in restore/);
+    // The Module's own wording leads: the first move is a reload, and most
+    // deaths are not the volume's fault.
+    expect(notices).toEqual([`engine died.${BOOT_ADVICE}`]);
   });
 
   // vect-hack-o3rc. An engine artifact that never arrived — a missing build,
@@ -241,7 +231,7 @@ describe("EngineSession", () => {
     const { worker, notices } = harness();
     worker.emit({ type: "fatal", message: "Error: wasm streaming compile failed" });
     await flush();
-    expect(notices).toEqual([`engine died: Error: wasm streaming compile failed${BOOT_ADVICE}`]);
+    expect(notices).toEqual([`engine died.${BOOT_ADVICE}`]);
   });
 
   it("says nothing about the save when the engine had started", async () => {
@@ -253,7 +243,7 @@ describe("EngineSession", () => {
     worker.emit({ type: "fatal", message: "wasm trap" });
     await flush();
 
-    expect(notices).toEqual(["engine died: wasm trap"]);
+    expect(notices).toEqual(["engine died."]);
   });
 
   it("counts the engine as started by its own message, not by a lifecycle one", async () => {
@@ -267,7 +257,7 @@ describe("EngineSession", () => {
     worker.emit({ type: "fatal", message: "wasm trap" });
     await flush();
 
-    expect(notices).toEqual(["saving is off", `engine died: wasm trap${BOOT_ADVICE}`]);
+    expect(notices).toEqual(["saving is off", `engine died.${BOOT_ADVICE}`]);
   });
 
   it("a worker error posts nothing and leaves the worker alone", () => {
@@ -488,13 +478,6 @@ describe("NetHack delegate", () => {
     expect(h.constants()).toBe(constants);
   });
 
-  it("words an engine death around the engine's own diagnostic", () => {
-    // Promises the autosave, unlike Angband's wording: this Module mounts a
-    // storage volume, so a reload has a checkpoint to offer.
-    expect(harness(null).delegate.fatalNotice("wasm trap"))
-      .toBe("The NetHack engine died — wasm trap. Reload the page; your last autosave will be offered.");
-  });
-
   it("forwards a lifecycle notice to the view", () => {
     const h = harness(null);
     h.delegate.onNotice("saving is off");
@@ -637,13 +620,6 @@ describe("Angband delegate", () => {
     // messages and put exception text on screen. It is the Backplane's
     // `sessionOnly` banner now (vect-hack-dem).
     expect(calls).toEqual(["ready"]);
-  });
-
-  it("words an engine death around the engine's own diagnostic", () => {
-    // No checkpoint promise, unlike NetHack's wording.
-    const { delegate } = harness();
-    expect(delegate.fatalNotice("Cannot create '/lib/save'"))
-      .toBe("The Angband engine died — Cannot create '/lib/save'. Reload the page to restart.");
   });
 
   it("forwards a lifecycle notice to the view", () => {

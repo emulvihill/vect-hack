@@ -57,8 +57,7 @@ export function makeDelegate(
     onNotice: notice,
     // Like Angband's: no recovery wording — there is no rebuilt-save case to
     // explain. Phase 2's checkpoint work may revisit.
-    fatalNotice: (message) =>
-      `The Larn engine died — ${message}. Reload the page to restart.`,
+    fatalNotice: "The Larn engine died. Reload the page to restart.",
     dispatch: async (msg) => {
       switch (msg.type) {
         case "ready":

@@ -189,12 +189,10 @@ Every game is chosen with `?game=`; a URL without it redirects to
 
 ## Troubleshooting
 
-**"The \<Game\> engine died — … error loading dynamically imported module …
-/modules/\<game\>/\<game\>.js"** (Firefox), or "Failed to fetch dynamically
-imported module" (Chrome): that engine is not built. Run
-`npm run build:<game>`, or `npm run setup` on a fresh clone, then reload. The
-running dev server picks the new files up without a restart. The message's
-suggestion to delete the stored save does not apply here.
+**"The game engine could not be loaded from …/modules/\<game\>/\<game\>.js"**:
+that engine is not built. Run `npm run build:<game>`, or `npm run setup` on a
+fresh clone, then reload. The running dev server picks the new files up
+without a restart.
 
 **`npm install` warns `EBADENGINE`, or a test driver fails on TypeScript
 syntax:** Node is older than 24. `node -v` must print v24 or later.

@@ -45,7 +45,7 @@ export function makeDelegate(
 ): SessionDelegate<MoriaWorkerToMain, MoriaMainToWorker> {
   return {
     onNotice: (text) => handler.onNotice(text),
-    fatalNotice: (message) => `The Moria engine died — ${message}. Reload the page to restart.`,
+    fatalNotice: "The Moria engine died. Reload the page to restart.",
     dispatch: async (msg) => {
       switch (msg.type) {
         case "ready":
