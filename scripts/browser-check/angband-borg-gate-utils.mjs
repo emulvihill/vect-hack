@@ -15,11 +15,14 @@
  * It used to be the floor for ONE game, so a borg that died at 9 s failed the
  * run (vect-hack-t4ja). A death is Angband working correctly, and it says
  * nothing about the client, so an ended game now starts another and the floor
- * applies to their sum. Every second of that sum is a frame-rate sample; the
- * warm-up is per game, so a run of short games arms the stall check for less
- * of it. That forgives no stall: a game ends only on one of the engine's own
- * end tells, a hung engine sends none, and so a hang is never restarted — it
- * is sampled until the stall check fires.
+ * applies to their sum. Every second of that sum is a frame-rate sample, but
+ * not every second is watched for stalls: the check arms START_MS into each
+ * game (see stallWatch). A hang is still caught: a game ends only on one of the
+ * engine's own end tells, a hung engine sends none, so its game is not
+ * restarted; it spends its budget, the check arms and fires. A quiet gap
+ * inside a game that ends before START_MS is not caught: that game is never
+ * watched, and a run of short games watches less of its play. The report says
+ * how much was watched next to the worst stall.
  *
  * Without this floor the gate could not fail: a run whose games all ended at
  * once would measure nothing and still pass, and an assertion that cannot fail
@@ -33,6 +36,29 @@ export const MIN_PLAY_MS = 120000;
  * measure 180 s, past MIN_PLAY_MS, so dice alone do not reach it.
  */
 export const MAX_GAMES = 20;
+
+/**
+ * The stall check's state over a run: the longest stretch with no map batch
+ * (`worstMs`), how long the check was armed (`watchedMs`), and the current
+ * stretch. A worst stall of 0 s means nothing unless something was watched.
+ */
+export function stallWatch() {
+  return { worstMs: 0, watchedMs: 0, stalledFor: 0 };
+}
+
+/**
+ * One sample of one game. `armed` is the gate's rule (the game is START_MS
+ * old), `quiet` that no map batch arrived since the last sample. An unarmed
+ * sample resets the stretch rather than leaving it unrecorded, or birth-time
+ * quiet leaks across the boundary and reports a stall on a healthy run; every
+ * game opens unarmed, so no stretch runs from one game into the next.
+ */
+export function watchSample(watch, armed, quiet, sampleMs) {
+  watch.stalledFor = armed && quiet ? watch.stalledFor + sampleMs : 0;
+  if (!armed) return;
+  watch.watchedMs += sampleMs;
+  watch.worstMs = Math.max(watch.worstMs, watch.stalledFor);
+}
 
 /**
  * Play games until `gateMs` of play has been measured or `maxGames` have been

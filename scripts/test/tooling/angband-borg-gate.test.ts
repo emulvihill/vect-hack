@@ -8,7 +8,9 @@
 // these fakes stand in for a page and a borg.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { MAX_GAMES, MIN_PLAY_MS, playGames, playProblems } from "../../browser-check/angband-borg-gate-utils.mjs";
+import {
+  MAX_GAMES, MIN_PLAY_MS, playGames, playProblems, stallWatch, watchSample,
+} from "../../browser-check/angband-borg-gate-utils.mjs";
 
 const GATE_MS = 600000;
 const DIED = { tell: "You die." };
@@ -66,6 +68,31 @@ describe("the borg gate's games", () => {
     const run = await playGames(games(Array.from({ length: 100 }, () => ({ ms: 9000, ended: true }))).playGame, GATE_MS);
     expect(run.games.length).toBe(MAX_GAMES);
     expect(playProblems(run)).toEqual([]);
+  });
+});
+
+describe("the borg gate's stall watch", () => {
+  it("counts only the time the check was armed, summed over games", () => {
+    // The check arms START_MS into each game. A game that ends before that is
+    // never watched, and the report must say so rather than print a bare
+    // "worst stall 0s" as though it had looked.
+    const watch = stallWatch();
+    const sample = (armed: boolean, quiet: boolean) => watchSample(watch, armed, quiet, 1000);
+    for (let s = 0; s < 50; s++) sample(false, true); // game 1: died at 50 s
+    expect(watch).toMatchObject({ worstMs: 0, watchedMs: 0 });
+    for (let s = 0; s < 60; s++) sample(false, s % 2 === 0); // game 2: warm-up
+    for (let s = 0; s < 30; s++) sample(true, s >= 10 && s < 15); // then 30 s watched, 5 s quiet
+    expect(watch).toMatchObject({ worstMs: 5000, watchedMs: 30000 });
+  });
+
+  it("starts every game's stall count from zero", () => {
+    // A game always opens unarmed, which resets the count: quiet at the end of
+    // one game and the start of the next is not one stall.
+    const watch = stallWatch();
+    for (let s = 0; s < 20; s++) watchSample(watch, true, true, 1000);
+    watchSample(watch, false, true, 1000);
+    for (let s = 0; s < 20; s++) watchSample(watch, true, true, 1000);
+    expect(watch).toMatchObject({ worstMs: 20000, watchedMs: 40000 });
   });
 });
 

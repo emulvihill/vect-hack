@@ -46,12 +46,13 @@
 //
 // Needs a dev server (npm run dev -- --port 5199) and a GPU:
 //   npm run check:angband-borg
-//   BORG_GATE_MS=120000 npm run check:angband-borg     # a shorter pre-gate
+//   BORG_GATE_MS=120000 npm run check:angband-borg     # a shorter pre-gate; 120 s of
+//                                                      # play is the floor, so less always fails
 //   BORG_PACE_MS=250 ... check:angband-borg             # paced run (?borg=250)
 import { chromium } from "playwright";
 import { mkdir, writeFile } from "node:fs/promises";
 import { STORAGE_DECLINED_WARNING } from "./gate-console.mjs";
-import { MAX_GAMES, playGames, playProblems } from "./angband-borg-gate-utils.mjs";
+import { MAX_GAMES, playGames, playProblems, stallWatch, watchSample } from "./angband-borg-gate-utils.mjs";
 
 const URL_BASE = process.env.NH_URL ?? "http://localhost:5199/";
 /**
@@ -187,7 +188,7 @@ await mkdir(OUT_DIR, { recursive: true });
 
 const errors = [];
 const fps = [], batchRate = [], sweepRate = [], rebuildRate = [];
-let worstStall = 0;
+const stall = stallWatch();
 /** The counters of every finished game, summed; maxRecords is the largest. */
 const totals = { levels: 0, moves: 0, batches: 0, sweeps: 0, effects: 0, maxRecords: 0 };
 let backend = null, notice = null, lastMessage = null, gamesStarted = 0;
@@ -221,7 +222,6 @@ async function playGame(budgetMs) {
     // Page time at the first sample, so a played window can be measured against
     // the same clock the end tell is stamped with.
     const startedPageNow = prev.now;
-    let stalledFor = 0;
     let ended = null;
 
     while (prev.now - startedPageNow < budgetMs) {
@@ -236,11 +236,7 @@ async function playGame(budgetMs) {
       }
       // Only count a stall once the borg has had time to birth its character:
       // before that the engine is legitimately quiet, waiting on birth prompts.
-      // The counter resets rather than merely going unrecorded at the boundary,
-      // or birth-time quiet leaks across it and reports a stall on a healthy run.
-      const running = Date.now() - started > START_MS;
-      stalledFor = running && now.batches === prev.batches ? stalledFor + SAMPLE_MS : 0;
-      if (running) worstStall = Math.max(worstStall, stalledFor);
+      watchSample(stall, Date.now() - started > START_MS, now.batches === prev.batches, SAMPLE_MS);
       prev = now;
 
       const secs = Math.round((Date.now() - started) / 1000);
@@ -291,7 +287,7 @@ const report = {
   maxBatchWords: totals.maxRecords * GRID_STRIDE,
   levels: totals.levels, moves: totals.moves, batches: totals.batches,
   sweeps: totals.sweeps, effects: totals.effects,
-  worstStallMs: worstStall, notice, lastMessage,
+  worstStallMs: stall.worstMs, stallWatchedSeconds: stall.watchedMs / 1000, notice, lastMessage,
   errors,
 };
 
@@ -327,7 +323,7 @@ console.log(`  map ${report.batchesPerSec.toFixed(1)}/s, full sweeps ${report.sw
   + `terrain rebuilds ${report.rebuildsPerSec.toFixed(1)}/s`);
 console.log(`  max grid batch ${report.maxBatchWords} words; ${report.levels} levels, `
   + `${report.moves} hero moves, ${report.effects} effects`);
-console.log(`  worst stall ${(report.worstStallMs / 1000).toFixed(0)}s; last message: ${report.lastMessage ?? "none"}`);
+console.log(`  worst stall ${(report.worstStallMs / 1000).toFixed(0)}s in ${report.stallWatchedSeconds.toFixed(0)}s watched; last message: ${report.lastMessage ?? "none"}`);
 console.log(`  screenshot ${OUT_DIR}/angband-borg-gate.png`);
 
 await writeFile(`${OUT_DIR}/angband-borg-gate.json`, JSON.stringify(report, null, 2));
