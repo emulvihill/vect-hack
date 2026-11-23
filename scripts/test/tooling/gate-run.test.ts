@@ -215,8 +215,8 @@ describe("which failures reach a desktop notification", () => {
     expect(names(notifiableFailures(allRed))).toEqual(["browser", "controls"]);
   });
 
-  // A ten-minute unattended play session whose outcome is partly luck does not
-  // get to wake anyone up. It still fails the run — that is the exit code's job,
+  // A play session of random characters through random dungeons, whose numbers
+  // move from run to run, does not get to wake anyone up. It still fails the run — that is the exit code's job,
   // not the notification's.
   it("never notifies for the borg gate alone", () => {
     expect(notifiableFailures([gate("browser", true), gate("controls", true), gate("borg", false)]))

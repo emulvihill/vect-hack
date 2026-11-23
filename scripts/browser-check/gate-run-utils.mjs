@@ -86,7 +86,9 @@ env: NH_URL     an existing server to test against; the runner then starts and
                 stops nothing (default http://localhost:5199/, managed here)
      GATES_OWN_SERVER=1  a server already answering on 5199 is could-not-run
                 (exit 3) instead of reused: for a run that holds the port
-     BORG_GATE_MS  passed through to the borg gate (120000 is the short pre-gate)`;
+     BORG_GATE_MS  passed through to the borg gate: the play to measure
+                (120000 is the short pre-gate, and also the floor: less
+                always fails)`;
 
 /**
  * Parse and validate, or throw a message that is fit to print on its own. A
@@ -149,10 +151,12 @@ export function appendProblem(existing, message) {
  * the desktop client's core rendering or control path broke, and that is the
  * whole of what this channel carries.
  *
- * The borg gate is deliberately not one of them. It watches a ten-minute
- * unattended play session whose outcome is partly luck — the borg's character
- * may simply die — so its failures are meant to be read deliberately rather
- * than pushed at someone.
+ * The borg gate is deliberately not one of them. A death no longer fails it
+ * (vect-hack-t4ja: an ended game starts another), but it is still not
+ * deterministic: every run plays random characters through random dungeons,
+ * so its numbers, and how much of its play the stall check watched, move from
+ * run to run. Its failures are meant to be read deliberately rather than
+ * pushed at someone.
  *
  * The touch gate is deliberately not one of them either, and the reason is
  * different enough to be worth writing down, because the obvious objection is

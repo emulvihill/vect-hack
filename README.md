@@ -147,7 +147,7 @@ no GPU: lint, typecheck, `test:render` and `check:payload`.
 | `npm run check:browser` | Every vector game on WebGPU and WebGL, plus the fallbacks. |
 | `npm run check:controls` | Camera-relative controls against a live game. |
 | `npm run check:touch` | The `?touch` scheme on a 390x844 phone viewport. |
-| `npm run check:angband-borg` | Ten minutes of unattended Angband borg play, measured. |
+| `npm run check:angband-borg` | Ten minutes of unattended Angband borg play, measured over as many games as that takes, at most 20: when the borg's character dies, a new game carries on the count, and each game's boot adds to the wall time. Fails below 120 s of play. |
 
 None of these is part of `npm test`. Run alone, every gate but
 `check:payload` needs a dev server already listening on 5199. Each reports
