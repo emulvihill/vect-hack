@@ -69,9 +69,9 @@
     "check:overlay": "node scripts/browser-check/overlay-layout-check.mjs",
     "check:touch": "npm run check:overlay && node scripts/browser-check/touch-check.mjs",
     "check:payload": "node scripts/browser-check/payload-check.mjs",
-    "check:gates": "host-reserve run --hosts saturn --hold saturn/port:5199 -- scripts/browser-check/gate-run-gpu.sh",
+    "check:gates": "node scripts/dev/reserved.mjs gates -- node scripts/browser-check/gate-run.mjs",
     "preview:mobile": "node scripts/dev/mobile-preview.mjs",
-    "test": "host-reserve run --hosts saturn --hold tree -- npm run test:suite",
+    "test": "node scripts/dev/reserved.mjs test -- npm run test:suite",
     "test:suite": "npm run typecheck && vitest run",
     "preview": "vitest run --config vitest.preview.config.ts && (magick .preview/nethack-scene.ppm .preview/nethack-scene.png 2>/dev/null && echo .preview/nethack-scene.png || echo .preview/nethack-scene.ppm) && (magick .preview/nethack-scene-fp.ppm .preview/nethack-scene-fp.png 2>/dev/null && echo .preview/nethack-scene-fp.png || echo .preview/nethack-scene-fp.ppm) && (magick .preview/angband-scene.ppm .preview/angband-scene.png 2>/dev/null && echo .preview/angband-scene.png || echo .preview/angband-scene.ppm) && (magick .preview/angband-scene-fp.ppm .preview/angband-scene-fp.png 2>/dev/null && echo .preview/angband-scene-fp.png || echo .preview/angband-scene-fp.ppm) && (magick .preview/radar.svg .preview/radar.png 2>/dev/null && echo .preview/radar.png || echo .preview/radar.svg)"
   },

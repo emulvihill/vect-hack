@@ -83,10 +83,12 @@ try {
   process.exit(EXIT.usage);
 }
 if (opts.help) { console.log(USAGE); process.exit(EXIT.green); }
-// Under a host-reserve lease the broker owns 5199, so a server already there is
-// outside it: "could not run", never reused. Asked before anything is launched.
-if (process.env.HOST_RESERVE_LEASE && MANAGED && splitGates(opts.gates).hosted.length && await answers(URL_BASE)) {
-  console.error(`COULD NOT RUN: ${URL_BASE} already answers inside host-reserve lease ${process.env.HOST_RESERVE_LEASE}`);
+// GATES_OWN_SERVER=1: this run holds 5199 (a reservation wrapper set it), so a
+// server already there is someone else's: "could not run", never reused. Asked
+// before anything is launched. An env var, not a flag, because a wrapper is a
+// prefix and can set the environment but not append to the command line.
+if (process.env.GATES_OWN_SERVER === "1" && MANAGED && splitGates(opts.gates).hosted.length && await answers(URL_BASE)) {
+  console.error(`COULD NOT RUN: ${URL_BASE} already answers, and GATES_OWN_SERVER=1 says this run starts its own`);
   process.exit(EXIT.cannotRun);
 }
 
