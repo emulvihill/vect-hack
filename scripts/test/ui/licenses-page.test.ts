@@ -100,7 +100,7 @@ describe("the staged licenses pages", () => {
 
   it("states the source offer with the repository, the version and the built commit on every page", () => {
     const version = builtVersion(root);
-    expect(read("SOURCE.txt")).toMatch(new RegExp(`^VectHack ${version.replace(/\./g, "\\.")} — corresponding source\n`));
+    expect(read("SOURCE.txt").split("\n", 2)).toEqual([`VectHack ${version} — corresponding source`, expect.any(String)]);
     for (const name of ["index.html", ...Object.keys(MODULES).map((id) => `${id}.html`)]) {
       const page = read(name);
       expect(page).toContain(SOURCE_URL);
