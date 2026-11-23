@@ -3,6 +3,11 @@
 // play for ten minutes. A human playtest is the other half of that gate; this
 // half is the part a machine can be honest about.
 //
+// Pass mark for vect-hack-t4ja, written down before any run against it: five
+// consecutive runs of this gate each end with a verdict that rests on at least
+// 120 s of measured play; none fails for "the game ended". Guard, reported
+// either way: how many games each run needed.
+//
 // What it measures and why each number is here:
 //   frame rate p50/p05    — the median frame and the bad tail. A mean hides a
 //                           stall; p05 is what a player would call a hitch.
