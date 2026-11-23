@@ -3,7 +3,7 @@
 // configured it is required: a wrapper that fails is the run's failure, never a
 // reason to run without it. Where none is, the command runs on this host.
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -70,6 +70,23 @@ describe("reserved.mjs", () => {
     expect(reserved("test", runs(marker)).status).toBe(2);
     writeFileSync(join(config, "vect-hack", "reserve.json"), "[]");
     expect(reserved("test", runs(marker)).status).toBe(2);
+    // A bad entry for another name is refused too, not left for that command to find.
+    writeFileSync(join(config, "vect-hack", "reserve.json"),
+      JSON.stringify({ test: ["env", "VIA=prefix"], gates: "nice -n 10" }));
+    const other = reserved("test", runs(marker));
+    expect(other.status).toBe(2);
+    expect(other.stderr).toContain('"gates"');
+    expect(existsSync(marker)).toBe(false);
+  });
+
+  // readFileSync through a dangling link is ENOENT, the same as no file at all.
+  it("refuses a config that is a dangling symlink rather than running directly", () => {
+    mkdirSync(join(config, "vect-hack"));
+    symlinkSync(join(config, "gone.json"), join(config, "vect-hack", "reserve.json"));
+    const marker = join(config, "ran");
+    const r = reserved("test", runs(marker));
+    expect(r.status).toBe(2);
+    expect(r.stderr).toContain("dangling symlink");
     expect(existsSync(marker)).toBe(false);
   });
 

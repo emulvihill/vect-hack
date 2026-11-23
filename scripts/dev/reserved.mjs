@@ -13,7 +13,7 @@
 // wrapper that fails (a busy or unreachable queue) is its exit code, not a
 // reason to run without it.
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { lstatSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -27,11 +27,16 @@ try {
   config = JSON.parse(readFileSync(file, "utf8"));
 } catch (err) {
   if (err.code !== "ENOENT") fail(`${file}: ${err.message}; fix or remove it`);
+  // ENOENT through a link that exists is a config gone missing, not no config.
+  if (lstatSync(file, { throwIfNoEntry: false })) fail(`${file}: a dangling symlink; fix or remove it`);
 }
 if (config === null || typeof config !== "object" || Array.isArray(config)) fail(`${file}: not a JSON object`);
+// Every entry, not just <name>'s: a bad "gates" must not wait for check:gates to surface.
+for (const [key, value] of Object.entries(config)) {
+  const valid = Array.isArray(value) && value.length && value.every((a) => typeof a === "string");
+  if (!valid) fail(`${file}: "${key}" must be a non-empty array of strings`);
+}
 const prefix = Object.hasOwn(config, name) ? config[name] : undefined;
-const valid = Array.isArray(prefix) && prefix.length && prefix.every((a) => typeof a === "string");
-if (prefix !== undefined && !valid) fail(`${file}: "${name}" must be a non-empty array of strings`);
 if (!prefix) console.error(`reserved: no reservation configured for ${name}; running on this host`);
 
 const argv = [...(prefix ?? []), ...command];

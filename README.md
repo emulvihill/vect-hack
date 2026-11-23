@@ -129,7 +129,9 @@ special headers.
 build machine, a `reserve.json` in `~/.config/vect-hack/` can put either one
 under a wrapper command, keyed `test` or `gates`, for example
 `{"test": ["nice", "-n", "10"]}` (`scripts/dev/reserve.example.json`); the
-command is appended to the wrapper's arguments.
+command is appended to the wrapper's arguments. A `gates` wrapper that reserves
+port 5199 sets `GATES_OWN_SERVER=1` (with `env`, as the example does), so the
+run starts its own server instead of reusing whatever answers there.
 
 `npm test` reports every failing test rather than stopping at the first, and
 its exit code is what matters — never pipe it. `docs/TESTS.md` says what each engine test pins.
