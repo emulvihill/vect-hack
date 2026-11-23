@@ -15,7 +15,7 @@ repo="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
 # systemd's user environment is not a login shell, so nvm's node is not on PATH
 # unless we put it there. Sourcing nvm.sh resolves whichever version the
 # `default` alias points at, so a node upgrade does not silently break the timer.
-export PATH="$HOME/.local/bin:/opt/devtools/bin:/opt/devtools/node/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 # shellcheck disable=SC1091
 [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" >/dev/null 2>&1
 

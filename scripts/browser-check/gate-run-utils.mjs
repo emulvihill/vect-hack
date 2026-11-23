@@ -84,6 +84,8 @@ export const USAGE = `usage: gate-run.mjs [--only <gate>[,<gate>]]
 
 env: NH_URL     an existing server to test against; the runner then starts and
                 stops nothing (default http://localhost:5199/, managed here)
+     GATES_OWN_SERVER=1  a server already answering on 5199 is could-not-run
+                (exit 3) instead of reused: for a run that holds the port
      BORG_GATE_MS  passed through to the borg gate (120000 is the short pre-gate)`;
 
 /**
