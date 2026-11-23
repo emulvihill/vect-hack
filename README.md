@@ -125,6 +125,11 @@ special headers.
 | `npm run test:<game>` | One engine's tests against the real WASM build, e.g. `npm run test:moria`. |
 | `npm run test:engines` | All four engines' tests, without the unit tests. |
 
+`npm test` and `npm run check:gates` run under `host-reserve`, the maintainer's
+shared build-host queue; without it, run `npm run test:suite`, or
+`node scripts/browser-check/gate-run.mjs` for the gates (it reuses a server
+already on 5199).
+
 `npm test` reports every failing test rather than stopping at the first, and
 its exit code is what matters — never pipe it. `docs/TESTS.md` says what each engine test pins.
 `.github/workflows/ci.yml` runs only the parts that need no engine build and
@@ -134,7 +139,7 @@ no GPU: lint, typecheck, `test:render` and `check:payload`.
 
 | Command | What it does |
 |---|---|
-| `npm run check:gates` | All gates in sequence; starts and stops its own dev server on 5199. |
+| `npm run check:gates` | All gates in sequence; starts and stops its own dev server on 5199, and exits 3 (could not run) if one already answers there. |
 | `npm run check:payload` | Each `?game=` loads only its own game's code. Needs no GPU and no server. |
 | `npm run check:browser` | Every vector game on WebGPU and WebGL, plus the fallbacks. |
 | `npm run check:controls` | Camera-relative controls against a live game. |
@@ -142,8 +147,9 @@ no GPU: lint, typecheck, `test:render` and `check:payload`.
 | `npm run check:angband-borg` | Ten minutes of unattended Angband borg play, measured. |
 
 None of these is part of `npm test`. Run alone, every gate but
-`check:payload` needs a dev server already listening on 5199. Each reports
-green, red, or could-not-run (no render node, no Chromium, no WebGPU/WebGL2).
+`check:payload` needs a dev server already listening on 5199; `check:gates`
+must not have one. Each reports green, red, or could-not-run (no render node,
+no Chromium, no WebGPU/WebGL2).
 Each script's header in `scripts/browser-check/` says what it asserts.
 
 ### Previews and the Larn bot

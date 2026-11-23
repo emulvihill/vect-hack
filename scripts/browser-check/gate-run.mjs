@@ -83,6 +83,12 @@ try {
   process.exit(EXIT.usage);
 }
 if (opts.help) { console.log(USAGE); process.exit(EXIT.green); }
+// Under a host-reserve lease the broker owns 5199, so a server already there is
+// outside it: "could not run", never reused. Asked before anything is launched.
+if (process.env.HOST_RESERVE_LEASE && MANAGED && splitGates(opts.gates).hosted.length && await answers(URL_BASE)) {
+  console.error(`COULD NOT RUN: ${URL_BASE} already answers inside host-reserve lease ${process.env.HOST_RESERVE_LEASE}`);
+  process.exit(EXIT.cannotRun);
+}
 
 const startedAtMs = Date.now();
 const startedAt = new Date(startedAtMs).toISOString();
