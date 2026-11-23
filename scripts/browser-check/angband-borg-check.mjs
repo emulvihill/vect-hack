@@ -24,6 +24,12 @@
 //                           what the worker->main transfer has to carry.
 //   hero moves            — liveness. A borg that stopped playing still renders.
 //
+// The play is measured over as many games as it takes (vect-hack-t4ja). When
+// the borg's character dies, the next game starts on a fresh page, until
+// BORG_GATE_MS of play has been measured or MAX_GAMES have been started; the
+// verdict rests on every game's samples, and the run prints how many games it
+// needed. angband-borg-gate-utils.mjs holds that accounting and its floor.
+//
 // The key protocol is deliberately not instrumented here. Under ?borg the
 // BorgPlayer decorator answers the engine itself and never calls the view's
 // nextKey (src/modules/angband/ui/BorgPlayer.ts), so a counter on the view
@@ -45,6 +51,7 @@
 import { chromium } from "playwright";
 import { mkdir, writeFile } from "node:fs/promises";
 import { STORAGE_DECLINED_WARNING } from "./gate-console.mjs";
+import { MAX_GAMES, playGames, playProblems } from "./angband-borg-gate-utils.mjs";
 
 const URL_BASE = process.env.NH_URL ?? "http://localhost:5199/";
 /**
@@ -61,6 +68,7 @@ const URL_BASE = process.env.NH_URL ?? "http://localhost:5199/";
  */
 const EXPECTED_CONSOLE = [STORAGE_DECLINED_WARNING];
 const OUT_DIR = ".preview";
+/** Play to measure, summed over the run's games. */
 const GATE_MS = Number(process.env.BORG_GATE_MS ?? 600000);
 /** Optional ?borg=<ms> pace; the gate itself runs unthrottled. */
 const PACE_MS = process.env.BORG_PACE_MS ?? "";
@@ -92,20 +100,6 @@ const STALL_MS = 30000;
  * is not an end.
  */
 const END_TELLS = [/^You die\.$/, /^Score not registered for /, /^You have won the game!$/];
-/**
- * How long the borg must have played before an ended game may still pass.
- * Derived from this gate's own constants, and fixed before the death times
- * were measured (pre-registered, vect-hack-zt7):
- * START_MS (60s) is unmeasured warm-up during which a stall is not even
- * counted, and 60s beyond it is 60 one-second samples — enough for the p05
- * this gate reports to be a percentile rather than a synonym for the single
- * worst sample.
- *
- * Without this floor the gate could not fail: every red run would be excused
- * by "the borg died", and an assertion that cannot fail is worse than no
- * assertion (vect-hack-azf).
- */
-const MIN_PLAY_MS = 120000;
 const MIN_FPS = 30;
 const CHROMIUM_ARGS = ["--enable-unsafe-webgpu", "--enable-features=Vulkan", "--use-angle=vulkan"];
 /** src/modules/angband/mapRecords.ts GRID_STRIDE. */
@@ -192,116 +186,142 @@ await fetch(URL_BASE).catch(() => {
 await mkdir(OUT_DIR, { recursive: true });
 
 const errors = [];
+const fps = [], batchRate = [], sweepRate = [], rebuildRate = [];
+let worstStall = 0;
+/** The counters of every finished game, summed; maxRecords is the largest. */
+const totals = { levels: 0, moves: 0, batches: 0, sweeps: 0, effects: 0, maxRecords: 0 };
+let backend = null, notice = null, lastMessage = null, gamesStarted = 0;
 const browser = await chromium.launch({ headless: true, args: CHROMIUM_ARGS });
-let report;
-try {
+
+/**
+ * One game, from boot until it ends or has played `budgetMs`. A new page is a
+ * new browser context, so its IndexedDB is empty and the borg births a fresh
+ * character: the same start every game of a run gets, the first included.
+ */
+async function playGame(budgetMs) {
+  const game = ++gamesStarted;
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-  page.on("console", (m) => {
-    if (m.type() !== "error" && m.type() !== "warning") return;
-    if (EXPECTED_CONSOLE.some((re) => re.test(m.text()))) return;
-    errors.push(`${m.type()}: ${m.text()}`);
-  });
-  page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
-  await page.addInitScript(OBSERVE, END_TELLS.map((re) => re.source));
-  await page.goto(`${URL_BASE}?game=angband&borg${PACE_MS && `=${PACE_MS}`}`, { waitUntil: "domcontentloaded" });
+  try {
+    page.on("console", (m) => {
+      if (m.type() !== "error" && m.type() !== "warning") return;
+      if (EXPECTED_CONSOLE.some((re) => re.test(m.text()))) return;
+      errors.push(`${m.type()}: ${m.text()}`);
+    });
+    page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
+    await page.addInitScript(OBSERVE, END_TELLS.map((re) => re.source));
+    await page.goto(`${URL_BASE}?game=angband&borg${PACE_MS && `=${PACE_MS}`}`, { waitUntil: "domcontentloaded" });
 
-  const backend = await page.waitForFunction(
-    () => window.__angbandView?.renderer?.backend ?? null, null, { timeout: BOOT_MS },
-  ).then((h) => h.jsonValue());
-  console.log(`[borg gate] backend=${backend}, sampling for ${(GATE_MS / 1000).toFixed(0)}s`);
+    backend = await page.waitForFunction(
+      () => window.__angbandView?.renderer?.backend ?? null, null, { timeout: BOOT_MS },
+    ).then((h) => h.jsonValue());
+    console.log(`[borg gate] game ${game}: backend=${backend}, up to ${(budgetMs / 1000).toFixed(0)}s of play left to measure`);
 
-  const started = Date.now();
-  let prev = await page.evaluate(SAMPLE);
-  // Page time at the first sample, so a played window can be measured against
-  // the same clock the end tell is stamped with.
-  const startedPageNow = prev.now;
-  const fps = [], batchRate = [], sweepRate = [], rebuildRate = [];
-  let stalledFor = 0, worstStall = 0;
-  let ended = null;
+    const started = Date.now();
+    let prev = await page.evaluate(SAMPLE);
+    // Page time at the first sample, so a played window can be measured against
+    // the same clock the end tell is stamped with.
+    const startedPageNow = prev.now;
+    let stalledFor = 0;
+    let ended = null;
 
-  while (Date.now() - started < GATE_MS) {
-    await page.waitForTimeout(SAMPLE_MS);
-    const now = await page.evaluate(SAMPLE);
-    const dt = (now.now - prev.now) / 1000;
-    if (dt > 0) {
-      fps.push((now.frames - prev.frames) / dt);
-      batchRate.push((now.batches - prev.batches) / dt);
-      sweepRate.push((now.sweeps - prev.sweeps) / dt);
-      rebuildRate.push((now.rebuilds - prev.rebuilds) / dt);
+    while (prev.now - startedPageNow < budgetMs) {
+      await page.waitForTimeout(SAMPLE_MS);
+      const now = await page.evaluate(SAMPLE);
+      const dt = (now.now - prev.now) / 1000;
+      if (dt > 0) {
+        fps.push((now.frames - prev.frames) / dt);
+        batchRate.push((now.batches - prev.batches) / dt);
+        sweepRate.push((now.sweeps - prev.sweeps) / dt);
+        rebuildRate.push((now.rebuilds - prev.rebuilds) / dt);
+      }
+      // Only count a stall once the borg has had time to birth its character:
+      // before that the engine is legitimately quiet, waiting on birth prompts.
+      // The counter resets rather than merely going unrecorded at the boundary,
+      // or birth-time quiet leaks across it and reports a stall on a healthy run.
+      const running = Date.now() - started > START_MS;
+      stalledFor = running && now.batches === prev.batches ? stalledFor + SAMPLE_MS : 0;
+      if (running) worstStall = Math.max(worstStall, stalledFor);
+      prev = now;
+
+      const secs = Math.round((Date.now() - started) / 1000);
+      if (secs % 30 === 0) {
+        console.log(`  game ${game}, ${secs}s: ${fps.at(-1).toFixed(0)} fps, ${now.batches} batches, `
+          + `${now.sweeps} sweeps, ${now.moves} moves, ${now.rebuilds} rebuilds`
+          + (now.notice ? `, notice: ${now.notice.slice(0, 60)}` : ""));
+      }
+      // A recognised end stops the sampling: there is no client left to measure,
+      // and every second past it would only be silence dressed up as a stall.
+      if (now.endedAt !== null) {
+        ended = { tell: now.endTell, playedMs: now.endedAt - startedPageNow };
+        console.log(`  the borg's game ended after ${(ended.playedMs / 1000).toFixed(0)}s: ${ended.tell}`);
+        break;
+      }
+      if (now.notice || errors.some((e) => e.startsWith("pageerror"))) break;
     }
-    // Only count a stall once the borg has had time to birth its character:
-    // before that the engine is legitimately quiet, waiting on birth prompts.
-    // The counter resets rather than merely going unrecorded at the boundary,
-    // or birth-time quiet leaks across it and reports a stall on a healthy run.
-    const running = Date.now() - started > START_MS;
-    stalledFor = running && now.batches === prev.batches ? stalledFor + SAMPLE_MS : 0;
-    if (running) worstStall = Math.max(worstStall, stalledFor);
-    prev = now;
 
-    const secs = Math.round((Date.now() - started) / 1000);
-    if (secs % 30 === 0) {
-      console.log(`  ${secs}s: ${fps.at(-1).toFixed(0)} fps, ${now.batches} batches, `
-        + `${now.sweeps} sweeps, ${now.moves} moves, ${now.rebuilds} rebuilds`
-        + (now.notice ? `, notice: ${now.notice.slice(0, 60)}` : ""));
-    }
-    // A recognised end stops the sampling: there is no client left to measure,
-    // and every second past it would only be silence dressed up as a stall.
-    if (now.endedAt !== null) {
-      ended = { tell: now.endTell, playedMs: now.endedAt - startedPageNow };
-      console.log(`  the borg's game ended after ${(ended.playedMs / 1000).toFixed(0)}s: ${ended.tell}`);
-      break;
-    }
-    if (now.notice || errors.some((e) => e.startsWith("pageerror"))) break;
+    const final = await page.evaluate(SAMPLE);
+    await page.screenshot({ path: `${OUT_DIR}/angband-borg-gate.png` });
+    for (const k of ["levels", "moves", "batches", "sweeps", "effects"]) totals[k] += final[k];
+    totals.maxRecords = Math.max(totals.maxRecords, final.maxRecords);
+    // A game that ended and then exited is Angband finishing, not the client
+    // stopping, so only a notice with no recognised end is kept for the verdict.
+    if (!ended) notice = final.notice;
+    lastMessage = final.lastMessage;
+    return { playedMs: ended ? ended.playedMs : prev.now - startedPageNow, ended: ended && { tell: ended.tell } };
+  } finally {
+    await page.close();
   }
+}
 
-  const final = await page.evaluate(SAMPLE);
-  await page.screenshot({ path: `${OUT_DIR}/angband-borg-gate.png` });
-  report = {
-    backend, seconds: (Date.now() - started) / 1000,
-    fps: { p50: percentile(fps, 0.5), p05: percentile(fps, 0.05), mean: fps.reduce((a, b) => a + b, 0) / (fps.length || 1) },
-    batchesPerSec: percentile(batchRate, 0.5),
-    sweepsPerSec: percentile(sweepRate, 0.5),
-    rebuildsPerSec: percentile(rebuildRate, 0.5),
-    maxBatchWords: final.maxRecords * GRID_STRIDE,
-    levels: final.levels, moves: final.moves, batches: final.batches,
-    sweeps: final.sweeps, effects: final.effects,
-    worstStallMs: worstStall, notice: final.notice, lastMessage: final.lastMessage,
-    ended: ended && { tell: ended.tell, playedSeconds: ended.playedMs / 1000 },
-    errors,
-  };
+const runStarted = Date.now();
+let run;
+try {
+  console.log(`[borg gate] measuring ${(GATE_MS / 1000).toFixed(0)}s of play over at most ${MAX_GAMES} games`);
+  run = await playGames(playGame, GATE_MS);
 } finally {
   await browser.close();
 }
+const report = {
+  backend, seconds: (Date.now() - runStarted) / 1000, playedSeconds: run.playedMs / 1000,
+  games: run.games.map((g) => ({ playedSeconds: g.playedMs / 1000, ended: g.ended?.tell ?? null })),
+  fps: { p50: percentile(fps, 0.5), p05: percentile(fps, 0.05), mean: fps.reduce((a, b) => a + b, 0) / (fps.length || 1) },
+  batchesPerSec: percentile(batchRate, 0.5),
+  sweepsPerSec: percentile(sweepRate, 0.5),
+  rebuildsPerSec: percentile(rebuildRate, 0.5),
+  maxBatchWords: totals.maxRecords * GRID_STRIDE,
+  levels: totals.levels, moves: totals.moves, batches: totals.batches,
+  sweeps: totals.sweeps, effects: totals.effects,
+  worstStallMs: worstStall, notice, lastMessage,
+  errors,
+};
 
 const problems = [];
-const ended = report.ended;
-// A game that ended and then exited is Angband finishing, not the client
-// stopping — so THIS assertion is scoped to a run with no recognised end.
-if (report.notice && !ended) problems.push(`the engine stopped: ${report.notice}`);
+// Only a game with no recognised end can leave a notice here (playGame).
+if (report.notice) problems.push(`the engine stopped: ${report.notice}`);
 if (report.errors.some((e) => e.startsWith("pageerror"))) {
   problems.push(`page error: ${report.errors.find((e) => e.startsWith("pageerror"))}`);
 }
-// The stall check is deliberately NOT scoped that way. The counters above are
-// updated BEFORE the loop breaks on `endedAt`, so post-death quiet can add at
-// most one SAMPLE_MS — reaching STALL_MS that way would need a >=29s freeze
-// already under way when the character died, which is a real stall by then.
-// So an `!ended` guard would forgive nothing worth forgiving, and one thing
-// that must never be forgiven: a real >=30s freeze during LIVE play, in a run
-// whose borg happened to die later, past the floor. That is the assertion this
+// The stall check is deliberately NOT scoped to games that did not end. The
+// counters above are updated BEFORE the loop breaks on `endedAt`, so post-death
+// quiet can add at most one SAMPLE_MS — reaching STALL_MS that way would need a
+// >=29s freeze already under way when the character died, which is a real
+// stall by then. So an `!ended` guard would forgive nothing worth forgiving,
+// and one thing that must never be forgiven: a real >=30s freeze during LIVE
+// play, in a game whose borg happened to die later. That is the assertion this
 // gate exists for, and it is unconditional.
 if (report.worstStallMs >= STALL_MS) problems.push(`map traffic stalled for ${report.worstStallMs / 1000}s`);
-// ... and an end that arrived too soon measured nothing, so it fails on its own
-// terms rather than being excused.
-if (ended && ended.playedSeconds * 1000 < MIN_PLAY_MS) {
-  problems.push(`the borg's game ended after ${ended.playedSeconds.toFixed(0)}s (${ended.tell}), `
-    + `below the ${MIN_PLAY_MS / 1000}s of play this gate needs to have measured anything`);
-}
+// An ended game is never a problem on its own; too little play over the whole
+// run is, because then nothing was measured.
+problems.push(...playProblems(run));
 if (report.fps.mean < MIN_FPS) problems.push(`${report.fps.mean.toFixed(1)} fps average, below ${MIN_FPS}`);
 if (!report.moves) problems.push(`the borg never moved the hero`);
 if (report.errors.length) problems.push(`console: ${report.errors.slice(0, 3).join(" | ")}`);
 
-console.log(`\n[borg gate] backend=${report.backend} over ${report.seconds.toFixed(0)}s`
-  + (ended ? ` (the game ended after ${ended.playedSeconds.toFixed(0)}s: ${ended.tell})` : ""));
+const games = report.games.length;
+console.log(`\n[borg gate] backend=${report.backend}: ${report.playedSeconds.toFixed(0)}s of play measured `
+  + `over ${games} game${games === 1 ? "" : "s"} in ${report.seconds.toFixed(0)}s`);
+report.games.forEach((g, i) => console.log(`  game ${i + 1}: ${g.playedSeconds.toFixed(0)}s`
+  + (g.ended ? `, ended: ${g.ended}` : "")));
 console.log(`  fps p50=${report.fps.p50.toFixed(1)} p05=${report.fps.p05.toFixed(1)} mean=${report.fps.mean.toFixed(1)}`);
 console.log(`  map ${report.batchesPerSec.toFixed(1)}/s, full sweeps ${report.sweepsPerSec.toFixed(1)}/s, `
   + `terrain rebuilds ${report.rebuildsPerSec.toFixed(1)}/s`);
