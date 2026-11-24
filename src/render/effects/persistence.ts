@@ -16,10 +16,10 @@ export function residual(dtS: number, halfLifeS: number): number {
 }
 
 /** The flat amount subtracted from the residue this frame, before it is scaled
- *  by `residual`. An exponential alone never reaches black: at the 0.30s
- *  half-life the sRGB-encoded tail of a full-scale stamp stays visible for about
- *  3.5s, and an overbright one for 4.4s. The drain ends it in about 1.4–2.3s
- *  while leaving the first few tenths of a second nearly unchanged. */
+ *  by `residual`. An exponential alone never reaches black; the drain takes the
+ *  tail to exactly zero. At the 0.015s half-life the exponential has a
+ *  full-scale stamp under 1% in 0.1s, so the drain only finishes what is
+ *  already invisible and leaves the first half-life nearly unchanged. */
 export function drain(dtS: number, perS: number): number {
   return perS * dtS;
 }
