@@ -179,8 +179,8 @@ Every game is chosen with `?game=`; a URL without it redirects to
 | `&view=debug` | The exact terminal view instead of the 3D one. |
 | `&gl` | Force WebGL instead of WebGPU. |
 | `&skin=quadrascan` / `ghost` / `high-contrast` | Colour palette; remembered in localStorage. |
-| `&bot` / `&bot=fast` / `&bot=<ms>` | Let the self-playing bot play, at one turn a second, flat out, or at a chosen pace. |
-| `&borg` / `&borg=<ms>` | Angband only: hand the game to Angband's built-in borg. |
+| `&bot` / `&bot=fast` / `&bot=<ms>` | Let the self-playing bot play, at two turns a second, flat out, or at a chosen pace. |
+| `&borg` / `&borg=fast` / `&borg=<ms>` | Angband only: hand the game to Angband's built-in borg, paced the same three ways. |
 | `&touch` | NetHack only: on-screen thumb pad and action bar for phones. |
 | `&trace` | Log every windowport call (the engine's screen I/O) to the console. |
 | `&return=<url>` | Add a "Quit to main page" row to the Saves panel that goes to `<url>`; the site links every game with `&return=/`. |

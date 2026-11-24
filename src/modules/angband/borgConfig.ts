@@ -1,4 +1,5 @@
-// ?borg=<ms>: pacing for the built-in borg, by the engine's own knob.
+// ?borg pacing for the built-in borg, by the engine's own knob. src/main.ts
+// decides the ms (its default, ?borg=fast's 0, or ?borg=<ms>).
 //
 // borg_think_dungeon() pauses once per borg move — "add a short pause to slow
 // the borg down for viewing" (external/angband/src/borg/borg-think-dungeon.c:1237)
@@ -6,10 +7,11 @@
 // (borg-init.c:81). That file lives in our persisted volume, so the delay is
 // set by patching the line there before the borg starts, and it must be
 // patched on EVERY ?borg run: a value written once would otherwise persist,
-// and a later plain ?borg would inherit it instead of running unthrottled.
+// and a later ?borg=fast would inherit it instead of running unthrottled.
 //
 // The factor is the square root of the asked-for ms (the engine squares it),
-// so the pace lands on the nearest perfect square: ?borg=250 runs at 256ms.
+// so the pace lands on the nearest perfect square: ?borg=250 runs at 256ms,
+// and the 500ms default at 484ms.
 
 export const BORG_CONFIG_PATH = "/lib/user/borg.txt";
 
