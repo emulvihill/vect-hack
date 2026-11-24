@@ -77,8 +77,8 @@ const OUT_DIR = ".preview";
 const GATE_MS = Number(process.env.BORG_GATE_MS ?? 600000);
 /** ?borg's value: unthrottled for the gate itself, or an optional <ms> pace.
  *  Anything that is not a whole number is "fast" too: the page would read a
- *  mistyped pace as the demo's default, and the gate would then fail on the
- *  pause instead of saying the variable was wrong. */
+ *  mistyped pace as the demo's default, and the gate would then measure the
+ *  pause instead of the client. */
 const PACE = /^\d+$/.test(process.env.BORG_PACE_MS ?? "") ? process.env.BORG_PACE_MS : "fast";
 const SAMPLE_MS = 1000;
 const BOOT_MS = 30000;

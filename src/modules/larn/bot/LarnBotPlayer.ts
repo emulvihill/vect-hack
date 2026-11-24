@@ -21,7 +21,7 @@ export class LarnBotPlayer implements LarnHandler {
 
   /** `tuning` overrides the ladder's knobs (policy.ts DEFAULT_TUNING); only
    *  the gym's --tuning passes one. */
-  constructor(view: LarnHandler, delayMs = 150, tuning: Partial<PolicyTuning> = {}) {
+  constructor(view: LarnHandler, delayMs: number, tuning: Partial<PolicyTuning> = {}) {
     this.view = view;
     this.brain = new LarnBrain(tuning);
     this.delayMs = delayMs;

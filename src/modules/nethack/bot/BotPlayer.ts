@@ -25,7 +25,7 @@ export class BotPlayer implements NethackHandler {
   private pendingExt = "";
   private announcedDeath = false;
 
-  constructor(private view: NethackHandler, private delayMs = 150) {}
+  constructor(private view: NethackHandler, private delayMs: number) {}
 
   onReady(constants: Record<string, Record<string, number | string>>) {
     this.model.onReady(constants);
