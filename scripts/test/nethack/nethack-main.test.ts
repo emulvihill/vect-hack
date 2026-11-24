@@ -239,6 +239,13 @@ it("hands ?bot the view it just built, and a human game no bot at all", async ()
   await boot("?game=nethack&view=debug&bot=250");
   expect(seam.botDelay).toBe(250);
 
+  // The demo's pace, the same in every game: the bare flag, and the
+  // empty-valued one the no-keyboard notice's button navigates to.
+  await boot("?game=nethack&view=debug&bot");
+  expect(seam.botDelay).toBe(500);
+  await boot("?game=nethack&view=debug&bot=");
+  expect(seam.botDelay).toBe(500);
+
   await boot("?game=nethack&view=debug");
   expect(seam.botWrapped).toBeNull();
   expect(seam.handler).toBe(seam.tty);

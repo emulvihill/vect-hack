@@ -94,6 +94,8 @@ async function boot(search: string) {
   seam.installMenu.mockClear();
   seam.exportSave.mockClear();
   seam.describe.mockClear();
+  seam.setBorgDelay.mockClear();
+  seam.borgWrapped = null;
   seam.vector.look = {};
   seam.tty.onNotice.mockClear();
   const els = new Map([["view", new El()], ["cmdbtn", new El()], ["licenseslink", new El()]]);
@@ -146,6 +148,30 @@ it("keeps the canvas and builds the vector view when a GPU is available", async 
   expect((window as any).__angbandView).toBe(seam.vector);
   expect(els.get("view")!.removed).toBe(false);
   expect(seam.vectorArgs).toEqual([els.get("view"), { forceWebGL: true }]);
+});
+
+it("paces ?borg as ?bot is paced, and sends a human game no pace at all", async () => {
+  seam.gpu = true;
+  // The demo's pace, the same in every game: the bare flag, and the
+  // empty-valued one the no-keyboard notice's button navigates to. The borg
+  // used to run flat out here, which is what a phone visitor was shown.
+  await boot("?game=angband&view=debug&borg");
+  expect(seam.borgWrapped).toBe(seam.tty);
+  expect(seam.setBorgDelay.mock.calls).toEqual([[500]]);
+  await boot("?game=angband&view=debug&borg=");
+  expect(seam.setBorgDelay.mock.calls).toEqual([[500]]);
+
+  // Unthrottled has to be asked for by name, and 0 is still sent: borg.txt
+  // persists, so silence would leave the last run's pace in force.
+  await boot("?game=angband&view=debug&borg=fast");
+  expect(seam.setBorgDelay.mock.calls).toEqual([[0]]);
+
+  await boot("?game=angband&view=debug&borg=250");
+  expect(seam.setBorgDelay.mock.calls).toEqual([[250]]);
+
+  await boot("?game=angband&view=debug");
+  expect(seam.borgWrapped).toBeNull();
+  expect(seam.setBorgDelay).not.toHaveBeenCalled();
 });
 
 // licenses-page.test.ts pins licensesHref() and the staged pages; this pins

@@ -158,6 +158,16 @@ it("hands ?bot the view it just built, and a human game no bot at all", async ()
   expect(seam.handler).not.toBe(seam.tty);
   expect((seam.handler as object).constructor.name).toBe("LarnBotPlayer");
 
+  await boot("?game=larn&view=debug&bot=250");
+  expect(seam.botDelay).toBe(250);
+
+  // The demo's pace, the same in every game: the bare flag, and the
+  // empty-valued one the no-keyboard notice's button navigates to.
+  await boot("?game=larn&view=debug&bot");
+  expect(seam.botDelay).toBe(500);
+  await boot("?game=larn&view=debug&bot=");
+  expect(seam.botDelay).toBe(500);
+
   await boot("?game=larn&view=debug");
   expect(seam.botWrapped).toBeNull();
   expect(seam.handler).toBe(seam.tty);

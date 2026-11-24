@@ -49,6 +49,10 @@
 //   BORG_GATE_MS=120000 npm run check:angband-borg     # a shorter pre-gate; 120 s of
 //                                                      # play is the floor, so less always fails
 //   BORG_PACE_MS=250 ... check:angband-borg             # paced run (?borg=250)
+//
+// The gate asks for ?borg=fast by name. A bare ?borg is the demo's pace
+// (src/main.ts SELF_PLAY_DEFAULT_MS), two moves a second, and ten minutes of
+// that would measure the pause rather than the client.
 import { chromium } from "playwright";
 import { mkdir, writeFile } from "node:fs/promises";
 import { STORAGE_DECLINED_WARNING } from "./gate-console.mjs";
@@ -71,8 +75,11 @@ const EXPECTED_CONSOLE = [STORAGE_DECLINED_WARNING];
 const OUT_DIR = ".preview";
 /** Play to measure, summed over the run's games. */
 const GATE_MS = Number(process.env.BORG_GATE_MS ?? 600000);
-/** Optional ?borg=<ms> pace; the gate itself runs unthrottled. */
-const PACE_MS = process.env.BORG_PACE_MS ?? "";
+/** ?borg's value: unthrottled for the gate itself, or an optional <ms> pace.
+ *  Anything that is not a whole number is "fast" too: the page would read a
+ *  mistyped pace as the demo's default, and the gate would then measure the
+ *  pause instead of the client. */
+const PACE = /^\d+$/.test(process.env.BORG_PACE_MS ?? "") ? process.env.BORG_PACE_MS : "fast";
 const SAMPLE_MS = 1000;
 const BOOT_MS = 30000;
 /** The borg births a character itself; give it room before demanding traffic. */
@@ -210,7 +217,7 @@ async function playGame(budgetMs) {
     });
     page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
     await page.addInitScript(OBSERVE, END_TELLS.map((re) => re.source));
-    await page.goto(`${URL_BASE}?game=angband&borg${PACE_MS && `=${PACE_MS}`}`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${URL_BASE}?game=angband&borg=${PACE}`, { waitUntil: "domcontentloaded" });
 
     backend = await page.waitForFunction(
       () => window.__angbandView?.renderer?.backend ?? null, null, { timeout: BOOT_MS },

@@ -6,6 +6,8 @@ describe("?borg pacing via borg.txt", () => {
     // borg_think_dungeon sleeps factor² ms, so the pace lands on the nearest
     // perfect square: 250 asked, 256 delivered.
     expect(borgDelayFactor(250)).toBe(16);
+    // main.ts's default for a bare ?borg: 500 asked, 484 delivered.
+    expect(borgDelayFactor(500)).toBe(22);
     expect(borgDelayFactor(1000)).toBe(32);
     expect(borgDelayFactor(0)).toBe(0);
   });
@@ -23,7 +25,7 @@ describe("?borg pacing via borg.txt", () => {
       .toBe("# the player's own settings\nborg_respawn_race = 5\nborg_delay_factor = 10\n");
   });
 
-  it("writes a bare ?borg's zero, so the last run's pace cannot carry over", () => {
+  it("writes ?borg=fast's zero, so the last run's pace cannot carry over", () => {
     // borg.txt persists in the volume; only an explicit reset undoes a value.
     expect(withBorgDelay("borg_delay_factor = 16\n", 0)).toBe("borg_delay_factor = 0\n");
     expect(withBorgDelay("", 0)).toBe("borg_delay_factor = 0\n");

@@ -157,11 +157,17 @@ if (window.__vhBooted === 1) {
 // its flag is present: ?bot and ?borg are demos, and a human game should not
 // download a bot to not use it.
 
-/** ?bot pacing, shared by NetHack's and Larn's decorators: one second per
- *  command by default — the point of watching it is watching it — with
- *  ?bot=fast unthrottled and ?bot=<ms> for anything in between. */
-function botDelayMs(bot: string): number {
-  return bot === "fast" ? 0 : /^\d+$/.test(bot) ? Number(bot) : 1000;
+/** The pace of every game's self-player when its flag names none: bare ?bot
+ *  (NetHack, Larn) and bare ?borg (Angband), and the empty-valued ?bot= and
+ *  ?borg= that the no-keyboard notice's demo button navigates to
+ *  (src/ui/noKeyboard.ts). That button is the demo a keyboardless visitor
+ *  is offered, so the default is a pace to watch at, never flat out. */
+const SELF_PLAY_DEFAULT_MS = 500;
+
+/** Self-play pacing in ms per input, one reading for ?bot and ?borg alike:
+ *  =fast is unthrottled (0), =<ms> is that pace, anything else the default. */
+function selfPlayDelayMs(flag: string): number {
+  return flag === "fast" ? 0 : /^\d+$/.test(flag) ? Number(flag) : SELF_PLAY_DEFAULT_MS;
 }
 
 async function bootNethack(params: URLSearchParams): Promise<void> {
@@ -181,7 +187,7 @@ async function bootNethack(params: URLSearchParams): Promise<void> {
   // ?bot: the self-playing decorator answers all input.
   const bot = params.get("bot");
   const player = bot !== null
-    ? new (await import("./modules/nethack/bot/BotPlayer")).BotPlayer(view, botDelayMs(bot))
+    ? new (await import("./modules/nethack/bot/BotPlayer")).BotPlayer(view, selfPlayDelayMs(bot))
     : view;
   const session = new NetHackSession(player);
   // Point-and-look: the one line per Module that
@@ -223,10 +229,11 @@ async function bootAngband(params: URLSearchParams): Promise<void> {
   // race a view that has not installed its term mirror and input queue.
   const session = new AngbandSession(player);
   window.__angbandSession = session;
-  // ?borg=<ms> paces the borg like ?bot=<ms> paces the bot; bare ?borg is
-  // unthrottled. Sent even for 0: borg.txt persists, so the last run's
-  // pace would otherwise carry over (src/modules/angband/borgConfig.ts).
-  if (borg !== null) session.setBorgDelay(/^\d+$/.test(borg) ? Number(borg) : 0);
+  // The borg is paced exactly as the bots are (selfPlayDelayMs above). Sent
+  // on every ?borg run, ?borg=fast's 0 included: borg.txt persists, so the
+  // last run's pace would otherwise carry over
+  // (src/modules/angband/borgConfig.ts).
+  if (borg !== null) session.setBorgDelay(selfPlayDelayMs(borg));
   // Point-and-look: the one line per Module that
   // connects the shared HUD to this Module's engine. Only the vector view
   // has a canvas and a look — the discriminant rather than a structural cast,
@@ -257,7 +264,7 @@ async function bootLarn(params: URLSearchParams): Promise<void> {
   const bot = params.get("bot");
   // Fetched only for the bot: a human game loads none of its code.
   const player = bot !== null
-    ? new (await import("./modules/larn/bot/LarnBotPlayer")).LarnBotPlayer(view, botDelayMs(bot))
+    ? new (await import("./modules/larn/bot/LarnBotPlayer")).LarnBotPlayer(view, selfPlayDelayMs(bot))
     : view;
   const session = new LarnSession(player);
   window.__larnSession = session;
