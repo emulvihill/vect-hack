@@ -160,8 +160,8 @@ if (window.__vhBooted === 1) {
 /** The pace of every game's self-player when its flag names none: bare ?bot
  *  (NetHack, Larn) and bare ?borg (Angband), and the empty-valued ?bot= and
  *  ?borg= that the no-keyboard notice's demo button navigates to
- *  (src/ui/noKeyboard.ts). That button is how a phone visitor meets the game,
- *  so the default is a pace to watch at, never flat out. */
+ *  (src/ui/noKeyboard.ts). That button is the demo a keyboardless visitor
+ *  is offered, so the default is a pace to watch at, never flat out. */
 const SELF_PLAY_DEFAULT_MS = 500;
 
 /** Self-play pacing in ms per input, one reading for ?bot and ?borg alike:
