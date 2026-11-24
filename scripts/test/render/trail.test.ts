@@ -95,26 +95,32 @@ function residue(peak: number, t: number, fps: number, perS = DRAIN): number {
   return shown;
 }
 
+/** A frame rate that lands a frame exactly on the half-life: 60fps does not
+ *  resolve a half-life shorter than its own 16.7ms frame. */
+const HL_FPS = 4 / HL;
+
 describe("phosphor persistence", () => {
   it("halves once per half-life without the drain", () => {
-    expect(residue(1, HL, 60, 0)).toBeCloseTo(0.5, 6);
+    expect(residue(1, HL, HL_FPS, 0)).toBeCloseTo(0.5, 6);
   });
 
-  it("without the drain, a full-scale stamp is still above zero after 3s", () => {
-    expect(residue(1, 3, 60, 0)).toBeGreaterThan(0);
+  it("without the drain, a full-scale stamp is still above zero after 20 half-lives", () => {
+    expect(residue(1, 20 * HL, HL_FPS, 0)).toBeGreaterThan(0);
   });
 
-  it("the drain takes a full-scale stamp to true black by 1.5s", () => {
-    expect(residue(1, 1.5, 60)).toBe(0);
-    expect(residue(1, 1.5, 10)).toBe(0);
+  it("the drain takes a full-scale stamp to true black by 0.25s", () => {
+    expect(residue(1, 0.25, 120)).toBe(0);
+    expect(residue(1, 0.25, 60)).toBe(0);
+    expect(residue(1, 0.25, 10)).toBe(0);
   });
 
-  it("the drain takes an overbright stamp to true black by 2.5s", () => {
-    expect(residue(8, 2.5, 60)).toBe(0);
+  it("the drain takes an overbright stamp to true black by 0.3s", () => {
+    expect(residue(8, 0.3, 120)).toBe(0);
+    expect(residue(8, 0.3, 60)).toBe(0);
   });
 
   it("the drain barely touches the first half-life", () => {
-    expect(residue(1, HL, 60)).toBeGreaterThan(0.47);
+    expect(residue(1, HL, HL_FPS)).toBeGreaterThan(0.47);
   });
 });
 
