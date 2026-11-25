@@ -627,6 +627,19 @@ async function trailProbe(page, game, label) {
     return shoot(name);
   };
 
+  // What the page paints over the canvas — the save-risk notice, the Saves
+  // button — is in every shot and never moves. NetHack opens on a room small
+  // enough that it outweighs the level, so it is measured once with the canvas
+  // hidden and taken off both sides of every ratio.
+  const canvasVisibility = (value) => page.evaluate((v) => {
+    document.getElementById("view").style.visibility = v;
+  }, value);
+  await canvasVisibility("hidden");
+  const chrome = await shoot("chrome");
+  await canvasVisibility("");
+  const over = (a, b, of) => (of(b) > of(chrome) ? (of(a) - of(chrome)) / (of(b) - of(chrome)) : null);
+  const energy = (p) => p.energy, lit = (p) => p.lit;
+
   await frames(TRAIL_CLEAR_S, TRAIL_CLEAR_FRAMES);
   await frames(0, TRAIL_HELD_FRAMES);
   const held = await shoot("held");
@@ -653,13 +666,12 @@ async function trailProbe(page, game, label) {
   const faded = await shoot("faded");
   const fadedStill = await still("faded-still");
 
-  const over = (a, b) => (b ? a / b : null);
+  // A null ratio is a still with nothing on the canvas, and fails every bar.
   return {
     wheels,
-    lit: heldStill.lit,
-    still: over(held.energy, heldStill.energy),
-    residue: over(moved.lit, movedStill.lit),
-    leftover: over(faded.lit, fadedStill.lit),
+    still: over(held, heldStill, energy),
+    residue: over(moved, movedStill, lit),
+    leftover: over(faded, fadedStill, lit),
   };
 }
 
@@ -667,7 +679,6 @@ async function trailProbe(page, game, label) {
 function trailProblems(t) {
   const problems = [];
   const off = (ratio, tolerance) => ratio === null || Math.abs(ratio - 1) > tolerance;
-  if (t.lit < MIN_LIT_PIXELS) problems.push(`trail: the held still is nearly blank (${t.lit} lit pixels)`);
   if (t.still === null || t.still < TRAIL_STILL_MIN || t.still > TRAIL_STILL_MAX)
     problems.push(`trail: a held scene through the trail is x${showRatio(t.still)} the same scene drawn still — the composite is not a max`);
   if (t.wheels < TRAIL_STEPS)
