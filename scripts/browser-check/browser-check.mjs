@@ -43,25 +43,26 @@ const MIN_LIT_PIXELS = 2000;
 /** Halo the bloom stack adds per bare-core pixel; see bloomGain(). */
 const MIN_BLOOM_GAIN = 0.5;
 /**
- * The trail probe's four bars (trailProbe() says what each shot is). They were
- * written down before the probe's first run, from what the MAX composite has
- * to do, not from what a run happened to measure.
+ * The trail probe's bars (trailProbe() says what each shot is). Each sits
+ * between two measured populations: the trail working, on both backends, and
+ * the same code on three 0.185.1's WebGL backend, whose blend table has no MAX
+ * — the one way this is known to break, and it breaks quietly.
  *
- * HOLD: nine frames of a held scene against one, as a ratio of screen energy.
- * A max of equal frames is that frame, so the ratio is 1; a composite that
- * adds would be several times that by the ninth frame, and one that subtracts
- * would be near zero.
+ * STILL: a scene held for nine frames at dt 0, as screen energy over
+ * renderStill() of the same state. Working reads x1.06 to x1.18, not 1: the
+ * composite lays the last frame's resolved pixels over a multisampled target,
+ * so a partly covered edge pixel creeps toward full brightness while nothing
+ * decays. Without MAX it reads x0.38 to x0.53, the picture at half brightness.
+ * A composite that added instead would run every lit pixel to saturation,
+ * which is the ceiling's job.
  */
-const TRAIL_HOLD_TOLERANCE = 0.02;
-/** STILL: the held, trailed frame against renderStill() of the same state.
- *  With nothing moving the trail has nothing to add, so the two are one
- *  picture drawn by two routes; the slack is for the two routes' antialiasing. */
-const TRAIL_STILL_TOLERANCE = 0.15;
+const TRAIL_STILL_MIN = 0.75;
+const TRAIL_STILL_MAX = 1.35;
 /** RESIDUE: lit pixels after four zoom steps a few milliseconds apart, over
- *  the same state drawn still. Each step leaves the frame before it on screen
- *  at over 90%, so five framings are lit where a still has one; a renderer
- *  with no trail scores exactly 1. */
-const MIN_TRAIL_RESIDUE = 1.5;
+ *  the same state drawn still. Each step leaves the frames before it lit
+ *  behind the lines it moved. A renderer with no trail scores 1 by
+ *  construction, and the WebGL backend without MAX measured x0.98 to x0.99. */
+const MIN_TRAIL_RESIDUE = 1.2;
 /** LEFTOVER: the same ratio a second later. Sixty-six half-lives leave
  *  nothing, so it is back to 1; a residue that never clears stays where
  *  RESIDUE left it. */
@@ -69,9 +70,14 @@ const TRAIL_LEFTOVER_TOLERANCE = 0.05;
 /** Seconds between the probe's zoom frames: 0.002s is a residual of 0.91 at
  *  the 0.015s half-life. */
 const TRAIL_STEP_S = 0.002;
-/** Wheel delta per zoom step; OrbitCam turns 60 into a 7.5% longer orbit. */
-const TRAIL_WHEEL_DELTA = 60;
+/** Wheel delta per zoom step; OrbitCam turns 120 into a 15.5% longer orbit,
+ *  which moves a line 60px from the middle of the view by 9px. NetHack's
+ *  opening room is about that small, and a shorter step left its frames
+ *  lying on top of each other. */
+const TRAIL_WHEEL_DELTA = 120;
 const TRAIL_STEPS = 4;
+/** Held frames at dt 0 before the STILL shot. */
+const TRAIL_HELD_FRAMES = 9;
 /** DungeonRenderer's own frame-time ceiling, ten of which are the second
  *  that clears the trail. */
 const TRAIL_CLEAR_S = 0.1;
@@ -598,9 +604,9 @@ function glowProfile(png) {
  *
  * Three questions, each a pair of shots of one scene state, so where the hero
  * spawned and how much level is on screen cancel:
- *   - held: after the trail is cleared, one frame at dt 0 and then eight more.
- *     Nothing moves and nothing decays at dt 0, so a composite that is a max
- *     leaves the ninth frame equal to the first, and to renderStill().
+ *   - held: the trail is cleared, then the scene is drawn nine times at dt 0,
+ *     where nothing moves and nothing decays. What comes out has to be the
+ *     picture renderStill() draws, neither dimmed nor piled up.
  *   - moved: four wheel steps, a frame after each. The wheel is the player's
  *     own zoom and OrbitCam applies it at once, so every line on screen moves
  *     and the frames before it are still lit behind it.
@@ -622,10 +628,8 @@ async function trailProbe(page, game, label) {
   };
 
   await frames(TRAIL_CLEAR_S, TRAIL_CLEAR_FRAMES);
-  await frames(0, 1);
-  const held1 = await shoot("held-1");
-  await frames(0, 8);
-  const held9 = await shoot("held-9");
+  await frames(0, TRAIL_HELD_FRAMES);
+  const held = await shoot("held");
   const heldStill = await still("held-still");
 
   // Counted on the canvas itself: a wheel that landed on chrome above it moves
@@ -653,8 +657,7 @@ async function trailProbe(page, game, label) {
   return {
     wheels,
     lit: heldStill.lit,
-    hold: over(held9.energy, held1.energy),
-    still: over(held9.energy, heldStill.energy),
+    still: over(held.energy, heldStill.energy),
     residue: over(moved.lit, movedStill.lit),
     leftover: over(faded.lit, fadedStill.lit),
   };
@@ -665,10 +668,8 @@ function trailProblems(t) {
   const problems = [];
   const off = (ratio, tolerance) => ratio === null || Math.abs(ratio - 1) > tolerance;
   if (t.lit < MIN_LIT_PIXELS) problems.push(`trail: the held still is nearly blank (${t.lit} lit pixels)`);
-  if (off(t.hold, TRAIL_HOLD_TOLERANCE))
-    problems.push(`trail: a held scene changed brightness over nine frames (x${showRatio(t.hold)}) — the composite is not a max`);
-  if (off(t.still, TRAIL_STILL_TOLERANCE))
-    problems.push(`trail: a held scene through the trail is x${showRatio(t.still)} the same scene drawn still`);
+  if (t.still === null || t.still < TRAIL_STILL_MIN || t.still > TRAIL_STILL_MAX)
+    problems.push(`trail: a held scene through the trail is x${showRatio(t.still)} the same scene drawn still — the composite is not a max`);
   if (t.wheels < TRAIL_STEPS)
     problems.push(`trail: ${t.wheels} of ${TRAIL_STEPS} wheel steps reached the canvas — nothing moved to trail`);
   else if (t.residue === null || t.residue < MIN_TRAIL_RESIDUE)
@@ -998,7 +999,7 @@ for (const r of results) {
   console.log(`  bloom on  lit=${g.lit} core=${g.core} halo=${g.halo} halo/core=${g.haloRatio.toFixed(2)}`);
   console.log(`  bloom off lit=${f.lit} core=${f.core} halo=${f.halo} halo/core=${f.haloRatio.toFixed(2)}`);
   console.log(`  bloom-added halo per core pixel ${showGain(gain)}`);
-  console.log(`  trail held x${showRatio(r.trail.hold)} vs-still x${showRatio(r.trail.still)} residue x${showRatio(r.trail.residue)} leftover x${showRatio(r.trail.leftover)} wheels=${r.trail.wheels}`);
+  console.log(`  trail held x${showRatio(r.trail.still)} of the still, residue x${showRatio(r.trail.residue)} leftover x${showRatio(r.trail.leftover)} wheels=${r.trail.wheels}`);
   console.log(`  screenshot ${r.shot}`);
   if (problems.length) { failed = true; problems.forEach((p) => console.log(`  FAIL: ${p}`)); }
   else console.log("  OK");
