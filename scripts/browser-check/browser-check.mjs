@@ -49,19 +49,19 @@ const MIN_BLOOM_GAIN = 0.5;
  * — the one way this is known to break, and it breaks quietly.
  *
  * STILL: a scene held for nine frames at dt 0, as screen energy over
- * renderStill() of the same state. Working reads x1.06 to x1.18, not 1: the
+ * renderStill() of the same state. Working reads x1.13 to x1.27, not 1: the
  * composite lays the last frame's resolved pixels over a multisampled target,
  * so a partly covered edge pixel creeps toward full brightness while nothing
- * decays. Without MAX it reads x0.38 to x0.53, the picture at half brightness.
- * A composite that added instead would run every lit pixel to saturation,
- * which is the ceiling's job.
+ * decays. Without MAX the held frame is black, x0.0. The ceiling is for a
+ * composite that adds instead, which runs every lit pixel to saturation.
  */
 const TRAIL_STILL_MIN = 0.75;
-const TRAIL_STILL_MAX = 1.35;
+const TRAIL_STILL_MAX = 1.5;
 /** RESIDUE: lit pixels after four zoom steps a few milliseconds apart, over
  *  the same state drawn still. Each step leaves the frames before it lit
- *  behind the lines it moved. A renderer with no trail scores 1 by
- *  construction, and the WebGL backend without MAX measured x0.98 to x0.99. */
+ *  behind the lines it moved: working reads x3.0 to x5.8. A renderer with no
+ *  trail scores 1 by construction, and the WebGL backend without MAX measured
+ *  x0.91 to x0.94. */
 const MIN_TRAIL_RESIDUE = 1.2;
 /** LEFTOVER: the same ratio a second later. Sixty-six half-lives leave
  *  nothing, so it is back to 1; a residue that never clears stays where
@@ -71,9 +71,8 @@ const TRAIL_LEFTOVER_TOLERANCE = 0.05;
  *  the 0.015s half-life. */
 const TRAIL_STEP_S = 0.002;
 /** Wheel delta per zoom step; OrbitCam turns 120 into a 15.5% longer orbit,
- *  which moves a line 60px from the middle of the view by 9px. NetHack's
- *  opening room is about that small, and a shorter step left its frames
- *  lying on top of each other. */
+ *  which moves a line 60px from the middle of the view by 9px, clear of
+ *  where it was; NetHack's opening room is about that small. */
 const TRAIL_WHEEL_DELTA = 120;
 const TRAIL_STEPS = 4;
 /** Held frames at dt 0 before the STILL shot. */
