@@ -25,6 +25,12 @@
 // The hazard the spec records still applies, with the roles moved: the composite
 // quad *is* the fade now, and it must not be additive. Adding the residue back
 // is exactly the accumulation described above; MAX is what keeps it bounded.
+//
+// Both backends run this, and on WebGL that rests on three r186 or later: below
+// it the WebGL backend's blend-equation table has no MAX, so the call is
+// rejected and the composite draws under whichever equation was bound last,
+// which is the accumulation again. Nothing in the page reports that; the trail
+// probe on check:browser's ?gl arms is what goes red.
 import {
   CustomBlending, HalfFloatType, MaxEquation, MeshBasicNodeMaterial, OneFactor,
   QuadMesh, RenderTarget, ReverseSubtractEquation, Vector2,
@@ -78,7 +84,6 @@ export class Trail {
    *  the frame before it. Sampling a buffer that is currently bound as the
    *  render target is illegal, which is why there are two. */
   private buffers = [new TrailBuffer(1, 1), new TrailBuffer(1, 1)];
-  private readonly quad = new QuadMesh();
   private live = 0;
   /** A resized or brand-new buffer holds nothing worth trailing. */
   private stale = true;
@@ -89,6 +94,8 @@ export class Trail {
     blending: CustomBlending, blendEquation: ReverseSubtractEquation,
     blendSrc: OneFactor, blendDst: OneFactor,
   });
+  /** One quad for every pass; render() hands it that pass's material. */
+  private readonly quad = new QuadMesh(this.drainMat);
 
   constructor(
     private readonly halfLifeSeconds = TOKENS.glow.persistence_half_life_s,

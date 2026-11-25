@@ -1,8 +1,8 @@
 // Owns the WebGPU (WebGL-fallback) renderer, the scene, and the frame loop.
 // Two batches: terrain, rebuilt when the level's terrain changes or the hero
 // carries the light to another cell, and entities, rebuilt every frame because
-// each glyph carries its own transform. Both go through the phosphor trail on
-// WebGPU; the WebGL fallback draws them straight to the canvas (see frame()).
+// each glyph carries its own transform. Both go through the phosphor trail, on
+// either backend.
 import { Color, Plane, Raycaster, Scene, Vector2, Vector3, WebGPURenderer } from "three/webgpu";
 import type { CameraMode, DungeonCamera } from "./DungeonCamera";
 import { FirstPersonCam } from "./FirstPersonCam";
@@ -199,6 +199,20 @@ export class DungeonRenderer {
     this.renderer.render(this.scene, this.cam.camera);
   }
 
+  /**
+   * Stop the frame loop and draw one frame the way the loop does, through the
+   * phosphor trail, as if `dt` seconds had passed since the last one. The
+   * clock is the caller's, so a gate can ask what the trail does with a frame
+   * time it chose: 0 holds the scene and the residue exactly where they are,
+   * a few milliseconds leave nearly all of the last frame behind, and a tenth
+   * of a second leaves none. renderStill() of the same state is the picture
+   * with no residue in it.
+   */
+  renderFrame(dt: number): void {
+    this.stop();
+    this.draw(dt);
+  }
+
   /** The engine finished a map update; recentre on the hero. */
   syncHero(): void {
     const h = this.map.hero;
@@ -332,6 +346,11 @@ export class DungeonRenderer {
     if (!this.running) return;
     const dt = this.last ? Math.min((time - this.last) / 1000, MAX_FRAME_SECONDS) : 0;
     this.last = time;
+    this.draw(dt);
+  }
+
+  /** One frame, `dt` seconds after the last. */
+  private draw(dt: number): void {
     this.elapsed += dt;
 
     this.fx.observe(this.map);
@@ -352,15 +371,7 @@ export class DungeonRenderer {
     this.cam.update(dt);
     this.effectsDrawn = buildEntities(this.map, this.entities, this.elapsed, this.facing, this.fx,
       { hideHero: this.currentMode === "first", highlight: this.highlight ?? undefined });
-    // Phosphor persistence is a WebGPU-only tier. The trail composites the prior
-    // frame with a MAX blend, and three's WebGL fallback backend has no MAX in
-    // its blend-equation table — it rejects the call and draws under whatever
-    // equation was last bound, which is not a max at all. So WebGL renders
-    // straight to the canvas and loses the spatial trail, the same degradation
-    // the vector-CRT model's css-approx tier takes for this effect (§4, where
-    // persistence is a "loses form" row: afterglow or nothing, never a trail).
-    if (this.backend === "webgpu") this.trail.render(this.renderer, this.scene, this.cam.camera, dt);
-    else this.renderer.render(this.scene, this.cam.camera);
+    this.trail.render(this.renderer, this.scene, this.cam.camera, dt);
     this.rendered++;
     this.onFrame?.(this.cam.azimuth);
   }
