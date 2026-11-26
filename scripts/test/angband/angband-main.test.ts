@@ -147,7 +147,7 @@ it("keeps the canvas and builds the vector view when a GPU is available", async 
   const { els } = await boot("?game=angband&gl");
   expect((window as any).__angbandView).toBe(seam.vector);
   expect(els.get("view")!.removed).toBe(false);
-  expect(seam.vectorArgs).toEqual([els.get("view"), { forceWebGL: true }]);
+  expect(seam.vectorArgs).toEqual([els.get("view"), { forceWebGL: true, phosphorTrail: true }]);
 });
 
 it("paces ?borg as ?bot is paced, and sends a human game no pace at all", async () => {

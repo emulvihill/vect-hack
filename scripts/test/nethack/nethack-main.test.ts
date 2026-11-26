@@ -193,7 +193,7 @@ it("keeps the canvas and builds the vector view when a GPU is available", async 
   const { els } = await boot("?game=nethack&gl");
   expect((window as any).__nhView).toBe(seam.vector);
   expect(els.get("view")!.removed).toBe(false);
-  expect(seam.vectorArgs).toEqual([els.get("view"), { forceWebGL: true }]);
+  expect(seam.vectorArgs).toEqual([els.get("view"), { forceWebGL: true, phosphorTrail: true }]);
 
   saveUi().notify("saved");
   expect(seam.vectorNotice).toHaveBeenCalledWith("saved");
