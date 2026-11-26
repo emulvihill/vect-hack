@@ -105,7 +105,7 @@ it("composes the explicit Moria vector view before its session and F3 export", a
   expect((window as any).__moriaView).toBe(seam.vector);
   expect((window as any).__moriaSession).toBeTruthy();
   expect(seam.handler).toBe(seam.vector);
-  expect(seam.vectorArgs).toEqual([els.get("view"), { forceWebGL: false }]);
+  expect(seam.vectorArgs).toEqual([els.get("view"), { forceWebGL: false, phosphorTrail: true }]);
   expect(replace).not.toHaveBeenCalled();
 
   expect(seam.installMenu).toHaveBeenCalledOnce();
@@ -134,7 +134,7 @@ it("forces WebGL only for the explicit Moria gl route", async () => {
   seam.gpu = true;
   const { els } = await boot("?game=moria&gl");
   expect((window as any).__moriaView).toBe(seam.vector);
-  expect(seam.vectorArgs).toEqual([els.get("view"), { forceWebGL: true }]);
+  expect(seam.vectorArgs).toEqual([els.get("view"), { forceWebGL: true, phosphorTrail: true }]);
   expect(els.get("view")!.removed).toBe(false);
 });
 

@@ -13,6 +13,7 @@
 // the common case one probe's latency in front of the renderer's download and
 // buys it no bytes at all; it is the tty arms that stop paying.
 import { GPU_UNAVAILABLE_NOTICE, browserGpuProbe, gpuAvailable } from "./gpuSupport";
+import { resolveUserSettings } from "./userSettings";
 
 /**
  * Which arm ran, and the view it built. A discriminant rather than an
@@ -28,12 +29,13 @@ export type ChosenView<V, T> =
 
 /** `?view=debug` picks the tty view; `?gl` pins the vector view to WebGL. */
 export async function chooseView<V, T extends { onNotice(text: string): void }>(views: {
-  vector: () => Promise<new (canvas: HTMLCanvasElement, opts: { forceWebGL: boolean }) => V>;
+  vector: () => Promise<new (canvas: HTMLCanvasElement, opts: { forceWebGL: boolean; phosphorTrail: boolean }) => V>;
   tty: () => Promise<new () => T>;
 }): Promise<ChosenView<V, T>> {
   const canvas = document.getElementById("view") as HTMLCanvasElement;
   const flags = new URLSearchParams(location.search);
   const forceWebGL = flags.has("gl");
+  const { phosphorTrail } = resolveUserSettings(location.search);
   if (flags.get("view") === "debug") {
     canvas.remove();
     const Tty = await views.tty();
@@ -49,5 +51,5 @@ export async function chooseView<V, T extends { onNotice(text: string): void }>(
     return { kind: "tty", view };
   }
   const Vector = await views.vector();
-  return { kind: "vector", view: new Vector(canvas, { forceWebGL }) };
+  return { kind: "vector", view: new Vector(canvas, { forceWebGL, phosphorTrail }) };
 }

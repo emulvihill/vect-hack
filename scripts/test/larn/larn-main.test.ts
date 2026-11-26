@@ -143,7 +143,7 @@ it("keeps the canvas and builds the vector view when a GPU is available", async 
   const { els } = await boot("?game=larn&gl");
   expect((window as any).__larnView).toBe(seam.vector);
   expect(els.get("view")!.removed).toBe(false);
-  expect(seam.vectorArgs).toEqual([els.get("view"), { forceWebGL: true }]);
+  expect(seam.vectorArgs).toEqual([els.get("view"), { forceWebGL: true, phosphorTrail: true }]);
 });
 
 it("hands ?bot the view it just built, and a human game no bot at all", async () => {

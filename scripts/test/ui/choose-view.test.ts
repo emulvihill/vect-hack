@@ -35,7 +35,7 @@ class Tty {
 }
 
 class Vector {
-  constructor(readonly canvas: unknown, readonly opts: { forceWebGL: boolean }) {}
+  constructor(readonly canvas: unknown, readonly opts: { forceWebGL: boolean; phosphorTrail: boolean }) {}
 }
 
 let canvas: Canvas;
@@ -106,7 +106,7 @@ it("pins the WebGL backend for ?gl, in the probe and in the view it builds", asy
   const chosen = await chooseView(loaders());
 
   expect(seam.gpuArgs[1]).toEqual({ forceWebGL: true });
-  expect((chosen.view as Vector).opts).toEqual({ forceWebGL: true });
+  expect((chosen.view as Vector).opts).toEqual({ forceWebGL: true, phosphorTrail: true });
   expect((chosen.view as Vector).canvas).toBe(canvas);
 });
 
