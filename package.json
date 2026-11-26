@@ -76,12 +76,12 @@
     "preview": "vitest run --config vitest.preview.config.ts && (magick .preview/nethack-scene.ppm .preview/nethack-scene.png 2>/dev/null && echo .preview/nethack-scene.png || echo .preview/nethack-scene.ppm) && (magick .preview/nethack-scene-fp.ppm .preview/nethack-scene-fp.png 2>/dev/null && echo .preview/nethack-scene-fp.png || echo .preview/nethack-scene-fp.ppm) && (magick .preview/angband-scene.ppm .preview/angband-scene.png 2>/dev/null && echo .preview/angband-scene.png || echo .preview/angband-scene.ppm) && (magick .preview/angband-scene-fp.ppm .preview/angband-scene-fp.png 2>/dev/null && echo .preview/angband-scene-fp.png || echo .preview/angband-scene-fp.ppm) && (magick .preview/radar.svg .preview/radar.png 2>/dev/null && echo .preview/radar.png || echo .preview/radar.svg)"
   },
   "dependencies": {
-    "three": "^0.185.1"
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.13.3",
-    "@types/three": "^0.185.1",
+    "@types/three": "^0.187.0",
     "eslint": "^10.9.1",
     "fake-indexeddb": "^6.2.5",
     "globals": "^17.11.0",
