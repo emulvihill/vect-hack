@@ -1,8 +1,8 @@
 // Owns the WebGPU (WebGL-fallback) renderer, the scene, and the frame loop.
 // Two batches: terrain, rebuilt when the level's terrain changes or the hero
 // carries the light to another cell, and entities, rebuilt every frame because
-// each glyph carries its own transform. Both reach the canvas through the frame
-// presenter: the phosphor trail, unless it is switched off.
+// each glyph carries its own transform. Both go through the phosphor trail, on
+// either backend, unless it is switched off.
 import { Color, Plane, Raycaster, Scene, Vector2, Vector3, WebGPURenderer } from "three/webgpu";
 import type { CameraMode, DungeonCamera } from "./DungeonCamera";
 import { FirstPersonCam } from "./FirstPersonCam";
@@ -14,7 +14,6 @@ import { ENTITY_CAPACITY, buildEntities } from "./EntityLayer";
 import { pickEntityCell } from "./pick";
 import { MapFx } from "./effects/mapFx";
 import { Trail } from "./effects/Trail";
-import { DIRECT, type FramePresenter } from "./FramePresenter";
 import type { Cell, CellGrid } from "../backplane/cell";
 import { activeSkin } from "../skins";
 
@@ -65,7 +64,7 @@ export class DungeonRenderer {
   private readonly entities: LineBatch;
   private readonly wallFill: WallFill | null;
   private readonly fx: MapFx;
-  private readonly presenter: FramePresenter;
+  private readonly trail: Trail | null;
   private readonly raycaster = new Raycaster();
   /** The map lives at y=0 (see EntityLayer's place()); pickCell() never needs
    *  the entities' own hover height, since a cell owns whatever is on it. */
@@ -103,7 +102,7 @@ export class DungeonRenderer {
     this.wallFill = SKIN.walls.opacity > 0 ? new WallFill(fillCapacity) : null;
     this.fx = new MapFx(map.cols, map.rows);
     this.cam = this.makeCam("orbital", 0);
-    this.presenter = opts.phosphorTrail === false ? DIRECT : new Trail();
+    this.trail = opts.phosphorTrail === false ? null : new Trail();
     this.scene.add(this.terrain.object, this.entities.object);
     if (this.wallFill) this.scene.add(this.wallFill.mesh);
     this.renderer = new WebGPURenderer({ canvas, antialias: true, forceWebGL: opts.forceWebGL });
@@ -356,7 +355,8 @@ export class DungeonRenderer {
     this.cam.update(dt);
     this.effectsDrawn = buildEntities(this.map, this.entities, this.elapsed, this.facing, this.fx,
       { hideHero: this.currentMode === "first", highlight: this.highlight ?? undefined });
-    this.presenter.render(this.renderer, this.scene, this.cam.camera, dt);
+    if (this.trail) this.trail.render(this.renderer, this.scene, this.cam.camera, dt);
+    else this.renderer.render(this.scene, this.cam.camera);
     this.rendered++;
     this.onFrame?.(this.cam.azimuth);
   }
@@ -366,7 +366,7 @@ export class DungeonRenderer {
     const h = this.canvas.clientHeight || 1;
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, MAX_PIXEL_RATIO));
     this.renderer.setSize(w, h, false);
-    this.presenter.fit(this.renderer);
+    this.trail?.fit(this.renderer);
     this.cam.resize(w, h);
   }
 
@@ -376,7 +376,7 @@ export class DungeonRenderer {
     this.terrain.dispose();
     this.entities.dispose();
     this.wallFill?.dispose();
-    this.presenter.dispose();
+    this.trail?.dispose();
     this.renderer.dispose();
   }
 }

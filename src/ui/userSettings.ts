@@ -1,29 +1,29 @@
-// User settings: `?p_<name>=true|false` sets one and localStorage remembers it.
-// The URL beats the stored value, which beats the default. A new setting is one
-// row in SETTINGS.
+// `?p_<name>=<value>` sets a user setting and localStorage remembers it.
+// The URL beats the stored value, which beats the default; an invalid value is
+// ignored. A new setting is one row in SETTINGS.
+interface Setting<T> { param: `p_${string}`; parse(value: string | null): T | null; fallback: T }
+
+const bool = (v: string | null) => (v === "true" ? true : v === "false" ? false : null);
+
 const SETTINGS = {
-  phosphorTrail: { param: "p_enable_persistence", fallback: true },
-} as const;
+  phosphorTrail: { param: "p_enable_persistence", parse: bool, fallback: true },
+} satisfies Record<string, Setting<unknown>>;
 
-export type UserSettings = { -readonly [K in keyof typeof SETTINGS]: boolean };
+export type UserSettings = { [K in keyof typeof SETTINGS]: (typeof SETTINGS)[K]["fallback"] };
 
-function parse(value: string | null): boolean | null {
-  return value === "true" ? true : value === "false" ? false : null;
+function resolve<T>({ param, parse, fallback }: Setting<T>, params: URLSearchParams): T {
+  const key = `vect-hack.${param}`;
+  const fromUrl = parse(params.get(param));
+  try {
+    if (fromUrl === null) return parse(localStorage.getItem(key)) ?? fallback;
+    localStorage.setItem(key, String(fromUrl));
+  } catch { /* no storage */ }
+  return fromUrl ?? fallback;
 }
 
 export function resolveUserSettings(search: string): UserSettings {
   const params = new URLSearchParams(search);
-  const settings = {} as UserSettings;
-  for (const name of Object.keys(SETTINGS) as (keyof typeof SETTINGS)[]) {
-    const { param, fallback } = SETTINGS[name];
-    const key = `vect-hack.${param}`;
-    const fromUrl = parse(params.get(param));
-    let stored: boolean | null = null;
-    try {
-      if (fromUrl === null) stored = parse(localStorage.getItem(key));
-      else localStorage.setItem(key, String(fromUrl));
-    } catch { /* no storage */ }
-    settings[name] = fromUrl ?? stored ?? fallback;
-  }
-  return settings;
+  return Object.fromEntries(
+    Object.entries(SETTINGS).map(([name, s]) => [name, resolve(s, params)]),
+  ) as UserSettings;
 }

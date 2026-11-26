@@ -30,7 +30,6 @@ import {
   QuadMesh, RenderTarget, ReverseSubtractEquation, Vector2,
   type Camera, type Scene, type WebGPURenderer,
 } from "three/webgpu";
-import type { FramePresenter } from "../FramePresenter";
 import { TOKENS } from "../palette";
 import { drain, residual } from "./persistence";
 
@@ -74,7 +73,7 @@ class TrailBuffer {
   }
 }
 
-export class Trail implements FramePresenter {
+export class Trail {
   /** Ping-pong pair: `buffers[live]` is written this frame, the other one holds
    *  the frame before it. Sampling a buffer that is currently bound as the
    *  render target is illegal, which is why there are two. */
