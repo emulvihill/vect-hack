@@ -7,6 +7,8 @@ Umoria 5.7.15. Game logic, AI, saves, and RNG remain in the native cores; the
 TypeScript client owns their I/O adapters, shared CellGrid, renderer, cameras,
 HUD, and browser persistence.
 
+![The classic NetHack text view, then the same games in VectHack](docs/demo.gif)
+
 By Eric Mulvihill.
 
 ## Dedication
