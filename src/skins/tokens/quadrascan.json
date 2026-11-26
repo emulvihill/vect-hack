@@ -13,7 +13,7 @@
     "flare_budget": 48,
     "flare_spikes": 4,
     "flare_min_energy": 0.15,
-    "persistence_half_life_s": 0.0075,
+    "persistence_half_life_s": 0.010,
     "persistence_drain_per_s": 0.10,
     "energy_release_s": 0.80
   },

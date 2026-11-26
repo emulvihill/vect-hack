@@ -25,7 +25,7 @@
 // origin, which is why this talks to localhost rather than a file:// page.
 import { chromium } from "playwright";
 import { execFileSync } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { STORAGE_DECLINED_WARNING } from "./gate-console.mjs";
 
 const URL_BASE = process.env.NH_URL ?? "http://localhost:5199/";
@@ -63,14 +63,19 @@ const TRAIL_STILL_MAX = 1.5;
  *  trail scores 1 by construction, and the WebGL backend without MAX measured
  *  x0.91 to x0.94. */
 const MIN_TRAIL_RESIDUE = 1.2;
-/** LEFTOVER: the same ratio a second later. Over a hundred half-lives leave
- *  nothing, so it is back to 1; a residue that never clears stays where
- *  RESIDUE left it. */
+/** LEFTOVER: the same ratio a second later, which is dozens of half-lives
+ *  and leaves nothing, so it is back to 1; a residue that never clears stays
+ *  where RESIDUE left it. */
 const TRAIL_LEFTOVER_TOLERANCE = 0.05;
-/** Seconds between the probe's zoom frames: 0.001s is a residual of 0.91 at
- *  the 0.0075s half-life. It moves with the half-life, or the residue the
- *  bar was measured against is no longer what a step leaves behind. */
-const TRAIL_STEP_S = 0.001;
+/** The probe's zoom frames are this many half-lives apart, a residual of
+ *  0.91 a step. Counted in half-lives and read off the token, because the
+ *  half-life is tuned by eye and RESIDUE's bar was measured at this residual:
+ *  a step fixed in seconds would move the bar's footing with every retune. */
+const TRAIL_STEP_HALF_LIVES = 0.133;
+const TRAIL_HALF_LIFE_S = JSON.parse(await readFile(
+  new URL("../../src/skins/tokens/quadrascan.json", import.meta.url), "utf8",
+)).glow.persistence_half_life_s;
+const TRAIL_STEP_S = TRAIL_STEP_HALF_LIVES * TRAIL_HALF_LIFE_S;
 /** Wheel delta per zoom step; OrbitCam turns 120 into a 15.5% longer orbit,
  *  which moves a line 60px from the middle of the view by 9px, clear of
  *  where it was; NetHack's opening room is about that small. */
