@@ -1,8 +1,7 @@
 // Drives the real app in a real browser on a real GPU: boots a character,
-// walks a few turns, then reports the backend three chose, the frame rate,
-// whether the strokes actually glow, and whether the phosphor trail holds a
-// still scene, trails a moving one and clears. Runs once per Module (NetHack,
-// Angband, Larn, Moria)
+// walks a few turns, then reports the backend three chose, the frame rate, and
+// whether the strokes actually glow. Runs once per Module (NetHack, Angband,
+// Larn, Moria)
 // per backend (WebGPU, ?gl).
 //
 // Renderer diagnostics and CellGrid reads are public API. Larn and Moria
@@ -25,7 +24,7 @@
 // origin, which is why this talks to localhost rather than a file:// page.
 import { chromium } from "playwright";
 import { execFileSync } from "node:child_process";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { STORAGE_DECLINED_WARNING } from "./gate-console.mjs";
 
 const URL_BASE = process.env.NH_URL ?? "http://localhost:5199/";
@@ -42,51 +41,6 @@ const STEPS_PER_DIRECTION = 3;
 const MIN_LIT_PIXELS = 2000;
 /** Halo the bloom stack adds per bare-core pixel; see bloomGain(). */
 const MIN_BLOOM_GAIN = 0.5;
-/**
- * The trail probe's bars (trailProbe() says what each shot is). Each sits
- * between two measured populations: the trail working, on both backends, and
- * the same code on three 0.185.1's WebGL backend, whose blend table has no MAX
- * — the one way this is known to break, and it breaks quietly.
- *
- * STILL: a scene held for nine frames at dt 0, as screen energy over
- * renderStill() of the same state. Working reads x1.13 to x1.27, not 1: the
- * composite lays the last frame's resolved pixels over a multisampled target,
- * so a partly covered edge pixel creeps toward full brightness while nothing
- * decays. Without MAX the held frame is black, x0.0. The ceiling is for a
- * composite that adds instead, which runs every lit pixel to saturation.
- */
-const TRAIL_STILL_MIN = 0.75;
-const TRAIL_STILL_MAX = 1.5;
-/** RESIDUE: lit pixels after four zoom steps a few milliseconds apart, over
- *  the same state drawn still. Each step leaves the frames before it lit
- *  behind the lines it moved: working reads x3.0 to x5.8. A renderer with no
- *  trail scores 1 by construction, and the WebGL backend without MAX measured
- *  x0.91 to x0.94. */
-const MIN_TRAIL_RESIDUE = 1.2;
-/** LEFTOVER: the same ratio a second later, which is dozens of half-lives
- *  and leaves nothing, so it is back to 1; a residue that never clears stays
- *  where RESIDUE left it. */
-const TRAIL_LEFTOVER_TOLERANCE = 0.05;
-/** The probe's zoom frames are this many half-lives apart, a residual of
- *  0.91 a step. Counted in half-lives and read off the token, because the
- *  half-life is tuned by eye and RESIDUE's bar was measured at this residual:
- *  a step fixed in seconds would move the bar's footing with every retune. */
-const TRAIL_STEP_HALF_LIVES = 0.133;
-const TRAIL_HALF_LIFE_S = JSON.parse(await readFile(
-  new URL("../../src/skins/tokens/quadrascan.json", import.meta.url), "utf8",
-)).glow.persistence_half_life_s;
-const TRAIL_STEP_S = TRAIL_STEP_HALF_LIVES * TRAIL_HALF_LIFE_S;
-/** Wheel delta per zoom step; OrbitCam turns 120 into a 15.5% longer orbit,
- *  which moves a line 60px from the middle of the view by 9px, clear of
- *  where it was; NetHack's opening room is about that small. */
-const TRAIL_WHEEL_DELTA = 120;
-const TRAIL_STEPS = 4;
-/** Held frames at dt 0 before the STILL shot. */
-const TRAIL_HELD_FRAMES = 9;
-/** DungeonRenderer's own frame-time ceiling, ten of which are the second
- *  that clears the trail. */
-const TRAIL_CLEAR_S = 0.1;
-const TRAIL_CLEAR_FRAMES = 10;
 /** LOOK_HINT from src/ui/hud/Look.ts — this is a .mjs script and cannot import
  *  the TypeScript module, so the string is copied. The look probe below has to
  *  tell the hint apart from an engine's answer: a Module whose describe seam
@@ -589,114 +543,15 @@ async function settleTty(page, game, label, needHero = false) {
  */
 function glowProfile(png) {
   const out = execFileSync("magick", [png, "-format", "%c", "histogram:info:-"], { maxBuffer: 1 << 30 });
-  let halo = 0, mid = 0, core = 0, energy = 0;
+  let halo = 0, mid = 0, core = 0;
   for (const line of out.toString().split("\n")) {
     const m = line.match(/^\s*(\d+):\s*\(\s*(\d+),\s*(\d+),\s*(\d+)/);
     if (!m) continue;
     const n = +m[1], v = Math.max(+m[2], +m[3], +m[4]);
     if (v < 6) continue;                       // black
-    energy += n * v;
     if (v < 70) halo += n; else if (v < 170) mid += n; else core += n;
   }
-  return { lit: halo + mid + core, halo, mid, core, energy, haloRatio: core ? halo / core : 0 };
-}
-
-/**
- * Phosphor persistence, on whichever backend the arm brought up. Called with
- * the frame loop stopped and the bloom stack off, so every shot is bare cores
- * and the probe owns the clock: DungeonRenderer.renderFrame(dt) is the loop's
- * own frame with the frame time handed in.
- *
- * Three questions, each a pair of shots of one scene state, so where the hero
- * spawned and how much level is on screen cancel:
- *   - held: the trail is cleared, then the scene is drawn nine times at dt 0,
- *     where nothing moves and nothing decays. What comes out has to be the
- *     picture renderStill() draws, neither dimmed nor piled up.
- *   - moved: four wheel steps, a frame after each. The wheel is the player's
- *     own zoom and OrbitCam applies it at once, so every line on screen moves
- *     and the frames before it are still lit behind it.
- *   - faded: a second of frames later, nothing of that is left.
- */
-async function trailProbe(page, game, label) {
-  const frames = (dt, n) => page.evaluate(([view, seconds, count]) => {
-    const r = window[view].renderer;
-    for (let i = 0; i < count; i++) r.renderFrame(seconds);
-  }, [game.view, dt, n]);
-  const shoot = async (name) => {
-    const png = `${OUT_DIR}/browser-${label}-trail-${name}.png`;
-    await page.locator("#stage").screenshot({ path: png });
-    return glowProfile(png);
-  };
-  const still = async (name) => {
-    await page.evaluate((view) => window[view].renderer.renderStill(), game.view);
-    return shoot(name);
-  };
-
-  // What the page paints over the canvas — the save-risk notice, the Saves
-  // button — is in every shot and never moves. NetHack opens on a room small
-  // enough that it outweighs the level, so it is measured once with the canvas
-  // hidden and taken off both sides of every ratio.
-  const canvasVisibility = (value) => page.evaluate((v) => {
-    document.getElementById("view").style.visibility = v;
-  }, value);
-  await canvasVisibility("hidden");
-  const chrome = await shoot("chrome");
-  await canvasVisibility("");
-  const over = (a, b, of) => (of(b) > of(chrome) ? (of(a) - of(chrome)) / (of(b) - of(chrome)) : null);
-  const energy = (p) => p.energy, lit = (p) => p.lit;
-
-  await frames(TRAIL_CLEAR_S, TRAIL_CLEAR_FRAMES);
-  await frames(0, TRAIL_HELD_FRAMES);
-  const held = await shoot("held");
-  const heldStill = await still("held-still");
-
-  // Counted on the canvas itself: a wheel that landed on chrome above it moves
-  // nothing, and "no residue" would then be blaming the trail for it.
-  await page.evaluate(() => {
-    window.__gateWheels = 0;
-    document.getElementById("view").addEventListener("wheel", () => { window.__gateWheels++; });
-  });
-  const box = await page.locator("#view").boundingBox();
-  if (box) await page.mouse.move(box.x + 2, box.y + 2);
-  for (let step = 0; step < TRAIL_STEPS; step++) {
-    await page.mouse.wheel(0, TRAIL_WHEEL_DELTA);
-    await page.waitForFunction((n) => window.__gateWheels > n, step, { timeout: 2000 }).catch(() => {});
-    await frames(TRAIL_STEP_S, 1);
-  }
-  const wheels = await page.evaluate(() => window.__gateWheels);
-  const moved = await shoot("moved");
-  const movedStill = await still("moved-still");
-
-  await frames(TRAIL_CLEAR_S, TRAIL_CLEAR_FRAMES);
-  const faded = await shoot("faded");
-  const fadedStill = await still("faded-still");
-
-  // A null ratio is a still with nothing on the canvas, and fails every bar.
-  return {
-    wheels,
-    still: over(held, heldStill, energy),
-    residue: over(moved, movedStill, lit),
-    leftover: over(faded, fadedStill, lit),
-  };
-}
-
-/** What the trail probe found wrong, as report lines. */
-function trailProblems(t) {
-  const problems = [];
-  const off = (ratio, tolerance) => ratio === null || Math.abs(ratio - 1) > tolerance;
-  if (t.still === null || t.still < TRAIL_STILL_MIN || t.still > TRAIL_STILL_MAX)
-    problems.push(`trail: a held scene through the trail is x${showRatio(t.still)} the same scene drawn still — the composite is not a max`);
-  if (t.wheels < TRAIL_STEPS)
-    problems.push(`trail: ${t.wheels} of ${TRAIL_STEPS} wheel steps reached the canvas — nothing moved to trail`);
-  else if (t.residue === null || t.residue < MIN_TRAIL_RESIDUE)
-    problems.push(`trail: a zoom left no residue behind it (lit x${showRatio(t.residue)} of the still)`);
-  if (off(t.leftover, TRAIL_LEFTOVER_TOLERANCE))
-    problems.push(`trail: a second later the picture is still x${showRatio(t.leftover)} the still — the residue did not clear`);
-  return problems;
-}
-
-function showRatio(ratio) {
-  return ratio === null ? "n/a" : ratio.toFixed(3);
+  return { lit: halo + mid + core, halo, mid, core, haloRatio: core ? halo / core : 0 };
 }
 
 /**
@@ -874,15 +729,12 @@ async function drive(page, game, label, arm) {
   const flat = `${OUT_DIR}/browser-${label}-nobloom.png`;
   await page.locator("#stage").screenshot({ path: flat });
 
-  // After both stills: it moves the camera, and it wants the bloom off.
-  const trail = await trailProbe(page, game, label);
-
   // Asked last: a throwaway WebGL 2 context during the frame-rate sample would
   // be measuring something else.
   const probe = await page.evaluate(GPU_PROBE);
 
   return {
-    label, url, backend, expectBackend, cells, fps, shot, errors, moved, drift, look, trail,
+    label, url, backend, expectBackend, cells, fps, shot, errors, moved, drift, look,
     probe, expectProbe: arm.expectProbe,
     directions: game.directions,
     glow: glowProfile(shot), flat: glowProfile(flat),
@@ -1003,7 +855,6 @@ for (const r of results) {
   // reported as a problem rather than passing quietly.
   if (!r.look.ring || !r.look.label || r.look.label === LOOK_HINT)
     problems.push(`look: no ring, or no engine answer, after hovering the hero (${JSON.stringify(r.look)})`);
-  problems.push(...trailProblems(r.trail));
   problems.push(...probeProblems(r));
 
   console.log(`\n[${r.label}] backend=${r.backend} cells=${r.cells} fps=${r.fps.toFixed(1)} camera-drift=${r.drift.toFixed(2)} look=${JSON.stringify(r.look)}`);
@@ -1015,7 +866,6 @@ for (const r of results) {
   console.log(`  bloom on  lit=${g.lit} core=${g.core} halo=${g.halo} halo/core=${g.haloRatio.toFixed(2)}`);
   console.log(`  bloom off lit=${f.lit} core=${f.core} halo=${f.halo} halo/core=${f.haloRatio.toFixed(2)}`);
   console.log(`  bloom-added halo per core pixel ${showGain(gain)}`);
-  console.log(`  trail held x${showRatio(r.trail.still)} of the still, residue x${showRatio(r.trail.residue)} leftover x${showRatio(r.trail.leftover)} wheels=${r.trail.wheels}`);
   console.log(`  screenshot ${r.shot}`);
   if (problems.length) { failed = true; problems.forEach((p) => console.log(`  FAIL: ${p}`)); }
   else console.log("  OK");

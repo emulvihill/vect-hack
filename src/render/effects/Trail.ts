@@ -16,24 +16,15 @@
 // rate. Taking the max instead makes a static scene a fixed point: it trails
 // motion and builds up nothing.
 //
-// The half-life is 0.010s, not the vector-CRT model's 0.30s. The camera
-// follows the hero, so one step moves every line on screen, and at 0.30s each
-// step left the whole scene doubled for about 2s: at one move a second the
-// picture never cleared. The value is picked by eye between two that were
-// tried: at 0.015s the streak behind a step was too noticeable, and 0.0075s
-// was a little short. At 0.010s a stamp is under 1% in 0.07s, four frames at
-// 60fps.
+// The half-life is 0.010s, not the vector-CRT model's 0.30s. The camera follows
+// the hero, so one step moves every line on screen, and at 0.30s each step left
+// the whole scene doubled for about 2s: at one move a second the picture never
+// cleared. At 0.010s a stamp is under 1% in 0.07s, which reads as a short streak
+// behind whatever moves and never as a second image.
 //
 // The hazard the spec records still applies, with the roles moved: the composite
 // quad *is* the fade now, and it must not be additive. Adding the residue back
 // is exactly the accumulation described above; MAX is what keeps it bounded.
-//
-// Both backends run this, and on WebGL that rests on three r186 or later: below
-// it the WebGL backend's blend-equation table has no MAX, so the call is
-// rejected and the composite draws under whichever equation was bound last.
-// Measured on 0.185.1, a held scene comes out black and nothing trails; the
-// only word of it is an INVALID_ENUM warning in the console. The trail probe on
-// check:browser's ?gl arms is what goes red.
 import {
   CustomBlending, HalfFloatType, MaxEquation, MeshBasicNodeMaterial, OneFactor,
   QuadMesh, RenderTarget, ReverseSubtractEquation, Vector2,
@@ -45,12 +36,7 @@ import { drain, residual } from "./persistence";
 /** An 8-bit residual quantizes: the last counts never reach zero and stick as
  *  permanent ghosts, so the trail has to hold float. */
 const TRAIL_TYPE = HalfFloatType;
-/** The trail is the only place the scene is rasterized, so it carries the MSAA.
- *  That costs the fixed point its exactness: the composite reads the previous
- *  buffer resolved and writes it to every sample of this one, so a partly
- *  covered edge pixel keeps a share of last frame's coverage on top of its own.
- *  Held at dt 0, where nothing decays, a still scene reads x1.13 to x1.27 its
- *  screen energy after nine frames, on both backends; with 0 samples, x1.000. */
+/** The trail is the only place the scene is rasterized, so it carries the MSAA. */
 const TRAIL_SAMPLES = 4;
 
 const size = new Vector2();

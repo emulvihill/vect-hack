@@ -199,20 +199,6 @@ export class DungeonRenderer {
     this.renderer.render(this.scene, this.cam.camera);
   }
 
-  /**
-   * Stop the frame loop and draw one frame the way the loop does, through the
-   * phosphor trail, as if `dt` seconds had passed since the last one. The
-   * clock is the caller's, so a gate can ask what the trail does with a frame
-   * time it chose: 0 holds the scene and the residue exactly where they are,
-   * a few milliseconds leave nearly all of the last frame behind, and a tenth
-   * of a second leaves none. renderStill() of the same state is the picture
-   * with no residue in it.
-   */
-  renderFrame(dt: number): void {
-    this.stop();
-    this.draw(dt);
-  }
-
   /** The engine finished a map update; recentre on the hero. */
   syncHero(): void {
     const h = this.map.hero;
@@ -346,11 +332,6 @@ export class DungeonRenderer {
     if (!this.running) return;
     const dt = this.last ? Math.min((time - this.last) / 1000, MAX_FRAME_SECONDS) : 0;
     this.last = time;
-    this.draw(dt);
-  }
-
-  /** One frame, `dt` seconds after the last. */
-  private draw(dt: number): void {
     this.elapsed += dt;
 
     this.fx.observe(this.map);
