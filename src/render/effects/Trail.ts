@@ -11,16 +11,16 @@
 // `fadeAlpha` over the accumulation and re-draws the scene *additively* into
 // it, which is bounded only for transients. A dungeon redraws the same static
 // geometry every frame, so it reaches a steady state of draw/(1 - residual) —
-// 1.9x the intended brightness at 60fps and 3.1x at 120fps with the 0.015s
+// 1.3x the intended brightness at 60fps and 1.9x at 120fps with the 0.0075s
 // half-life, so how bright a beam is would depend on the display's refresh
 // rate. Taking the max instead makes a static scene a fixed point: it trails
 // motion and builds up nothing.
 //
-// The half-life is 0.015s, not the vector-CRT model's 0.30s. The camera follows
-// the hero, so one step moves every line on screen, and at 0.30s each step left
-// the whole scene doubled for about 2s: at one move a second the picture never
-// cleared. At 0.015s a stamp is under 1% in 0.1s, which reads as a short streak
-// behind whatever moves and never as a second image.
+// The half-life is 0.0075s, not the vector-CRT model's 0.30s. The camera
+// follows the hero, so one step moves every line on screen, and at 0.30s each
+// step left the whole scene doubled for about 2s: at one move a second the
+// picture never cleared. At 0.015s the streak behind a step was still too
+// noticeable. At 0.0075s a stamp is under 1% in 0.05s, three frames at 60fps.
 //
 // The hazard the spec records still applies, with the roles moved: the composite
 // quad *is* the fade now, and it must not be additive. Adding the residue back

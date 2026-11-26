@@ -63,13 +63,14 @@ const TRAIL_STILL_MAX = 1.5;
  *  trail scores 1 by construction, and the WebGL backend without MAX measured
  *  x0.91 to x0.94. */
 const MIN_TRAIL_RESIDUE = 1.2;
-/** LEFTOVER: the same ratio a second later. Sixty-six half-lives leave
+/** LEFTOVER: the same ratio a second later. Over a hundred half-lives leave
  *  nothing, so it is back to 1; a residue that never clears stays where
  *  RESIDUE left it. */
 const TRAIL_LEFTOVER_TOLERANCE = 0.05;
-/** Seconds between the probe's zoom frames: 0.002s is a residual of 0.91 at
- *  the 0.015s half-life. */
-const TRAIL_STEP_S = 0.002;
+/** Seconds between the probe's zoom frames: 0.001s is a residual of 0.91 at
+ *  the 0.0075s half-life. It moves with the half-life, or the residue the
+ *  bar was measured against is no longer what a step leaves behind. */
+const TRAIL_STEP_S = 0.001;
 /** Wheel delta per zoom step; OrbitCam turns 120 into a 15.5% longer orbit,
  *  which moves a line 60px from the middle of the view by 9px, clear of
  *  where it was; NetHack's opening room is about that small. */
