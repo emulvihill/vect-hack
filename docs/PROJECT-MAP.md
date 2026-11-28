@@ -22,9 +22,10 @@ anything  -> main.ts               (none)
 - `external/NetHack` — official source, submodule pinned to the `NetHack-5.0` branch tip
   (release-tag wasm bugs were fixed on the branch). Never
   patched: it stays a clean external dependency anyone can compile as instructed.
-  `build-nethack-wasm.sh` pins `SUPPORTED_NETHACK` and refuses to build a different
-  release, because `src/modules/nethack/recoverSave.ts` depends on NetHack's on-disk save
-  layout. Moving the pin means re-checking that port — and checking whether
+  `build-nethack-wasm.sh` pins the commit (`SUPPORTED_NETHACK_COMMIT`) and the
+  release (`SUPPORTED_NETHACK`), and refuses a different one or a modified
+  tree, because `src/modules/nethack/recoverSave.ts` depends on NetHack's
+  on-disk save layout. Moving the pin means re-checking that port — and checking whether
   `sys/libnh/libnhmain.c` has learned to clear `program_state.in_self_recover`,
   which is the upstream bug the port exists to route around.
 - `external/angband` — official source, submodule pinned to 4.2.6-166
