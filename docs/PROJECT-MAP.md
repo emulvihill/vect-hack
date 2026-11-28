@@ -51,9 +51,9 @@ anything  -> main.ts               (none)
 - `scripts/build/` — the four `build-<game>-wasm.sh` engine builds with their makefiles and
   `setup-toolchain.sh`, plus what the app build and the dev server load from here.
 - `scripts/dev/` — tools run by hand: the bot gym, the offline and mobile previews,
-  `serve-www.mjs`, and the worktree setup and teardown.
+  and `serve-www.mjs`.
 - `scripts/browser-check/` — the render gates behind `npm run check:*`, real Chromium and
-  none part of `npm test`, with their shared utils and the nightly timer units.
+  none part of `npm test`, with their shared utils.
 - `scripts/test/` — what `npm test` runs: the vitest unit tests (`*.test.ts`, one folder per
   Module or area, `tooling/` for the scripts themselves) and each Module's engine tests
   (`test-<game>-<name>.mjs`, run through `<game>.engine.ts`).

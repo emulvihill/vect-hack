@@ -399,7 +399,7 @@ async function pruneQuietly() {
   }
 }
 
-/** Keep the last KEEP_RUNS run directories; a nightly timer runs forever. */
+/** Keep the last KEEP_RUNS run directories; repeated runs would grow it without bound. */
 async function prune() {
   const dirs = (await readdir(STATE_DIR, { withFileTypes: true }))
     .filter((d) => d.isDirectory()).map((d) => d.name);
