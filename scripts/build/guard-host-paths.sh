@@ -18,8 +18,8 @@ usage() {
 label="$1"
 shift
 
-# $HOME too: a worktree's emsdk links back to the primary checkout, which only
-# $HOME covers. A trailing slash keeps $HOME=/home/x from matching /home/xy; a
+# $HOME too: toolchain paths (emsdk) can resolve under it where no source dir
+# does. A trailing slash keeps $HOME=/home/x from matching /home/xy; a
 # $HOME of / would match everything.
 needles=()
 if [ -n "${HOME:-}" ] && [ "$HOME" != "/" ]; then
