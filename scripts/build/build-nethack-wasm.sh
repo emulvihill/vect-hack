@@ -9,11 +9,12 @@ source "$ROOT/external/emsdk/emsdk_env.sh" >/dev/null
 
 # The NetHack commit this client is built and tested against; moving it means
 # re-checking everything SUPPORTED_NETHACK below guards. Build outputs are
-# gitignored upstream, so a dirty tree is a source edit.
+# gitignored upstream, so a dirty tree is a local edit.
 SUPPORTED_NETHACK_COMMIT="a3a587dcf3650590ee410dba348477b569991ee4"
 head="$(git -C "$NH" rev-parse HEAD 2>/dev/null || true)"
 if [ "$head" != "$SUPPORTED_NETHACK_COMMIT" ]; then
   echo "build-nethack-wasm: submodule is at ${head:-not-a-git-checkout}; this client supports $SUPPORTED_NETHACK_COMMIT." >&2
+  echo "  Re-check what SUPPORTED_NETHACK guards below, then update SUPPORTED_NETHACK_COMMIT here." >&2
   exit 1
 fi
 if [ -n "$(git -C "$NH" status --short)" ]; then
