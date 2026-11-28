@@ -10,7 +10,7 @@ MIT license, and its own notices travel with that license — see
 [LICENSING.md](LICENSING.md) for the map. `npm run build` copies every text
 into `dist/licenses/`, so a copied `dist/` carries its own terms.
 
-## three.js (v0.185.1)
+## three.js (v0.187.0)
 
 Bundled into the application. <https://github.com/mrdoob/three.js>
 
