@@ -175,7 +175,8 @@ function checkThreeVersion(root) {
   const json = (f) => JSON.parse(readFileSync(join(root, f), 'utf8'));
   const locked = json('package-lock.json').packages['node_modules/three'].version;
   const installed = json('node_modules/three/package.json').version;
-  const noticed = /^## three\.js \(v(\S+)\)$/m.exec(readFileSync(join(root, 'THIRD_PARTY_NOTICES.md'), 'utf8'))?.[1];
+  const noticed = /^## three\.js \(v(\S+)\)\r?$/m.exec(readFileSync(join(root, 'THIRD_PARTY_NOTICES.md'), 'utf8'))?.[1]
+    ?? 'nothing (no "## three.js (vX.Y.Z)" heading)';
   if (installed !== locked) throw new Error(`node_modules has three ${installed}, package-lock.json pins ${locked}: run npm ci`);
   if (noticed !== locked) throw new Error(`THIRD_PARTY_NOTICES.md names three ${noticed}, package-lock.json pins ${locked}`);
 }
