@@ -169,6 +169,17 @@ export function moduleHtml(module, texts) {
     texts);
 }
 
+/** The notices name the three.js the lockfile pins, and node_modules holds it;
+ *  the heading is hand-written, so a version bump fails here until it is fixed. */
+function checkThreeVersion(root) {
+  const json = (f) => JSON.parse(readFileSync(join(root, f), 'utf8'));
+  const locked = json('package-lock.json').packages['node_modules/three'].version;
+  const installed = json('node_modules/three/package.json').version;
+  const noticed = /^## three\.js \(v(\S+)\)$/m.exec(readFileSync(join(root, 'THIRD_PARTY_NOTICES.md'), 'utf8'))?.[1];
+  if (installed !== locked) throw new Error(`node_modules has three ${installed}, package-lock.json pins ${locked}: run npm ci`);
+  if (noticed !== locked) throw new Error(`THIRD_PARTY_NOTICES.md names three ${noticed}, package-lock.json pins ${locked}`);
+}
+
 /** Stage every text, SOURCE.txt, index.html and one <game>.html per entry in
  *  MODULES from `root` into `out`. */
 export function stageLicenses(root, out) {
@@ -187,6 +198,7 @@ export function stageLicenses(root, out) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+  checkThreeVersion(root);
   stageLicenses(root, join(root, 'dist', 'licenses'));
   console.log(`stage-licenses: ${LICENSE_FILES.length} files + SOURCE.txt + index.html + ${Object.keys(MODULES).length} game pages -> dist/licenses/`);
 }
