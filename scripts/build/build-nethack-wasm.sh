@@ -218,6 +218,13 @@ fi
 "$ROOT/scripts/build/guard-host-paths.sh" build-nethack-wasm "$ROOT" -- \
   "$NH/targets/wasm/nethack.js" "$NH/targets/wasm/nethack.wasm"
 
+if [ "$(git -C "$NH" rev-parse HEAD)" != "$SUPPORTED_NETHACK_COMMIT" ] || \
+   [ -n "$(git -C "$NH" status --short)" ]; then
+  echo "build-nethack-wasm: submodule changed during the build" >&2
+  rm -f "$NH/targets/wasm/nethack.js" "$NH/targets/wasm/nethack.wasm"
+  exit 1
+fi
+
 mkdir -p "$ROOT/public/modules/nethack"
 cp -f "$NH/targets/wasm/nethack.js" "$NH/targets/wasm/nethack.wasm" "$ROOT/public/modules/nethack/"
 
