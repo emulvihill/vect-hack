@@ -277,7 +277,7 @@ export function pruneList(dirs, keep) {
  *
  * This is the logged-out case, and it is why the runner has a "could not run"
  * verdict. logind hands the seat's active session an ACL on the render node
- * (a `user:<login>:rw-` entry); log out and that entry goes away, so at 03:30 on
+ * (a `user:<login>:rw-` entry); log out and that entry goes away, so on
  * a machine nobody is logged into, Chromium falls back to software rendering
  * and every arm goes red for a reason that has nothing to do with the code.
  */

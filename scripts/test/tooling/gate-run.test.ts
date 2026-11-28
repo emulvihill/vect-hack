@@ -152,7 +152,7 @@ describe("the gate table", () => {
         ".preview/angband-borg-gate.json"]);
   });
 
-  // The gate list is what `check:gates` and the nightly timer both drive, so a
+  // The gate list is what `check:gates` drives, so a
   // gate that exists as an npm script and not here is a gate nobody runs —
   // which is the whole of vect-hack-hnw, and then of vect-hack-qv1. touch and
   // payload are named explicitly because each spent time being exactly that.

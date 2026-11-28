@@ -188,7 +188,7 @@ for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"]) {
  *
  *  - is there a GPU render node this user may open? logind hands the seat's
  *    active session an ACL on /dev/dri/renderD*, and takes it away at logout.
- *    At 03:30 on a logged-out build host, Chromium falls back to software and every
+ *    On a logged-out build host, Chromium falls back to software and every
  *    arm goes red for a reason nobody should be woken for.
  *  - does Chromium launch, and does it then see WebGPU and WebGL2? The gates
  *    drive eight arms that need both, and the touch gate needs a GPU as much as
@@ -399,7 +399,7 @@ async function pruneQuietly() {
   }
 }
 
-/** Keep the last KEEP_RUNS run directories; a nightly timer runs forever. */
+/** Keep the last KEEP_RUNS run directories; repeated runs would grow it without bound. */
 async function prune() {
   const dirs = (await readdir(STATE_DIR, { withFileTypes: true }))
     .filter((d) => d.isDirectory()).map((d) => d.name);
